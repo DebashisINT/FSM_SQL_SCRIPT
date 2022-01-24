@@ -1,0 +1,215 @@
+--EXEC PRC_FTSPAITENTORDERREGISTER_REPORT '2022-01-01','2022-01-31','','','',378
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSPAITENTORDERREGISTER_REPORT]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSPAITENTORDERREGISTER_REPORT] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_FTSPAITENTORDERREGISTER_REPORT]
+(
+@FROMDATE NVARCHAR(10)=NULL,
+@TODATE NVARCHAR(10)=NULL,
+@STATEID NVARCHAR(MAX)=NULL,
+@SHOPID NVARCHAR(MAX)=NULL,
+@EMPID NVARCHAR(MAX)=NULL,
+@USERID INT 
+) --WITH ENCRYPTION
+AS
+/****************************************************************************************************************************************************************************
+Written by : Debashis Talukder on 24/01/2022
+Module	   : FTS Paitent Order Register.Refer: 0024580
+****************************************************************************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @Strsql NVARCHAR(MAX),@SqlStrTable NVARCHAR(MAX)
+	DECLARE @isRevisitTeamDetail NVARCHAR(100)
+	SELECT @isRevisitTeamDetail=[Value] FROM fts_app_config_settings WHERE [Key]='isRevisitTeamDetail' AND [Description]='Revisit from Team Details in Portal'
+
+	IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
+		DROP TABLE #STATEID_LIST
+	CREATE TABLE #STATEID_LIST (State_Id INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
+	IF @STATEID <> ''
+		BEGIN
+			SET @STATEID=REPLACE(@STATEID,'''','')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #STATEID_LIST SELECT id from tbl_master_state where id in('+@STATEID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+
+	IF OBJECT_ID('tempdb..#SHOPID_LIST') IS NOT NULL
+		DROP TABLE #SHOPID_LIST
+	CREATE TABLE #SHOPID_LIST (Shop_ID INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #SHOPID_LIST (Shop_ID ASC)
+	IF @SHOPID <> ''
+		BEGIN
+			SET @SHOPID=REPLACE(@SHOPID,'''','')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #SHOPID_LIST SELECT Shop_ID from tbl_Master_shop where Shop_ID in('+@SHOPID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+
+	IF OBJECT_ID('tempdb..#EMPLOYEE_LIST') IS NOT NULL
+		DROP TABLE #EMPLOYEE_LIST
+	CREATE TABLE #EMPLOYEE_LIST (emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
+	IF @EMPID <> ''
+		BEGIN
+			SET @EMPID = REPLACE(''''+@EMPID+'''',',',''',''')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@EMPID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,ISNULL(cnt_UCC,'') FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
+			CREATE TABLE #EMPHR
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHR
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+	
+	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSPAITENTORDERREGISTER_REPORT') AND TYPE IN (N'U'))
+	BEGIN
+		CREATE TABLE FTSPAITENTORDERREGISTER_REPORT
+		(
+		  USERID INT,
+		  SEQ INT,
+		  EMPCODE NVARCHAR(100) NULL,
+		  EMPNAME NVARCHAR(300) NULL,
+		  BRANCHDESC NVARCHAR(300),
+		  SHOPNAME NVARCHAR(100) NULL,
+		  ENTITYCODE NVARCHAR(600) NULL,
+		  ADDRESS NVARCHAR(MAX) NULL,
+		  CONTACT NVARCHAR(100) NULL,
+		  SHOPTYPE NVARCHAR(50) NULL,
+		  PATIENT_NAME NVARCHAR(400) NULL,
+		  PATIENT_PHONE_NO NVARCHAR(30) NULL,
+		  PATIENT_ADDRESS NVARCHAR(1000) NULL,
+		  HOSPITAL NVARCHAR(400) NULL,
+		  EMAIL_ADDRESS NVARCHAR(600) NULL,
+		  ORDDATE NVARCHAR(10) NULL,
+		  ORDID BIGINT,
+		  ORDRNO NVARCHAR(60) NULL,
+		  PRODUCT NVARCHAR(500) NULL,
+		  QUANTITY DECIMAL(10,0),
+		  RATE DECIMAL(18,2),
+		  ORDVALUE DECIMAL(18,2),
+		  PPNAME NVARCHAR(100) NULL,
+		  DDNAME NVARCHAR(100) NULL,
+		  EMPLOYEE_ID NVARCHAR(100) NULL,
+		  SCHEME_QTY DECIMAL(18,2),
+		  SCHEME_RATE DECIMAL(18,2),
+		  TOTAL_SCHEME_PRICE DECIMAL(18,2),
+		  MRP DECIMAL(18,2)
+		)
+		CREATE NONCLUSTERED INDEX IX1 ON FTSPAITENTORDERREGISTER_REPORT (SEQ)
+	END
+	DELETE FROM FTSPAITENTORDERREGISTER_REPORT WHERE USERID=@USERID
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO FTSPAITENTORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,PATIENT_NAME,PATIENT_PHONE_NO,PATIENT_ADDRESS,HOSPITAL,'
+	SET @Strsql+='EMAIL_ADDRESS,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPNAME,DDNAME,EMPLOYEE_ID,SCHEME_QTY,SCHEME_RATE,TOTAL_SCHEME_PRICE,MRP) '
+	SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,ROW_NUMBER() OVER(ORDER BY CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,105),ORDHEAD.ORDERCODE) AS SEQ,EMP.emp_contactId AS EMPCODE,'
+	SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
+	SET @Strsql+='BR.branch_description AS BRANCHDESC,SHOP.SHOP_NAME AS SHOPNAME,SHOP.ENTITYCODE,SHOP.ADDRESS,SHOP.SHOP_OWNER_CONTACT AS CONTACT,STYPS.NAME AS SHOPTYPE,ORDHEAD.PATIENT_NAME,'
+	SET @Strsql+='ORDHEAD.PATIENT_PHONE_NO,ORDHEAD.PATIENT_ADDRESS,ORDHEAD.HOSPITAL,ORDHEAD.EMAIL_ADDRESS,CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,105) AS ORDDATE,ORDHEAD.OrderId AS ORDID,'
+	SET @Strsql+='ORDHEAD.ORDERCODE AS ORDRNO,PROD.sProducts_Name AS PRODUCT,ORDDET.Product_Qty AS QUANTITY,ORDDET.Product_Rate AS RATE,(ORDDET.Product_Qty*ORDDET.Product_Rate) AS ORDVALUE,SHOPPP.Shop_Name AS ''PPName'','
+	SET @Strsql+='SHOPDD.Shop_Name AS ''DDName'',CNT.cnt_UCC,ORDDET.Scheme_Qty,ORDDET.Scheme_Rate,ORDDET.Total_Scheme_Price,ORDDET.MRP '
+	SET @Strsql+='FROM tbl_master_employee EMP '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=USR.user_contactId '
+		END
+	IF @isRevisitTeamDetail='0'
+		BEGIN
+			SET @Strsql+='INNER JOIN tbl_Master_shop SHOP ON SHOP.Shop_CreateUser=USR.user_id '
+			SET @Strsql+='INNER JOIN tbl_shoptype STYPS ON STYPS.SHOP_TYPEID=SHOP.TYPE '
+			SET @Strsql+='INNER JOIN tbl_trans_fts_Orderupdate ORDHEAD ON ORDHEAD.Shop_Code=SHOP.Shop_Code '
+		END
+	ELSE IF @isRevisitTeamDetail='1'
+		BEGIN
+			SET @Strsql+='INNER JOIN tbl_trans_fts_Orderupdate ORDHEAD ON ORDHEAD.userID=USR.user_id '
+			SET @Strsql+='INNER JOIN tbl_Master_shop SHOP ON SHOP.Shop_Code=ORDHEAD.Shop_Code '
+			SET @Strsql+='INNER JOIN tbl_shoptype STYPS ON STYPS.SHOP_TYPEID=SHOP.TYPE '
+		END
+	SET @Strsql+='INNER JOIN tbl_FTs_OrderdetailsProduct ORDDET ON ORDHEAD.OrderId=ORDDET.Order_ID '
+	SET @Strsql+='INNER JOIN Master_sProducts PROD ON PROD.sProducts_ID=ORDDET.Product_Id '
+	SET @Strsql+='INNER JOIN tbl_master_state STATE ON STATE.ID=SHOP.STATEID '
+	SET @Strsql+='LEFT OUTER JOIN( '
+	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_pp_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A '
+	SET @Strsql+=') SHOPPP ON SHOP.assigned_to_pp_id=SHOPPP.Shop_Code '
+	SET @Strsql+='LEFT OUTER JOIN( '
+	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A '
+	SET @Strsql+=') SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	IF @STATEID <> ''
+		SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=SHOP.STATEID) '
+	IF @SHOPID <> ''
+		SET @Strsql+='AND EXISTS (SELECT Shop_ID FROM #SHOPID_LIST AS SP WHERE SP.Shop_ID=SHOP.Shop_ID) '
+	ELSE IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EM WHERE EM.emp_contactId=EMP.emp_contactId) '
+	SET @Strsql=@Strsql+'ORDER BY CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,105),ORDHEAD.ORDERCODE'
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	DROP TABLE #SHOPID_LIST
+	DROP TABLE #STATEID_LIST
+	DROP TABLE #EMPLOYEE_LIST
+	DROP TABLE #TEMPCONTACT
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR_EDIT
+		DROP TABLE #EMPHR
+	END
+
+	SET NOCOUNT OFF
+END
