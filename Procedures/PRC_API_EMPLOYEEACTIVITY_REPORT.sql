@@ -1,4 +1,4 @@
---EXEC PRC_API_EMPLOYEEACTIVITY_REPORT 'EMN0000001','2019-03-01','2020-06-30',378,'',''
+--EXEC PRC_API_EMPLOYEEACTIVITY_REPORT '','2022-01-08','2022-01-14',378,'',''
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_API_EMPLOYEEACTIVITY_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -26,6 +26,7 @@ Module	   : Employee Activity Report for Track
 													Refer: 0024198
 5.0			v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 6.0			v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
+7.0			v2.0.26		Debashis	24/01/2022		Reports > Employee Tracking > Employee Activity, Unable to generate report, system is getting logout.Refer: 0024636
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -97,7 +98,10 @@ BEGIN
 			  ENTITYCODE NVARCHAR(600) NULL,
 			  --End of Rev 1.0
 			  SHOP_TYPE NVARCHAR(50) NULL,
-			  MOBILE_NO NVARCHAR(10) NULL,
+			  --Rev 7.0
+			  --MOBILE_NO NVARCHAR(10) NULL,
+			  MOBILE_NO NVARCHAR(100) NULL,
+			  --End of Rev 7.0
 			  --Rev 6.0
 			  ALT_MOBILENO1 NVARCHAR(40) NULL,
 			  SHOP_OWNER_EMAIL2 NVARCHAR(300) NULL,
