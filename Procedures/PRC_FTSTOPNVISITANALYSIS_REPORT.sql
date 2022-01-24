@@ -1,0 +1,239 @@
+--EXEC PRC_FTSTOPNVISITANALYSIS_REPORT '2020-02-01','2020-02-29','','','EMS0000100',2,378
+--EXEC PRC_FTSTOPNVISITANALYSIS_REPORT '2020-02-01','2020-02-29','','','',0,378
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSTOPNVISITANALYSIS_REPORT]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSTOPNVISITANALYSIS_REPORT] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_FTSTOPNVISITANALYSIS_REPORT]
+(
+@FROMDATE NVARCHAR(10)=NULL,
+@TODATE NVARCHAR(10)=NULL,
+@STATEID NVARCHAR(MAX)=NULL,
+@DESIGNID NVARCHAR(MAX)=NULL,
+@EMPID NVARCHAR(MAX)=NULL,
+@NOOFVISIT INT=0,
+@USERID INT
+) --WITH ENCRYPTION
+AS
+/****************************************************************************************************************************************************************************
+Written by : Debashis Talukder on 28/02/2020
+Module	   : Top N visit Analysis
+****************************************************************************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @Strsql NVARCHAR(MAX),@sqlStrTable NVARCHAR(MAX)
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
+		DROP TABLE #STATEID_LIST
+	CREATE TABLE #STATEID_LIST (State_Id INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
+	IF @STATEID <> ''
+		BEGIN
+			SET @STATEID=REPLACE(@STATEID,'''','')
+			SET @sqlStrTable=''
+			SET @sqlStrTable=' INSERT INTO #STATEID_LIST SELECT id from tbl_master_state where id in('+@STATEID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+	
+	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#DESIGNATION_LIST') AND TYPE IN (N'U'))
+		DROP TABLE #DESIGNATION_LIST
+	CREATE TABLE #DESIGNATION_LIST (deg_id INT)
+	CREATE NONCLUSTERED INDEX IX2 ON #DESIGNATION_LIST (deg_id ASC)
+	IF @DESIGNID <> ''
+		BEGIN
+			SET @DESIGNID=REPLACE(@DESIGNID,'''','')
+			SET @sqlStrTable=''
+			SET @sqlStrTable=' INSERT INTO #DESIGNATION_LIST SELECT deg_id from tbl_master_designation where deg_id in('+@DESIGNID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPLOYEE_LIST') AND TYPE IN (N'U'))
+		DROP TABLE #EMPLOYEE_LIST
+	CREATE TABLE #EMPLOYEE_LIST (emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
+	IF @EMPID <> ''
+		BEGIN
+			SET @EMPID = REPLACE(''''+@EMPID+'''',',',''',''')
+			SET @sqlStrTable=''
+			SET @sqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@EMPID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSTOPNVISITANALYSIS_REPORT') AND TYPE IN (N'U'))
+		BEGIN
+			CREATE TABLE FTSTOPNVISITANALYSIS_REPORT
+			(
+			  USERID INT,
+			  SEQ INT,
+			  FROMDATE NVARCHAR(10),
+			  TODATE NVARCHAR(10),
+			  CONTACTNO NVARCHAR(50) NULL,
+			  STATEID INT,
+			  STATE NVARCHAR(50) NULL,
+			  EMPCODE NVARCHAR(100) NULL,
+			  EMPNAME NVARCHAR(300) NULL,
+			  EMPID NVARCHAR(100) NULL,
+			  DEG_ID INT,
+			  DESIGNATION NVARCHAR(50) NULL,
+			  DATEOFJOINING NVARCHAR(10),
+			  REPORTTO NVARCHAR(300) NULL,
+			  RPTTODESG NVARCHAR(50) NULL,
+			  SHOP_TYPE NVARCHAR(10),
+			  SHOP_CODE NVARCHAR(100),
+			  SHOP_NAME NVARCHAR(300) NULL,
+			  SHOPADDR NVARCHAR(300) NULL,
+			  SHOPCONTACT NVARCHAR(30) NULL,
+			  TOTAL_VISIT INT,
+			  NEWSHOP_VISITED INT,
+			  RE_VISITED INT,
+			  TOTAL_ORDER_BOOKED_VALUE DECIMAL(38,2),
+			  TOTAL_DELIVERED_VALUE DECIMAL(38,2),
+			  TOTAL_COLLECTION DECIMAL(38,2)
+			)
+			CREATE NONCLUSTERED INDEX IX1 ON FTSTOPNVISITANALYSIS_REPORT (SEQ)
+		END
+	DELETE FROM FTSTOPNVISITANALYSIS_REPORT WHERE USERID=@USERID
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO FTSTOPNVISITANALYSIS_REPORT(USERID,SEQ,FROMDATE,TODATE,CONTACTNO,STATEID,STATE,EMPCODE,EMPNAME,EMPID,DEG_ID,DESIGNATION,DATEOFJOINING,REPORTTO,RPTTODESG,SHOP_TYPE,SHOP_CODE,'
+	SET @Strsql+='SHOP_NAME,SHOPADDR,SHOPCONTACT,TOTAL_VISIT,NEWSHOP_VISITED,RE_VISITED,TOTAL_ORDER_BOOKED_VALUE,TOTAL_DELIVERED_VALUE,TOTAL_COLLECTION) '
+	SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY TOTAL_VISIT DESC) AS SEQ,CONVERT(NVARCHAR(10),'''+@FROMDATE+''',105) AS FROMDATE,CONVERT(NVARCHAR(10),'''+@TODATE+''',105) AS TODATE,'
+	SET @Strsql+='CONTACTNO,STATEID,STATE,EMPCODE,EMPNAME,EMPID,DEG_ID,DESIGNATION,DATEOFJOINING,REPORTTO,RPTTODESG,SHOP_TYPE,SHOP_CODE,SHOP_NAME,SHOPADDR,SHOPCONTACT,TOTAL_VISIT,NEWSHOP_VISITED,RE_VISITED,'
+	SET @Strsql+='Total_Order_Booked_Value,TOTAL_DELIVERED_VALUE,Total_Collection FROM('
+	SET @Strsql+='SELECT CONTACTNO,STATEID,STATE,EMPCODE,EMPNAME,EMPID,DEG_ID,DESIGNATION,DATEOFJOINING,REPORTTO,RPTTODESG,SHOP_TYPE,SHOP_CODE,SHOP_NAME,SHOPADDR,SHOPCONTACT,'
+	SET @Strsql+='SUM(TOTAL_VISIT) AS TOTAL_VISIT,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(Total_Order_Booked_Value) AS Total_Order_Booked_Value,'
+	SET @Strsql+='SUM(TOTAL_DELIVERED_VALUE) AS TOTAL_DELIVERED_VALUE,SUM(Total_Collection) AS Total_Collection FROM( '
+	SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,'
+	SET @Strsql+='ST.state AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,'
+	SET @Strsql+='RPTTO.REPORTTO,RPTTO.RPTTODESG,EMP.emp_uniqueCode AS EMPID,SHOP.SHOP_TYPE,SHOP.Shop_Code,SHOP.Shop_Name,SHOP.Address AS SHOPADDR,SHOP.Shop_Owner_Contact AS SHOPCONTACT,'
+	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,'
+	SET @Strsql+='ISNULL(ORDHEAD.Ordervalue,0) AS Total_Order_Booked_Value,ISNULL(BILLDET.BILLVALUE,0) AS TOTAL_DELIVERED_VALUE,ISNULL(COLLEC.collectionvalue,0) AS Total_Collection '
+	SET @Strsql+='FROM tbl_master_employee EMP '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+	SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+	SET @Strsql+='INNER JOIN ( '
+	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
+	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
+	SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	SET @Strsql+='INNER JOIN ( '
+	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
+	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+	SET @Strsql+='INNER JOIN ( '
+	SET @Strsql+='SELECT USERID,cnt_internalId,Login_datetime FROM( '
+	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
+	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	SET @Strsql+=') LOGINLOGOUT) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,VISITED_TIME FROM( '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME '
+	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.VISITED_TIME '
+	SET @Strsql+='UNION ALL '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME '
+	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.VISITED_TIME '
+	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT DISTINCT Shop_Code,Shop_CreateUser,Shop_Name,Address,Shop_Owner_Contact,assigned_to_pp_id,assigned_to_dd_id,Type, '
+	SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' WHEN TYPE=5 THEN ''Diamond'' '
+	SET @Strsql+='WHEN TYPE=6 THEN ''Stockist'' WHEN TYPE=7 THEN ''Chemist'' WHEN TYPE=8 THEN ''Doctor'' WHEN TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE '
+	SET @Strsql+='FROM tbl_Master_shop '
+	SET @Strsql+=') SHOP ON SHOP.Shop_CreateUser=USR.user_id AND SHOP.Shop_Code=SHOPACT.Shop_Id '
+	SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) AS ORDDATE '
+	SET @Strsql+='FROM tbl_trans_fts_Orderupdate ORDH '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='GROUP BY ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105)) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
+	SET @Strsql+='AND ATTEN.Login_datetime=ORDHEAD.ORDDATE AND ORDHEAD.SHOP_CODE=SHOP.SHOP_CODE '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT BILLD.User_Id,ORDH.SHOP_CODE,CNT.cnt_internalId,SUM(ISNULL(BILLD.invoice_amount,0)) AS BILLVALUE,CONVERT(NVARCHAR(10),BILLD.invoice_date,105) AS INVDATE FROM tbl_FTS_BillingDetails BILLD '
+	SET @Strsql+='INNER JOIN tbl_trans_fts_Orderupdate ORDH ON BILLD.OrderCode=ORDH.OrderCode AND ORDH.userID=BILLD.User_Id '
+	SET @Strsql+='AND CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=BILLD.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),BILLD.invoice_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='GROUP BY BILLD.User_Id,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),BILLD.invoice_date,105)) BILLDET ON BILLDET.cnt_internalId=CNT.cnt_internalId '
+	SET @Strsql+='AND ATTEN.Login_datetime=BILLDET.INVDATE AND BILLDET.SHOP_CODE=SHOP.SHOP_CODE '
+	SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,COLLEC.shop_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue,CONVERT(NVARCHAR(10),'
+	SET @Strsql+='COLLEC.collection_date,105) AS collection_date FROM tbl_FTS_collection COLLEC '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='GROUP BY COLLEC.user_id,COLLEC.shop_id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),COLLEC.collection_date,105)) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId '
+	SET @Strsql+='AND ATTEN.Login_datetime=COLLEC.collection_date AND COLLEC.shop_id=SHOP.SHOP_CODE '
+	SET @Strsql+=') AS DB '
+	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
+		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID=''
+		SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+	ELSE IF @STATEID='' AND @DESIGNID='' AND @EMPID<>''
+		SET @Strsql+='WHERE EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	ELSE IF @STATEID<>'' AND @DESIGNID='' AND @EMPID<>''
+		BEGIN
+			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+		END
+	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID<>''
+		BEGIN
+			SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+		END
+	ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID=''
+		BEGIN
+			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+			SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+		END
+	ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID<>''
+		BEGIN
+			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+			SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+		END
+	SET @Strsql+='GROUP BY CONTACTNO,STATEID,STATE,EMPCODE,EMPNAME,EMPID,DEG_ID,DESIGNATION,DATEOFJOINING,REPORTTO,RPTTODESG,SHOP_TYPE,SHOP_CODE,SHOP_NAME,SHOPADDR,SHOPCONTACT '
+	SET @Strsql+=') TOPNV WHERE TOTAL_VISIT>='+LTRIM(RTRIM(STR(@NOOFVISIT)))+' '
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	DROP TABLE #DESIGNATION_LIST
+	DROP TABLE #EMPLOYEE_LIST
+	DROP TABLE #STATEID_LIST
+	DROP TABLE #TEMPCONTACT
+
+	SET NOCOUNT OFF
+END
