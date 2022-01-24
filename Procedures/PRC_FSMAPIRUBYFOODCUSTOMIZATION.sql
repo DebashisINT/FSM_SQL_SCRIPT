@@ -1,0 +1,168 @@
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FSMAPIRUBYFOODCUSTOMIZATION]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FSMAPIRUBYFOODCUSTOMIZATION] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_FSMAPIRUBYFOODCUSTOMIZATION]
+(
+@ACTION NVARCHAR(100)=NULL,
+@USER_ID NVARCHAR(50)=NULL,
+@SHOP_ID NVARCHAR(100)=NULL,
+@JsonXML XML=NULL,
+@PathImage NVARCHAR(500)=NULL,
+@BaseURL NVARCHAR(500)=NULL,
+@session_token NVARCHAR(MAX)=NULL,
+@RETURN_AMOUNT DECIMAL(18,2)=NULL,
+@RETURN_ID NVARCHAR(100)=NULL,
+@DESCRIPTION NVARCHAR(500)=NULL,
+@RETURN_DATE_TIME DATETIME=NULL,
+@LATITUDE NVARCHAR(MAX)=NULL,
+@LONGITUDE NVARCHAR(MAX)=NULL,
+@ADDRESS NVARCHAR(MAX)=NULL
+) --WITH ENCRYPTION
+AS
+/****************************************************************************************************************
+Written By : Debashis Talukder On 06/12/2021
+Purpose : For RubyFood Lead.
+****************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @HEADERID BIGINT
+
+	IF @ACTION='PROSPECTLIST'
+		BEGIN
+			SELECT CONVERT(NVARCHAR(10),StageID) AS pros_id,Stage AS pros_name FROM FTS_Stage WHERE IsActive=1
+		END
+	IF @ACTION='QUESTIONLIST'
+		BEGIN
+			SELECT CONVERT(NVARCHAR(10),QUESID) AS question_id,QUESDESCRIPTION AS question FROM FSMAPIRUBYFOODQUESTION WHERE IsActive=1
+		END
+	IF @ACTION='INSERTDATA'
+		BEGIN
+			INSERT INTO FSMAPIRUBYFOODQA(USER_ID,SHOP_ID,CREATEBY,CREATEDATE,QUESTION_ID,ANSWER)
+			SELECT @USER_ID,@SHOP_ID,@USER_ID,GETDATE(),
+			XMLquesans.value('(question_id/text())[1]','BIGINT') AS question_id,
+			XMLquesans.value('(answer/text())[1]','BIT') AS answer
+			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLquesans)
+
+			SELECT * FROM FSMAPIRUBYFOODQA WHERE USER_ID=@USER_ID
+		END
+	IF @ACTION='UPDATEDATA'
+		BEGIN
+			UPDATE QA SET QA.QUESTION_ID=XMLquesans.value('(question_id/text())[1]','BIGINT'),QA.ANSWER=XMLquesans.value('(answer/text())[1]','BIT'),
+			QA.MODIFYBY=@USER_ID,QA.MODIFYDATE=GETDATE()
+			FROM FSMAPIRUBYFOODQA QA
+			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLquesans)
+			ON QA.USER_ID=@USER_ID AND QA.SHOP_ID=@SHOP_ID AND QA.QUESTION_ID=XMLquesans.value('(question_id/text())[1]','BIGINT')
+
+			SELECT * FROM FSMAPIRUBYFOODQA WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID
+		END
+	IF @ACTION='IMAGE1SAVE'
+		BEGIN
+			IF NOT EXISTS(SELECT USER_ID FROM FSMRUBYLEADIMAGE WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID)
+				BEGIN
+					INSERT INTO FSMRUBYLEADIMAGE(USER_ID,SHOP_ID,DOCUMENTIMAGEPATH1,CREATEBY,CREATEDATE)
+					SELECT @USER_ID,@SHOP_ID,@PathImage,@USER_ID,GETDATE()
+				END			
+			SELECT USER_ID,SHOP_ID FROM FSMRUBYLEADIMAGE WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID
+		END
+	IF @ACTION='IMAGE2SAVE'
+		BEGIN
+			IF EXISTS(SELECT USER_ID FROM FSMRUBYLEADIMAGE WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID)
+				BEGIN
+					UPDATE FSMRUBYLEADIMAGE SET DOCUMENTIMAGEPATH2=@PathImage,MODIFYBY=@USER_ID,MODIFYDATE=GETDATE()
+					WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID
+				END
+			SELECT USER_ID,SHOP_ID FROM FSMRUBYLEADIMAGE WHERE USER_ID=@USER_ID AND SHOP_ID=@SHOP_ID
+		END
+	IF @ACTION='QUESTIONANSWERLIST'
+		BEGIN
+			SELECT SHOP_ID AS shop_id,CONVERT(NVARCHAR(10),QUESTION_ID) AS question_id,ANSWER AS answer,CAST(1 AS BIT) AS isUploaded FROM FSMAPIRUBYFOODQA WHERE USER_ID=@USER_ID
+		END
+	IF @ACTION='LEADTYPEIMAGELINK'
+		BEGIN
+			SELECT SHOP_ID AS lead_shop_id,@BaseURL+ISNULL(DOCUMENTIMAGEPATH1,'') AS rubylead_image1,@BaseURL+ISNULL(DOCUMENTIMAGEPATH2,'') AS rubylead_image2 FROM FSMRUBYLEADIMAGE WHERE USER_ID=@USER_ID
+		END
+	IF @ACTION='ORDERRETURNINSERT'
+		BEGIN
+			BEGIN TRAN
+				BEGIN TRY
+					IF NOT EXISTS(SELECT RETURN_AMOUNT FROM FSMAPIRUBYFOODORDERRETURN WHERE RETURN_ID=@RETURN_ID)
+						BEGIN
+							INSERT INTO FSMAPIRUBYFOODORDERRETURN(USER_ID,SHOP_ID,RETURN_ID,RETURN_AMOUNT,DESCRIPTION,RETURN_DATE_TIME,LATITUDE,LONGITUDE,ADDRESS)
+							SELECT @USER_ID,@SHOP_ID,@RETURN_ID,@RETURN_AMOUNT,@DESCRIPTION,@RETURN_DATE_TIME,@LATITUDE,@LONGITUDE,@ADDRESS
+
+							SET @HEADERID=SCOPE_IDENTITY()
+						END
+
+					IF(@@ROWCOUNT>0)
+						BEGIN
+							INSERT INTO FSMAPIRUBYFOODORDERRETURNDET(HEADID,USER_ID,SHOP_ID,RETURN_ID,PROD_ID,PRODUCT_NAME,QTY,RATE,TOTAL_PRICE)
+							SELECT @HEADERID,@USER_ID,@SHOP_ID,@RETURN_ID,
+							XMLproduct.value('(id/text())[1]','BIGINT') AS id,
+							XMLproduct.value('(product_name/text())[1]','NVARCHAR(300)') AS product_name,
+							XMLproduct.value('(qty/text())[1]','DECIMAL(18,2)') AS qty,
+							XMLproduct.value('(rate/text())[1]','DECIMAL(18,2)') AS rate,
+							XMLproduct.value('(total_price/text())[1]','DECIMAL(18,2)') AS total_price
+							FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+							INNER JOIN Master_sProducts MP ON MP.sProducts_ID=XMLproduct.value('(id/text())[1]','BIGINT')
+
+							SELECT @session_token AS session_token,CAST(USER_ID AS NVARCHAR)AS user_id,RETURN_ID AS return_id,RETURN_AMOUNT AS return_amount,DESCRIPTION AS description 
+							FROM FSMAPIRUBYFOODORDERRETURN WHERE USER_ID=@USER_ID ORDER BY ID DESC
+						END
+					COMMIT TRAN
+				END TRY
+			BEGIN CATCH
+				ROLLBACK TRAN
+			END CATCH
+		END
+	IF @ACTION='ORDERRETURNWITHPRODUCTLIST'
+		BEGIN
+			IF @RETURN_DATE_TIME IS NULL OR @RETURN_DATE_TIME=''
+				BEGIN
+					SELECT CONVERT(NVARCHAR(50),ISNULL(COUNT(RETURN_ID),0)) AS total_returnlist_count FROM FSMAPIRUBYFOODORDERRETURN WHERE USER_ID=@USER_ID
+
+					SELECT MS.Shop_Code AS shop_id,MS.Address AS shop_address,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_contact_no,MS.Pincode AS pin_code,MS.Shop_Lat AS shop_lat,
+					MS.Shop_Long AS shop_long,ORH.LATITUDE AS return_lat,ORH.LONGITUDE AS return_long,ORH.RETURN_ID AS return_id,CONVERT(NVARCHAR(19),ORH.RETURN_DATE_TIME,120) AS return_date_time,ORH.RETURN_AMOUNT AS return_amount 
+					FROM tbl_Master_shop MS
+					INNER JOIN FSMAPIRUBYFOODORDERRETURN ORH ON MS.Shop_Code=ORH.SHOP_ID
+					WHERE ORH.USER_ID=@USER_ID
+
+					SELECT masprod.sProducts_ID AS id,masprod.sProducts_Brand AS brand_id,masprod.ProductClass_Code AS category_id,masprod.sProducts_Size AS watt_id,brnd.Brand_Name AS brand,
+					cls.ProductClass_Name AS category,msize.Size_Name AS watt,masprod.sProducts_Name AS product_name,ORD.RETURN_ID AS return_id,ORD.QTY AS qty,ORD.RATE AS rate,ORD.TOTAL_PRICE AS total_price
+					FROM FSMAPIRUBYFOODORDERRETURNDET ORD 
+					INNER JOIN Master_sProducts AS masprod ON ORD.PROD_ID=masprod.sProducts_ID
+					INNER JOIN tbl_master_brand brnd ON masprod.sProducts_Brand=brnd.Brand_Id 
+					INNER JOIN Master_ProductClass AS cls ON masprod.ProductClass_Code=cls.ProductClass_ID
+					INNER JOIN Master_Size AS msize ON masprod.sProducts_Size=msize.Size_ID
+					WHERE ORD.USER_ID=@user_id
+					ORDER BY masprod.sProducts_Name  
+				END
+			ELSE IF @RETURN_DATE_TIME IS NOT NULL OR @RETURN_DATE_TIME<>''
+				BEGIN
+					SELECT CONVERT(NVARCHAR(50),ISNULL(COUNT(RETURN_ID),0)) AS total_returnlist_count FROM FSMAPIRUBYFOODORDERRETURN WHERE USER_ID=@USER_ID 
+					AND CONVERT(NVARCHAR(10),RETURN_DATE_TIME,120)=CONVERT(NVARCHAR(10),@RETURN_DATE_TIME,120)
+
+					SELECT MS.Shop_Code AS shop_id,MS.Address AS shop_address,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_contact_no,MS.Pincode AS pin_code,MS.Shop_Lat AS shop_lat,
+					MS.Shop_Long AS shop_long,ORH.LATITUDE AS return_lat,ORH.LONGITUDE AS return_long,ORH.RETURN_ID AS return_id,CONVERT(NVARCHAR(19),ORH.RETURN_DATE_TIME,120) AS return_date_time,ORH.RETURN_AMOUNT AS return_amount 
+					FROM tbl_Master_shop MS
+					INNER JOIN FSMAPIRUBYFOODORDERRETURN ORH ON MS.Shop_Code=ORH.SHOP_ID
+					WHERE ORH.USER_ID=@USER_ID AND CONVERT(NVARCHAR(10),ORH.RETURN_DATE_TIME,120)=CONVERT(NVARCHAR(10),@RETURN_DATE_TIME,120)
+
+					SELECT masprod.sProducts_ID AS id,masprod.sProducts_Brand AS brand_id,masprod.ProductClass_Code AS category_id,masprod.sProducts_Size AS watt_id,brnd.Brand_Name AS brand,
+					cls.ProductClass_Name AS category,msize.Size_Name AS watt,masprod.sProducts_Name AS product_name,ORD.RETURN_ID AS return_id,ORD.QTY AS qty,ORD.RATE AS rate,ORD.TOTAL_PRICE AS total_price
+					FROM FSMAPIRUBYFOODORDERRETURN ORH 
+					INNER JOIN FSMAPIRUBYFOODORDERRETURNDET ORD ON ORH.ID=ORD.HEADID AND ORH.USER_ID=ORD.USER_ID AND ORH.SHOP_ID=ORD.SHOP_ID AND ORH.RETURN_ID=ORD.RETURN_ID
+					INNER JOIN Master_sProducts AS masprod ON ORD.PROD_ID=masprod.sProducts_ID
+					INNER JOIN tbl_master_brand brnd ON masprod.sProducts_Brand=brnd.Brand_Id 
+					INNER JOIN Master_ProductClass AS cls ON masprod.ProductClass_Code=cls.ProductClass_ID
+					INNER JOIN Master_Size AS msize ON masprod.sProducts_Size=msize.Size_ID
+					WHERE ORD.USER_ID=@user_id AND CONVERT(NVARCHAR(10),ORH.RETURN_DATE_TIME,120)=CONVERT(NVARCHAR(10),@RETURN_DATE_TIME,120)
+					ORDER BY masprod.sProducts_Name  
+				END
+		END
+
+	SET NOCOUNT OFF
+END
