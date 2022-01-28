@@ -110,6 +110,8 @@ BEGIN
 	93.0		Debashis	10-01-2022	ADD SETTINGS @Action='UserCheck' & 'GlobalCheck' MRPInOrder & FaceRegistrationFrontCamera. Row 601 & 602
 	94.0		Debashis	10-01-2022	ADD SETTINGS @Action='UserCheck' & 'GlobalCheck' IsShowMyDetails. Row 609 & 610
 	95.0		Debashis	10-01-2022	ADD SETTINGS @Action='UserCheck' IslandlineforCustomer & IsprojectforCustomer. Row 614
+	96.0		Debashis	28-01-2022	ADD SETTINGS @Action='GlobalCheck' IsAttendVisitShowInDashboard & IsShowInPortalManualPhotoRegn. Row 623
+	97.0		Debashis	28-01-2022	ADD SETTINGS @Action='UserCheck' IsAttendVisitShowInDashboard,IsShowManualPhotoRegnInApp,Leaveapprovalfromsupervisorinteam & Leaveapprovalfromsupervisor.Row 624
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -208,6 +210,10 @@ BEGIN
 	--Rev 94.0
 	,@IsShowMyDetails BIT
 	--End of Rev 94.0
+	--Rev 96.0
+	,@IsAttendVisitShowInDashboard BIT
+	,@IsShowInPortalManualPhotoRegn BIT
+	--End of Rev 96.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -357,6 +363,10 @@ BEGIN
 		--Rev 94.0
 		SET @IsShowMyDetails  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowMyDetails' AND IsActive=1)
 		--End of Rev 94.0
+		--Rev 96.0
+		SET @IsAttendVisitShowInDashboard  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAttendVisitShowInDashboard' AND IsActive=1)
+		SET @IsShowInPortalManualPhotoRegn  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowInPortalManualPhotoRegn' AND IsActive=1)
+		--End of Rev 96.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -485,6 +495,10 @@ BEGIN
 			--Rev 94.0
 			,@IsShowMyDetails AS IsShowMyDetails
 			--End of Rev 94.0
+			--Rev 96.0
+			,@IsAttendVisitShowInDashboard AS IsAttendVisitShowInDashboard
+			,@IsShowInPortalManualPhotoRegn AS IsShowInPortalManualPhotoRegn
+			--End of Rev 96.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1157,5 +1171,19 @@ BEGIN
 		SELECT 'IsprojectforCustomer' AS [Key],CONVERT(NVARCHAR(15),USR.IsprojectforCustomer) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 95.0
+		--Rev 97.0
+		UNION ALL
+		SELECT 'IsAttendVisitShowInDashboard' AS [Key],CONVERT(NVARCHAR(15),USR.IsAttendVisitShowInDashboard) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowManualPhotoRegnInApp' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowManualPhotoRegnInApp) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'Leaveapprovalfromsupervisorinteam' AS [Key],CONVERT(NVARCHAR(15),USR.Leaveapprovalfromsupervisorinteam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'Leaveapprovalfromsupervisor' AS [Key],CONVERT(NVARCHAR(15),USR.Leaveapprovalfromsupervisor) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 97.0
 	END
 END
