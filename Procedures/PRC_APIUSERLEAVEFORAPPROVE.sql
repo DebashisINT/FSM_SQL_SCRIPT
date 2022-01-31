@@ -1,0 +1,64 @@
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_APIUSERLEAVEFORAPPROVE]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_APIUSERLEAVEFORAPPROVE] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_APIUSERLEAVEFORAPPROVE]
+(
+@ACTION NVARCHAR(20),
+@USER_ID BIGINT=NULL,
+@CURRENT_STATUS NVARCHAR(20)=NULL,
+@APPROVE_USER BIGINT=NULL,
+@APPROVAL_DATE_TIME DATETIME=NULL,
+@APPROVER_REMARKS NVARCHAR(500)=NULL
+) --WITH ENCRYPTION
+AS
+/***************************************************************************************************************************************************************************************************
+Written By : Debashis Talukder On 31/01/2022
+Purpose : For User Leave Approval.
+***************************************************************************************************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,ISNULL(cnt_UCC,'') FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	IF @ACTION='FORAPPROVAL'
+		BEGIN
+			IF EXISTS(SELECT USER_ID FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@USER_ID)
+				BEGIN
+					UPDATE FTS_USER_LEAVEAPPLICATION SET CURRENT_STATUS=@CURRENT_STATUS,APPROVAL_USER=@APPROVE_USER,APPROVAL_DATE_TIME=@APPROVAL_DATE_TIME,APPROVER_REMARKS=@APPROVER_REMARKS
+					WHERE USER_ID=@USER_ID
+
+					SELECT APPROVAL_USER,CURRENT_STATUS,APPROVAL_DATE_TIME,APPROVER_REMARKS FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@USER_ID
+				END
+		END
+	IF @ACTION='USERLEAVELIST'
+		BEGIN
+			SELECT ULA.USER_ID AS user_id_leave_applied,ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'')<>'' THEN ' ' ELSE '' END)+ISNULL(CNT.CNT_LASTNAME,'') AS user_name_leave_applied,
+			REPLACE(CONVERT(NVARCHAR(20),ULA.CREATED_DATE,106),' ','-') AS applied_date,ULA.CREATED_DATE AS applied_date_time,CONVERT(NVARCHAR(20),ULA.LEAVE_START_DATE,105) AS from_date,
+			CONVERT(NVARCHAR(20),ULA.LEAVE_END_DATE,105) AS to_date,LT.LeaveType AS leave_type,CASE WHEN ULA.CURRENT_STATUS='APPROVE' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS approve_status,
+			CASE WHEN ULA.CURRENT_STATUS='REJECT' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS reject_status,ULA.LEAVE_REASON AS leave_reason,ULA.APPROVAL_DATE_TIME AS approval_date_time,ULA.APPROVER_REMARKS AS approver_remarks
+			FROM FTS_USER_LEAVEAPPLICATION ULA
+			INNER JOIN tbl_master_user USR ON ULA.USER_ID=USR.USER_ID
+			INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId
+			INNER JOIN tbl_FTS_Leavetype LT ON ULA.LEAVE_TYPE=LT.Leave_Id
+			WHERE ULA.USER_ID=@USER_ID
+		END
+
+	SET NOCOUNT OFF
+END
