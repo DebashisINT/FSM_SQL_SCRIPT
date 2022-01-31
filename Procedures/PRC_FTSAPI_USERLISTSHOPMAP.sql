@@ -29,6 +29,7 @@ Purpose : For API/FaceRegistration/UserList & API/FaceRegistration/FaceMatch API
 8.0		v2.0.26		Debashis	13/12/2021		Some new fields has been added.
 9.0		v2.0.26		Debashis	20-12-2021		A new fields has been added.
 10.0	v2.0.26		Debashis	18-01-2022		A new fields has been added.Row No: 613
+11.0	v2.0.26		Debashis	31-01-2022		A new fields has been added.Row No: 630
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 1.0
@@ -60,8 +61,11 @@ BEGIN
 			ISNULL(AADHDETINFO.REG_DOC_TYPE,'') AS Registered_with,
 			--End of Rev 9.0
 			--Rev 10.0
-			ISNULL(PHNO.phf_phoneNumber,'') AS emp_phone_no
+			ISNULL(PHNO.phf_phoneNumber,'') AS emp_phone_no,
 			--End of Rev 10.0
+			--Rev 11.0
+			USR.IsShowManualPhotoRegnInApp
+			--End of Rev 11.0
 			FROM FTS_EmployeeShopMap MAP
 			INNER JOIN TBL_MASTER_USER USR ON MAP.USER_ID=USR.USER_ID
 			--Rev 4.0
