@@ -81,15 +81,12 @@ BEGIN
 						,user_loginId contact_no,
 						--5.0 End
 						--Rev 12.0
-						CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied 
 						--End of Rev 12.0
 						from tbl_master_user usr
 						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=usr.user_contactId
 						--Rev 3.0 end
-						--Rev 12.0
-						LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON usr.USER_ID=LA.USER_ID
-						--End of Rev 12.0
 						where usr.user_id =@user_id
 
 						UNION ALL
@@ -100,17 +97,18 @@ BEGIN
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
-						CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
+						AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 						--End of Rev 12.0
 						from View_Userhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
-						LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_Userhiarchy.USER_ID=LA.USER_ID
 						LEFT OUTER JOIN (
 						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+						GROUP BY A.USER_ID
 						) LVA ON View_Userhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
 						where reprtuserid =@user_id
@@ -128,17 +126,18 @@ BEGIN
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
-						CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
+						AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 						--End of Rev 12.0
 						from View_Userhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
-						LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_Userhiarchy.USER_ID=LA.USER_ID
 						LEFT OUTER JOIN (
 						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+						GROUP BY A.USER_ID
 						) LVA ON View_Userhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
 						WHERE reprtuserid =@user_id
@@ -172,16 +171,16 @@ BEGIN
 								,contact_no ,0 AS SL,
 								--5.0 End
 								--Rev 12.0
-								CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 								--End of Rev 12.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId  
 								--Rev 12.0
-								LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_ALLUserhiarchy.USER_ID=LA.USER_ID
 								LEFT OUTER JOIN (
 								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
 								where View_ALLUserhiarchy.user_id=@user_id
@@ -201,16 +200,17 @@ BEGIN
 								,contact_no ,1 AS SL,
 								--5.0 End
 								--Rev 12.0
-								CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
+								AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 								--End of Rev 12.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId 
 								--Rev 12.0
-								LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_ALLUserhiarchy.USER_ID=LA.USER_ID
 								LEFT OUTER JOIN (
 								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
 								where View_ALLUserhiarchy.user_id<>@user_id
@@ -242,16 +242,16 @@ BEGIN
 								,contact_no ,0 AS SL,
 								--5.0 End
 								--Rev 12.0
-								CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 								--End of Rev 12.0
 								FROM View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId  
 								--Rev 12.0
-								LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_ALLUserhiarchy.USER_ID=LA.USER_ID
 								LEFT OUTER JOIN (
 								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
 								where View_ALLUserhiarchy.user_id=@user_id
@@ -271,16 +271,17 @@ BEGIN
 								,contact_no ,1 AS SL,
 								--5.0 End
 								--Rev 12.0
-								CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
+								AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
 								--End of Rev 12.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId 
 								--Rev 12.0
-								LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_ALLUserhiarchy.USER_ID=LA.USER_ID
 								LEFT OUTER JOIN (
 								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
 								where View_ALLUserhiarchy.user_id<>@user_id
@@ -303,17 +304,17 @@ BEGIN
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
-						CASE WHEN LA.CURRENT_STATUS='PENDING' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending,
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING')>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied 
 						--End of Rev 12.0
 						from View_ALLUserhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
-						LEFT OUTER JOIN FTS_USER_LEAVEAPPLICATION LA ON View_ALLUserhiarchy.USER_ID=LA.USER_ID
 						LEFT OUTER JOIN (
 						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
+						GROUP BY A.USER_ID
 						) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
 						where reprtuserid =@user_id
