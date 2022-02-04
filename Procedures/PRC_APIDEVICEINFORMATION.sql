@@ -15,6 +15,7 @@ AS
 /***************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 28/01/2022
 Purpose : For User wise Device Information.Row 628
+1.0		v2.0.27		Debashis	04-02-2022		A new Action has been added.Row No: 633
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -44,6 +45,17 @@ BEGIN
 			INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId
 			WHERE USR.user_id=@USER_ID
 		END
+	--Rev 1.0
+	IF @ACTION='IMEICLEAR'
+		BEGIN
+			IF EXISTS(SELECT UserId FROM tbl_User_IMEI WHERE UserId=@USER_ID)
+				BEGIN
+					SELECT UserId FROM tbl_User_IMEI WHERE UserId=@USER_ID
+
+					DELETE FROM tbl_User_IMEI WHERE UserId=@USER_ID
+				END
+		END
+	--End of Rev 1.0
 
 	DROP TABLE #TEMPCONTACT
 

@@ -112,6 +112,8 @@ BEGIN
 	95.0		Debashis	10-01-2022	ADD SETTINGS @Action='UserCheck' IslandlineforCustomer & IsprojectforCustomer. Row 614
 	96.0		Debashis	28-01-2022	ADD SETTINGS @Action='GlobalCheck' IsAttendVisitShowInDashboard & IsShowInPortalManualPhotoRegn. Row 623
 	97.0		Debashis	28-01-2022	ADD SETTINGS @Action='UserCheck' IsAttendVisitShowInDashboard,IsShowManualPhotoRegnInApp,Leaveapprovalfromsupervisorinteam & Leaveapprovalfromsupervisor.Row 624
+	98.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsIMEICheck,IsRestrictNearbyGeofence & IsQuotActivatedforEurobond.Row 634
+	99.0		Debashis	04-02-2022	ADD SETTINGS @Action='GlobalCheck' SqMtrRateCalculationforQuotEuro. Row 635
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -214,6 +216,9 @@ BEGIN
 	,@IsAttendVisitShowInDashboard BIT
 	,@IsShowInPortalManualPhotoRegn BIT
 	--End of Rev 96.0
+	--Rev 99.0
+	,@SqMtrRateCalculationforQuotEuro DECIMAL(18,2)
+	--End of Rev 99.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -367,6 +372,9 @@ BEGIN
 		SET @IsAttendVisitShowInDashboard  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAttendVisitShowInDashboard' AND IsActive=1)
 		SET @IsShowInPortalManualPhotoRegn  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowInPortalManualPhotoRegn' AND IsActive=1)
 		--End of Rev 96.0
+		--Rev 99.0
+		SET @SqMtrRateCalculationforQuotEuro  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='SqMtrRateCalculationforQuotEuro' AND IsActive=1)
+		--End of Rev 99.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -499,6 +507,9 @@ BEGIN
 			,@IsAttendVisitShowInDashboard AS IsAttendVisitShowInDashboard
 			,@IsShowInPortalManualPhotoRegn AS IsShowInPortalManualPhotoRegn
 			--End of Rev 96.0
+			--Rev 99.0
+			,@SqMtrRateCalculationforQuotEuro AS SqMtrRateCalculationforQuotEuro
+			--End of Rev 99.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1185,5 +1196,16 @@ BEGIN
 		SELECT 'Leaveapprovalfromsupervisor' AS [Key],CONVERT(NVARCHAR(15),USR.Leaveapprovalfromsupervisor) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 97.0
+		--Rev 98.0
+		UNION ALL
+		SELECT 'IsIMEICheck' AS [Key],CONVERT(NVARCHAR(15),USR.IsIMEICheck) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsRestrictNearbyGeofence' AS [Key],CONVERT(NVARCHAR(15),USR.IsRestrictNearbyGeofence) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsQuotActivatedforEurobond' AS [Key],CONVERT(NVARCHAR(15),USR.IsQuotActivatedforEurobond) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 98.0
 	END
 END
