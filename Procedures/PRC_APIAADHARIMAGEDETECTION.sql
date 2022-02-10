@@ -19,6 +19,7 @@ AS
 /***************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 01/12/2021
 Purpose : For Aadhar Image Detection API.
+1.0		v2.0.27		Debashis	10-02-2022		New feature for DOB & name check only where aadhaar to be avoid.Refer: 0024683
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -47,7 +48,10 @@ BEGIN
 
 					SELECT USER_ID,NAMEONAADHAR,AADHAAR_NO,'Unique' AS STRMESSAGE FROM FSMUSERAADHARIMAGEDETECTION WHERE USER_ID=@USER_ID
 				END
-			IF EXISTS(SELECT USER_ID FROM FSMUSERAADHARIMAGEDETECTION WHERE NAMEONAADHAR=@NAMEONAADHAR OR AADHARDOB=@AADHARDOB OR AADHAAR_NO=@AADHAAR_NO)
+			--Rev 1.0
+			--IF EXISTS(SELECT USER_ID FROM FSMUSERAADHARIMAGEDETECTION WHERE NAMEONAADHAR=@NAMEONAADHAR OR AADHARDOB=@AADHARDOB OR AADHAAR_NO=@AADHAAR_NO)
+			IF EXISTS(SELECT USER_ID FROM FSMUSERAADHARIMAGEDETECTION WHERE NAMEONAADHAR=@NAMEONAADHAR AND AADHARDOB=@AADHARDOB)
+			--End of Rev 1.0
 				SELECT USER_ID,NAMEONAADHAR,AADHAAR_NO,'Duplicate' AS STRMESSAGE FROM FSMUSERAADHARIMAGEDETECTION WHERE NAMEONAADHAR=@NAMEONAADHAR OR AADHARDOB=@AADHARDOB OR AADHAAR_NO=@AADHAAR_NO
 		END
 
