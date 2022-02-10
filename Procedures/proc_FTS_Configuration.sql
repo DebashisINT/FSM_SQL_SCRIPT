@@ -114,6 +114,7 @@ BEGIN
 	97.0		Debashis	28-01-2022	ADD SETTINGS @Action='UserCheck' IsAttendVisitShowInDashboard,IsShowManualPhotoRegnInApp,Leaveapprovalfromsupervisorinteam & Leaveapprovalfromsupervisor.Row 624
 	98.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsIMEICheck,IsRestrictNearbyGeofence & IsQuotActivatedforEurobond.Row 634
 	99.0		Debashis	04-02-2022	ADD SETTINGS @Action='GlobalCheck' SqMtrRateCalculationforQuotEuro. Row 635
+	100.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsAlternateNoForCustomer & IsWhatsappNoForCustomer.Row 636
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1207,5 +1208,13 @@ BEGIN
 		SELECT 'IsQuotActivatedforEurobond' AS [Key],CONVERT(NVARCHAR(15),USR.IsQuotActivatedforEurobond) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 98.0
+		--Rev 100.0
+		UNION ALL
+		SELECT 'IsAlternateNoForCustomer' AS [Key],CONVERT(NVARCHAR(15),USR.IsAlternateNoForCustomer) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsWhatsappNoForCustomer' AS [Key],CONVERT(NVARCHAR(15),USR.IsWhatsappNoForCustomer) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 100.0
 	END
 END
