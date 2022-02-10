@@ -109,8 +109,12 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 --End of Rev 16.0
 --Rev 17.0
 @project_name NVARCHAR(max)=NULL,
-@landline_number NVARCHAR(100)=NULL
+@landline_number NVARCHAR(100)=NULL,
 --End of Rev 17.0
+--Rev 18.0
+@alternateNoForCustomer NVARCHAR(100)=NULL,
+@whatsappNoForCustomer NVARCHAR(100)=NULL
+--End of Rev 18.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -131,6 +135,7 @@ As
 15.0		Tanmoy			24-06-2021			INSERT revisit Code
 16.0		Debashis		09-12-2021			Two fields added as Agency_Name & Lead_Contact_Number.
 17.0		Debashis		19-01-2022			Two fields added as Project_Name & Landline_Number.
+18.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 638,640 & 641
 ************************************************************************************************************************************************/
 Begin
 
@@ -227,6 +232,7 @@ Begin
 
 							--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
 							--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
+							--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
 							INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
@@ -256,7 +262,7 @@ Begin
 										--Rev 13.0 End
 										,competitor_img
 										,Agency_Name,Lead_Contact_Number
-										,Project_Name,Landline_Number
+										,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer
 										)
 								 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,@user_id,@added_date,@type,@dob,@date_aniversary
 										,@shop_image,@shop_id,1,@added_date,1,@assigned_to_pp_id,@assigned_to_dd_id,@StateID,@amount,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,
@@ -287,7 +293,7 @@ Begin
 										--Rev 13.0 End
 										,@competitor_img
 										,@agency_name,@lead_contact_number
-										,@project_name,@landline_number
+										,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer
 										)
 
 							SET @COUNT=SCOPE_IDENTITY();
@@ -310,11 +316,13 @@ Begin
 
 									--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
 									--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
+									--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
 									select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 									,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 									,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 									,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
-									@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number
+									@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
+									@alternateNoForCustomer,@whatsappNoForCustomer
 
 									--1.0 Rev start
 									INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)

@@ -29,8 +29,8 @@ AS
 11.0		INDRANIL		16-02-2021			Get retailer_id,dealer_id,beat_id
 12.0		INDRANIL		17-02-2021			Get account_holder,account_no,bank_name,ifsc,upi_id
 13.0		Debashis		19-01-2022			Four fields added as Project_Name,Landline_Number,Agency_Name & Lead_Contact_Number.
+14.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 637
 ************************************************************************************************************************************************/
-
 BEGIN
 
 	declare @sql nvarchar(MAX)=''
@@ -89,8 +89,11 @@ BEGIN
 			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.assigned_to_shop_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.assigned_to_shop_id),'''')  END as assigned_to_shop_id,'
 			--Rev 12.0 End
 			--Rev 13.0
-			set @sql+='shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number '
+			set @sql+='shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number,'
 			--End of Rev 13.0
+			--Rev 14.0
+			set @sql+='shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer '
+			--End of Rev 14.0
 
 			set @sql+=' from tbl_Master_shop as shop  '
 			set @sql+=' INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id   '
@@ -160,8 +163,11 @@ BEGIN
 			--Rev 12.0 End
 			,CASE WHEN ISNULL(convert(varchar(10),shop.assigned_to_shop_id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.assigned_to_shop_id),'')  END as assigned_to_shop_id,
 			--Rev 13.0
-			shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number 
+			shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number,
 			--End of Rev 13.0
+			--Rev 14.0
+			shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer 
+			--End of Rev 14.0
 			
 			from tbl_Master_shop as shop
 			INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id 

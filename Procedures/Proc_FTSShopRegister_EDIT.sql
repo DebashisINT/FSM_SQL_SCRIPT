@@ -101,8 +101,12 @@ ALTER  Proc [dbo].[Proc_FTSShopRegister_EDIT]
 --End of Rev 14.0
 --Rev 15.0
 @project_name NVARCHAR(max)=NULL,
-@landline_number NVARCHAR(100)=NULL
+@landline_number NVARCHAR(100)=NULL,
 --End of Rev 15.0
+--Rev 16.0
+@alternateNoForCustomer NVARCHAR(100)=NULL,
+@whatsappNoForCustomer NVARCHAR(100)=NULL
+--End of Rev 16.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -121,6 +125,7 @@ As
 13.0	v2.0.25		Debashis		23-09-2021			Condition added for Shop_Image.
 14.0	v2.0.26		Debashis		09-12-2021			Two fields added as Agency_Name & Lead_Contact_Number.
 15.0	v2.0.26		Debashis		19-01-2022			Two fields added as Project_Name & Landline_Number.
+16.0	v2.0.27		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 639,642 & 643
 ************************************************************************************************************************************************/
 BEGIN
 	
@@ -263,6 +268,9 @@ BEGIN
 			--Rev 15.0
 			,Project_Name=@project_name,Landline_Number=@landline_number
 			--End of Rev 15.0
+			--Rev 16.0
+			,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
+			--End of Rev 16.0
 			 where Shop_Code=@shop_id
 	--Rev 13.0
 		END
@@ -283,6 +291,9 @@ BEGIN
 			--Rev 15.0
 			,Project_Name=@project_name,Landline_Number=@landline_number
 			--End of Rev 15.0
+			--Rev 16.0
+			,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
+			--End of Rev 16.0
 			WHERE Shop_Code=@shop_id
 		END
 	--End of Rev 13.0
@@ -308,6 +319,9 @@ BEGIN
 				   --Rev 15.0
 				   ,@project_name AS project_name,@landline_number AS landline_number
 				   --End of Rev 15.0
+				   --Rev 16.0
+				   ,@alternateNoForCustomer AS alternateNoForCustomer,@whatsappNoForCustomer AS whatsappNoForCustomer
+				   --End of Rev 16.0
 		END
 
 
