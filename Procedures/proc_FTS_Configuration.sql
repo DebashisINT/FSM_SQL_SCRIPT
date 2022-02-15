@@ -115,6 +115,7 @@ BEGIN
 	98.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsIMEICheck,IsRestrictNearbyGeofence & IsQuotActivatedforEurobond.Row 634
 	99.0		Debashis	04-02-2022	ADD SETTINGS @Action='GlobalCheck' SqMtrRateCalculationforQuotEuro. Row 635
 	100.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsAlternateNoForCustomer & IsWhatsappNoForCustomer.Row 636
+	101.0		Debashis	14-02-2022	ADD SETTINGS @Action='UserCheck' MarkAttendNotification & UpdateUserName.Row 644
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1216,5 +1217,13 @@ BEGIN
 		SELECT 'IsWhatsappNoForCustomer' AS [Key],CONVERT(NVARCHAR(15),USR.IsWhatsappNoForCustomer) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 100.0
+		--Rev 101.0
+		UNION ALL
+		SELECT 'MarkAttendNotification' AS [Key],CONVERT(NVARCHAR(15),USR.MarkAttendNotification) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'UpdateUserName' AS [Key],CONVERT(NVARCHAR(15),USR.UpdateUserName) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 101.0
 	END
 END
