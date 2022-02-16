@@ -47,6 +47,7 @@ Module	   : Employee Performance Details
 17.0	v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
 18.0	v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 19.0	v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
+20.0	v2.0.27		Debashis	16/02/2022		New Type=Lead (16) to be considered in the report.Refer: 0024676
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -554,8 +555,9 @@ BEGIN
 	--SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' END AS SHOP_TYPE '
 	--Rev 9.0
 	--SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' WHEN TYPE=5 THEN ''Diamond'' END AS SHOP_TYPE '
+	--Rev 20.0 && A new TYPE has been added as "Lead".
 	SET @Strsql+='CASE WHEN shop.TYPE=1 THEN ''Shop'' WHEN shop.TYPE=2 THEN ''PP'' WHEN shop.TYPE=3 THEN ''New Party'' WHEN shop.TYPE=4 THEN ''DD'' WHEN shop.TYPE=5 THEN ''Diamond'' '
-	SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
+	SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=16 THEN ''Lead'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
 	--Rev 18.0
 	SET @Strsql+='shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,'
 	--End of Rev 18.0
