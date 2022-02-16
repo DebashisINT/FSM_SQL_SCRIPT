@@ -1,4 +1,4 @@
---exec PRC_FTSSALESSUMMARY_REPORTDALY '2019-08-01','2020-06-30','','','',11706
+--EXEC PRC_FTSSALESSUMMARY_REPORTDALY '2021-12-01','2021-12-31','','','',11706
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSSALESSUMMARY_REPORTDALY]') AND type in (N'P', N'PC'))
 BEGIN
@@ -141,9 +141,7 @@ BEGIN
 	SET @Strsql+=' IDEAL_TIME,convert(varchar(10),IDEALTIME_CNT) as IDEALTIME_CNT,'
 	SET @Strsql+=' CASE WHEN WORK_TIME>0 THEN RIGHT(''0'' + CAST(CAST(WORK_TIME AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(WORK_TIME AS VARCHAR) % 60 AS VARCHAR),2) ELSE ''0'' END AS UNDERTIME, '
 	SET @Strsql+=' LATE_CNT,ISNULL(shop_visited,0) AS shop_visited ,ISNULL(Ordervalue,0) AS Ordervalue,ISNULL(collectionvalue,0) AS collectionvalue,cnt_UCC, '
-
-	SET @Strsql+=' CASE WHEN Total_Hrs_Worked>0 THEN RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR) % 60 AS VARCHAR),2) ELSE ''Not Logged out'' END AS Total_Hrs_Worked '
-	
+	SET @Strsql+=' CASE WHEN Total_Hrs_Worked>0 THEN RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR) % 60 AS VARCHAR),2) ELSE ''Not Logged out'' END AS Total_Hrs_Worked '	
 	SET @Strsql+='  FROM ( '
 	SET @Strsql+=' SELECT shop_visited,Ordervalue,collectionvalue, '
 	SET @Strsql+=' T.Mintime,T.Maxtime,USR.user_id ,CONT.cnt_UCC,CONT.cnt_internalId,cont.cnt_firstName+'' ''+cont.cnt_lastName as Employeename,LOginDate as login_date,T.LOGGEDIN as login_time,T.LOGEDOUT as logout_time,  '
@@ -167,20 +165,16 @@ BEGIN
 	SET @Strsql+=' OR  CONVERT(NVARCHAR(10),Leave_ToDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120))  '
 	SET @Strsql+=' AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) END AS WORK_LEAVE_TYPE,  '
 	SET @Strsql+=' RIGHT(''0'' + CAST(CAST(GPS_Inactive_duration AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(GPS_Inactive_duration AS VARCHAR) % 60 AS VARCHAR),2) AS GPS_Inactive_duration,  ' 
-
 	SET @Strsql+='CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGEDOUT,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(T.LOGEDOUT,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 	SET @Strsql+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(T.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS Total_Hrs_Worked,'
-
 	SET @Strsql+=' CASE WHEN CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGEDOUT,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(T.LOGEDOUT,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)  '
 	SET @Strsql+=' - CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(T.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)>0  THEN T.WORK_TIME  '
 	SET @Strsql+=' -(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGEDOUT,''00:00:00'')) * 60) AS FLOAT)  +CAST(DATEPART(MINUTE,ISNULL(T.LOGEDOUT,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 	SET @Strsql+=' - CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT)  +CAST(DATEPART(MINUTE,ISNULL(T.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)) ELSE T.WORK_TIME '
 	SET @Strsql+=' -(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(''23:59:00'',''00:00:00'')) * 60) AS FLOAT)  +CAST(DATEPART(MINUTE,ISNULL(''23:59:00'',''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)  '
 	SET @Strsql+=' - CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(T.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT)  +CAST(DATEPART(MINUTE,ISNULL(T.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)) END AS WORK_TIME, '
-
 	SET @Strsql+=' RIGHT(''0'' + CAST(CAST(IDEAL_TIME AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(IDEAL_TIME AS VARCHAR) % 60 AS VARCHAR),2) AS IDEAL_TIME,  convert(INT,isnull(IDEAL_TIME/30,0)) AS IDEALTIME_CNT,  '
 	SET @Strsql+=' CASE WHEN LTCNT.LATE_CNT=''Y'' THEN ''Late'' WHEN LTCNT.LATE_CNT=''L'' THEN ''On Leave'' ELSE ''On Time'' END AS LATE_CNT  from tbl_master_user as USR  '
-
 	SET @Strsql+=' INNER JOIN (  '
 	SET @Strsql+=' SELECT CONVERT(VARCHAR(15),CAST(MIN(A.Login_datetime) AS TIME),100) AS Mintime,CONVERT(VARCHAR(15),CAST(MAX(A.Logout_datetime) AS TIME),100) AS Maxtime,''At Work'' AS ATTEN_STATUS, '
 	SET @Strsql+=' SA.User_id,MIN(A.Login_datetime) AS SDate,CAST(SA.SDate AS DATE) AS LOginDate,MIN(A.Login_datetime) AS LOGGEDIN,MAX(A.Logout_datetime) AS LOGEDOUT,MAX(EMPWHD.WORK_TIME) AS WORK_TIME '
@@ -207,7 +201,6 @@ BEGIN
 	SET @Strsql+=' - CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(MIN(BeginTime),''00:00:00'')) * 60) AS FLOAT)  + CAST(DATEPART(MINUTE,ISNULL(MIN(BeginTime),''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS WORK_TIME FROM tbl_EmpWorkingHoursDetails GROUP BY hourId) EMPWHD ON  '
 	SET @Strsql+=' EMPWHD.hourId=EMPWH.Id   WHERE SA.LoginLogout=0  AND CONVERT(NVARCHAR(10),SA.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120)   '
 	SET @Strsql+=' GROUP BY SA.User_id,SA.LoginLogout,CAST(SA.SDate AS DATE)  )T ON USR.user_id=T.User_Id  '
-
 	SET @Strsql+=' LEFT OUTER JOIN (  '
 	SET @Strsql+=' SELECT USERID,LATE_CNT,LOGGEDIN FROM( SELECT A.User_Id AS USERID,MIN(Login_datetime) AS LOGGEDIN,  '
 	SET @Strsql+=' CASE WHEN A.Isonleave=''TRUE'' THEN ''L'' WHEN CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL((Login_datetime),''00:00:00'')) * 60) AS FLOAT)  '
@@ -227,18 +220,15 @@ BEGIN
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT add_cntId,add_state  FROM  tbl_master_address  where add_addressType=''Office'' )S on S.add_cntId=CONT.cnt_internalId   '
 	SET @Strsql+=' LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state  '
-
 	SET @Strsql+=' INNER JOIN (  '
 	SET @Strsql+=' select cnt.emp_cntId,desg.deg_designation,deg_id,MAx(emp_id) as emp_id from tbl_trans_employeeCTC as cnt   '
 	SET @Strsql+=' INNER JOIN tbl_master_designation as desg on desg.deg_id=cnt.emp_Designation group by emp_cntId,desg.deg_designation,desg.deg_id )N ON USR.user_contactId= N.emp_cntId  '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,USR.user_id,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO  '
 	SET @Strsql+=' FROM tbl_master_employee EMP   '
 	SET @Strsql+=' INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo   '
 	SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId   '
 	SET @Strsql+=' INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId ) RPTTO ON RPTTO.emp_cntId=CONT.cnt_internalId  '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT GPS.User_Id,GPS.GPsDate,CNT.cnt_internalId,CAST(ISNULL(CAST((SUM(DATEPART(HOUR,ISNULL(GPS.Duration,''00:00:00'')) * 60)) AS FLOAT)  '
 	SET @Strsql+=' +CAST(SUM(DATEPART(MINUTE,ISNULL(GPS.Duration,''00:00:00'')) * 1) AS FLOAT),0) AS VARCHAR(100)) AS GPS_Inactive_duration FROM tbl_FTS_GPSSubmission GPS  '
@@ -246,7 +236,6 @@ BEGIN
 	SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId  WHERE  '
 	SET @Strsql+=' CONVERT(NVARCHAR(10),GPS.GPsDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120)  AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120)  '
 	SET @Strsql+=' GROUP BY GPS.User_Id,CNT.cnt_internalId,GPS.GPsDate) GPSSM ON GPSSM.cnt_internalId=USR.user_contactId and cast(GPSSM.GPsDate as date)=LOginDate  '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT user_id,SUM(IDEAL_TIME) AS IDEAL_TIME,CAST(start_ideal_date_time AS DATE) AS start_ideal_date_time FROM( '
 	SET @Strsql+=' SELECT user_id,start_ideal_date_time,CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(end_ideal_date_time,''00:00:00'')) * 60) AS FLOAT)  '
@@ -256,7 +245,6 @@ BEGIN
 	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),start_ideal_date_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) ) IDLE  '
 	SET @Strsql+=' GROUP BY user_id,CAST(start_ideal_date_time AS DATE)) IDEALLOACTION  '
 	SET @Strsql+=' ON IDEALLOACTION.user_id=USR.user_id AND CAST(T.SDATE AS DATE)=CAST(IDEALLOACTION.start_ideal_date_time AS DATE)  '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT User_Id,Sum(shop_visited) AS shop_visited,datea FROM( '
 	SET @Strsql+=' SELECT SHOPACT.User_Id,COUNT(SHOPACT.Shop_Id) AS shop_visited,cast(SHOPACT.visited_time as date)as datea FROM tbl_trans_shopActivitysubmit SHOPACT '
@@ -278,23 +266,19 @@ BEGIN
 	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+=' AND SHOPACT.Is_Newshopadd=0 GROUP BY SHOPACT.User_Id,cast(visited_time as date)) SHOPACT GROUP BY SHOPACT.User_Id,SHOPACT.datea  '
 	SET @Strsql+=' ) SHOPACST ON SHOPACST.User_Id=USR.user_id AND SHOPACST.datea=LOginDate '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT ORDH.userID,SUM(ISNULL(Ordervalue,0)) AS Ordervalue,CAST(ORDH.Orderdate AS DATE) AS ORDDATE FROM tbl_trans_fts_Orderupdate ORDH  '
 	SET @Strsql+=' INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID  '
 	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120)  '
 	SET @Strsql+=' GROUP BY ORDH.userID,CAST(ORDH.Orderdate AS DATE) '
 	SET @Strsql+=' ) ORDHEAD ON USR.user_id=ORDHEAD.userID AND ORDHEAD.ORDDATE=LOginDate '
-
 	SET @Strsql+=' LEFT OUTER JOIN ( '
 	SET @Strsql+=' SELECT COLLEC.user_id,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue,CAST(COLLEC.collection_date AS DATE) AS COLDATE FROM tbl_FTS_collection COLLEC '
 	SET @Strsql+=' INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id  '
 	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+=' GROUP BY COLLEC.user_id,CAST(COLLEC.collection_date AS DATE)  '
 	SET @Strsql+=' ) COLLEC ON COLLEC.user_id=USR.user_id AND COLLEC.COLDATE=LOginDate  '
-
 	SET @Strsql+=' WHERE LOginDate between '''+@FROMDATE+'''  AND '''+@TODATE+'''  '
-
 	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
 		SET @Strsql+=' AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=STAT.id) '
 	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID=''
@@ -322,14 +306,10 @@ BEGIN
 			SET @Strsql+=' AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=N.deg_id) '
 			SET @Strsql+=' AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CONT.cnt_internalId) '
 		END
-
-
 	SET @Strsql+='GROUP BY T.Mintime,T.Maxtime,USR.user_id,cont.cnt_firstName,T.LOGEDOUT,T.LOGGEDIN,T.WORK_TIME,GPSSM.GPS_Inactive_duration,IDEALLOACTION.IDEAL_TIME,LTCNT.LATE_CNT,  '
 	SET @Strsql+='cont.cnt_lastName,T.SDate,LOginDate,STAT.state,USR.user_loginId,  N.deg_designation,RPTTO.REPORTTO,T.ATTEN_STATUS,shop_visited,Ordervalue,collectionvalue,cnt_UCC,STAT.id '
 	SET @Strsql+=',N.deg_id,CONT.cnt_internalId,BR.branch_description '
 	SET @Strsql+=') TAB   ORDER BY TAB.login_date  '
-
-
 
   --SELECT  @Strsql
   EXEC SP_EXECUTESQL @Strsql
