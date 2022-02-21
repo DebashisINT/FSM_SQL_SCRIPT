@@ -112,10 +112,12 @@ BEGIN
 	95.0		Debashis	10-01-2022	ADD SETTINGS @Action='UserCheck' IslandlineforCustomer & IsprojectforCustomer. Row 614
 	96.0		Debashis	28-01-2022	ADD SETTINGS @Action='GlobalCheck' IsAttendVisitShowInDashboard & IsShowInPortalManualPhotoRegn. Row 623
 	97.0		Debashis	28-01-2022	ADD SETTINGS @Action='UserCheck' IsAttendVisitShowInDashboard,IsShowManualPhotoRegnInApp,Leaveapprovalfromsupervisorinteam & Leaveapprovalfromsupervisor.Row 624
-	98.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsIMEICheck,IsRestrictNearbyGeofence & IsQuotActivatedforEurobond.Row 634
+	98.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsIMEICheck,IsRestrictNearbyGeofence & IsNewQuotationfeatureOn.Row 634 & 655
 	99.0		Debashis	04-02-2022	ADD SETTINGS @Action='GlobalCheck' SqMtrRateCalculationforQuotEuro. Row 635
 	100.0		Debashis	04-02-2022	ADD SETTINGS @Action='UserCheck' IsAlternateNoForCustomer & IsWhatsappNoForCustomer.Row 636
 	101.0		Debashis	14-02-2022	ADD SETTINGS @Action='UserCheck' MarkAttendNotification & UpdateUserName.Row 644
+	102.0		Debashis	21-02-2022	ADD SETTINGS @Action='UserCheck' IsNewQuotationNumberManual,ShowQuantityNewQuotation & ShowAmountNewQuotation.Row 653
+	103.0		Debashis	21-02-2022	ADD SETTINGS @Action='GlobalCheck' NewQuotationRateCaption & NewQuotationShowTermsAndCondition. Row 654
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -221,6 +223,10 @@ BEGIN
 	--Rev 99.0
 	,@SqMtrRateCalculationforQuotEuro DECIMAL(18,2)
 	--End of Rev 99.0
+	--Rev 103.0
+	,@NewQuotationRateCaption NVARCHAR(50)
+	,@NewQuotationShowTermsAndCondition BIT
+	--End of Rev 103.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -377,6 +383,10 @@ BEGIN
 		--Rev 99.0
 		SET @SqMtrRateCalculationforQuotEuro  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='SqMtrRateCalculationforQuotEuro' AND IsActive=1)
 		--End of Rev 99.0
+		--Rev 103.0
+		SET @NewQuotationRateCaption =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NewQuotationRateCaption' AND IsActive=1)
+		SET @NewQuotationShowTermsAndCondition =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NewQuotationShowTermsAndCondition' AND IsActive=1)
+		--End of Rev 103.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -512,6 +522,10 @@ BEGIN
 			--Rev 99.0
 			,@SqMtrRateCalculationforQuotEuro AS SqMtrRateCalculationforQuotEuro
 			--End of Rev 99.0
+			--Rev 103.0
+			,@NewQuotationRateCaption AS NewQuotationRateCaption
+			,@NewQuotationShowTermsAndCondition AS NewQuotationShowTermsAndCondition
+			--End of Rev 103.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1206,7 +1220,7 @@ BEGIN
 		SELECT 'IsRestrictNearbyGeofence' AS [Key],CONVERT(NVARCHAR(15),USR.IsRestrictNearbyGeofence) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		UNION ALL
-		SELECT 'IsQuotActivatedforEurobond' AS [Key],CONVERT(NVARCHAR(15),USR.IsQuotActivatedforEurobond) AS [Value] 
+		SELECT 'IsNewQuotationfeatureOn' AS [Key],CONVERT(NVARCHAR(15),USR.IsNewQuotationfeatureOn) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 98.0
 		--Rev 100.0
@@ -1225,5 +1239,16 @@ BEGIN
 		SELECT 'UpdateUserName' AS [Key],CONVERT(NVARCHAR(15),USR.UpdateUserName) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 101.0
+		--Rev 102.0
+		UNION ALL
+		SELECT 'IsNewQuotationNumberManual' AS [Key],CONVERT(NVARCHAR(15),USR.IsNewQuotationNumberManual) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowQuantityNewQuotation' AS [Key],CONVERT(NVARCHAR(15),USR.ShowQuantityNewQuotation) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowAmountNewQuotation' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAmountNewQuotation) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 102.0
 	END
 END
