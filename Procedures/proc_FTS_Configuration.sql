@@ -221,7 +221,7 @@ BEGIN
 	,@IsShowInPortalManualPhotoRegn BIT
 	--End of Rev 96.0
 	--Rev 99.0
-	,@SqMtrRateCalculationforQuotEuro DECIMAL(18,2)
+	,@SqMtrRateCalculationforQuotEuro DECIMAL(18,3)
 	--End of Rev 99.0
 	--Rev 103.0
 	,@NewQuotationRateCaption NVARCHAR(50)
