@@ -118,6 +118,7 @@ BEGIN
 	101.0		Debashis	14-02-2022	ADD SETTINGS @Action='UserCheck' MarkAttendNotification & UpdateUserName.Row 644
 	102.0		Debashis	21-02-2022	ADD SETTINGS @Action='UserCheck' IsNewQuotationNumberManual,ShowQuantityNewQuotation & ShowAmountNewQuotation.Row 653
 	103.0		Debashis	21-02-2022	ADD SETTINGS @Action='GlobalCheck' NewQuotationRateCaption & NewQuotationShowTermsAndCondition. Row 654
+	104.0		Debashis	23-02-2022	ADD SETTINGS @Action='UserCheck' IsAllowClickForPhotoRegister & IsAllowClickForVisit.Row 656
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1250,5 +1251,13 @@ BEGIN
 		SELECT 'ShowAmountNewQuotation' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAmountNewQuotation) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 102.0
+		--Rev 104.0
+		UNION ALL
+		SELECT 'IsAllowClickForPhotoRegister' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowClickForPhotoRegister) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsAllowClickForVisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowClickForVisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 104.0
 	END
 END
