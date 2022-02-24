@@ -37,6 +37,21 @@ BEGIN
 	
 	DECLARE @HEADERID BIGINT
 
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
 	IF @ACTION='SAVEDATA'
 		BEGIN
 			IF EXISTS(SELECT QUOTATION_NUMBER FROM FSMAPIQUOTATIONHEAD WHERE QUOTATION_NUMBER=@QUOTATION_NUMBER)
@@ -94,13 +109,27 @@ BEGIN
 			SELECT QH.QUOTATION_NUMBER AS quotation_number,QH.QUOTATIONSAVE_DATE AS save_date_time,QH.QUOTATION_DATE_SELECTION AS quotation_date_selection,QH.PROJECT_NAME AS project_name,
 			QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,
 			QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,
-			QH.QUOTATION_CREATED_LAT AS quotation_created_lat,QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,QHD.PROD_ID AS product_id,
-			MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
+			QH.QUOTATION_CREATED_LAT AS quotation_created_lat,QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,
+			MS.Shop_Owner_Email AS shop_email,MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,
+			QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,
+			CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
 			FROM FSMAPIQUOTATIONHEAD QH
 			INNER JOIN FSMAPIQUOTATIONDETAILS QHD ON QH.ID=QHD.HEADID AND QH.QUOTATION_NUMBER=QHD.QUOTATION_NUMBER AND QH.SHOP_ID=QHD.SHOP_ID
 			INNER JOIN tbl_Master_shop MS ON QH.SHOP_ID=MS.Shop_Code
 			INNER JOIN Master_sProducts MP ON QHD.PROD_ID=MP.sProducts_ID
 			LEFT OUTER JOIN Master_Color MC ON QHD.COLOR_ID=MC.Color_ID
+			LEFT OUTER JOIN (
+			SELECT USR.user_id,ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'')<>'' THEN ' ' ELSE '' END)+ISNULL(CNT.CNT_LASTNAME,'') AS salesman_name,
+			DESG.deg_designation AS salesman_designation,USR.user_loginId AS salesman_login_id,ME.eml_email AS salesman_email,MP.phf_phoneNumber AS salesman_phone_no
+			FROM #TEMPCONTACT CNT
+			INNER JOIN TBL_MASTER_USER USR ON CNT.cnt_internalId=USR.user_contactId
+			INNER JOIN (
+			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+			LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL 
+			GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=CNT.cnt_internalId
+			LEFT OUTER JOIN TBL_MASTER_EMAIL ME ON CNT.cnt_internalId=ME.eml_internalId AND ME.eml_type='Official'
+			LEFT OUTER JOIN TBL_MASTER_PHONEFAX MP ON CNT.cnt_internalId=MP.phf_cntId AND MP.phf_type='Office'
+			) SM ON QH.SALESMAN_USER_ID=SM.user_id
 			WHERE QH.QUOTATION_NUMBER=@QUOTATION_NUMBER
 		END
 	ELSE IF @ACTION='UPDATEDATA'
@@ -133,6 +162,8 @@ BEGIN
 					SELECT 'Deleted' AS STRMESSAGE FROM FSMAPIQUOTATIONHEAD
 				END
 		END
+
+	DROP TABLE #TEMPCONTACT
 
 	SET NOCOUNT OFF
 END
