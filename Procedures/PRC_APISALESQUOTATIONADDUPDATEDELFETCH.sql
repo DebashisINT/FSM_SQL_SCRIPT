@@ -106,13 +106,13 @@ BEGIN
 		END
 	ELSE IF @ACTION='SHOWQUOTATIONDETAILS'
 		BEGIN
-			SELECT QH.QUOTATION_NUMBER AS quotation_number,QH.QUOTATIONSAVE_DATE AS save_date_time,QH.QUOTATION_DATE_SELECTION AS quotation_date_selection,QH.PROJECT_NAME AS project_name,
-			QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,
-			QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,
-			QH.QUOTATION_CREATED_LAT AS quotation_created_lat,QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,
-			MS.Shop_Owner_Email AS shop_email,MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,
-			QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,
-			CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
+			SELECT QH.QUOTATION_NUMBER AS quotation_number,CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,105)+' '+CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,108) AS save_date_time,
+			CONVERT(NVARCHAR(10),QH.QUOTATION_DATE_SELECTION,105) AS quotation_date_selection,QH.PROJECT_NAME AS project_name,QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,
+			QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,
+			QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_CREATED_LAT AS quotation_created_lat,
+			QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,MS.Shop_Owner_Email AS shop_email,
+			MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,
+			QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
 			FROM FSMAPIQUOTATIONHEAD QH
 			INNER JOIN FSMAPIQUOTATIONDETAILS QHD ON QH.ID=QHD.HEADID AND QH.QUOTATION_NUMBER=QHD.QUOTATION_NUMBER AND QH.SHOP_ID=QHD.SHOP_ID
 			INNER JOIN tbl_Master_shop MS ON QH.SHOP_ID=MS.Shop_Code
