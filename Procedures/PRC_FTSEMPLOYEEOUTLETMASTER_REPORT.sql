@@ -1,5 +1,5 @@
 --EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2020-04-01','2021-11-30','1','EMB0000017,EMP0000020',378
---EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2020-04-01','2021-11-30','','',378
+--EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2022-02-27','2022-02-28','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -19,6 +19,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 03/11/2021
 Module	   : Employee Outlet Master.Refer: 0024448
+1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -49,20 +50,22 @@ BEGIN
 			EXEC SP_EXECUTESQL @SqlStrTable
 		END
 
-	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
-		DROP TABLE #TEMPCONTACT
-	CREATE TABLE #TEMPCONTACT
-		(
-			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_branchid INT,
-			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
-		)
-	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	--Rev 1.0
+	--IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+	--	DROP TABLE #TEMPCONTACT
+	--CREATE TABLE #TEMPCONTACT
+	--	(
+	--		cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+	--		cnt_branchid INT,
+	--		cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+	--		cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+	--		cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+	--		cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+	--	)
+	--CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	--End of Rev 1.0
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
@@ -93,8 +96,37 @@ BEGIN
 			SELECT EMPCODE,RPTTOEMPCODE FROM cte 
 		END
 
+	--Rev 1.0
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			INSERT INTO #TEMPCONTACT
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
+		END
+	ELSE
+		BEGIN
+			INSERT INTO #TEMPCONTACT
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+		END
+	--End of Rev 1.0
+
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEOUTLETMASTER_REPORT') AND TYPE IN (N'U'))
 		BEGIN
+			--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
 			CREATE TABLE FTSEMPLOYEEOUTLETMASTER_REPORT
 			(
 			  USERID INT,
@@ -111,9 +143,11 @@ BEGIN
 			  DATEOFJOINING NVARCHAR(10),
 			  CONTACTNO NVARCHAR(50) NULL,
 			  REPORTTOID NVARCHAR(300) NULL,
+			  REPORTTOUID NVARCHAR(100),
 			  REPORTTO NVARCHAR(300) NULL,
 			  RPTTODESG NVARCHAR(50) NULL,
 			  HREPORTTOID NVARCHAR(300) NULL,
+			  HREPORTTOUID NVARCHAR(100),
 			  HREPORTTO NVARCHAR(300) NULL,
 			  HRPTTODESG NVARCHAR(50) NULL,
 			  OUTLETID NVARCHAR(100),
@@ -127,13 +161,14 @@ BEGIN
 		END
 	DELETE FROM FTSEMPLOYEEOUTLETMASTER_REPORT WHERE USERID=@USERID
 
+	--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
 	SET @Strsql=''
-	SET @Strsql='INSERT INTO FTSEMPLOYEEOUTLETMASTER_REPORT(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTO,RPTTODESG,'
-	SET @Strsql+='HREPORTTOID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG) '
+	SET @Strsql='INSERT INTO FTSEMPLOYEEOUTLETMASTER_REPORT(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTOUID,REPORTTO,'
+	SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG) '
 	SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY CNT.cnt_internalId) AS SEQ,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
-	SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,MS.EntityCode AS OUTLETID,'
+	SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,MS.EntityCode AS OUTLETID,'
 	SET @Strsql+='MS.Shop_Name AS OUTLETNAME,MS.Address AS OUTLETADDRESS,MS.Shop_Owner_Contact AS OUTLETCONTACT,MS.Shop_Lat AS OUTLETLAT,MS.Shop_Long AS OUTLETLANG '
 	SET @Strsql+='FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -146,7 +181,10 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @Strsql+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS REPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
-	SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+	--Rev 1.0
+	--SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+	SET @Strsql+='DESG.deg_designation AS RPTTODESG,CNT.cnt_UCC AS REPORTTOUID FROM tbl_master_employee EMP '
+	--End of Rev 1.0
 	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @Strsql+='INNER JOIN ('
@@ -155,7 +193,10 @@ BEGIN
 	SET @Strsql+=') DESG ON DESG.emp_cntId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL '
 	SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS HREPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS HREPORTTO,'
-	SET @Strsql+='DESG.deg_designation AS HRPTTODESG FROM tbl_master_employee EMP '
+	--Rev 1.0
+	--SET @Strsql+='DESG.deg_designation AS HRPTTODESG FROM tbl_master_employee EMP '
+	SET @Strsql+='DESG.deg_designation AS HRPTTODESG,CNT.cnt_UCC AS HREPORTTOUID FROM tbl_master_employee EMP '
+	--End of Rev 1.0
 	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @Strsql+='INNER JOIN ('
@@ -164,7 +205,10 @@ BEGIN
 	SET @Strsql+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL) HRPTTO ON HRPTTO.emp_cntId=RPTTO.REPORTTOID '
 	SET @Strsql+='LEFT OUTER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
-	SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
+	--Rev 1.0
+	--SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
+	SET @Strsql+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
+	--End of Rev 1.0
 	SET @Strsql+='AND CONVERT(NVARCHAR(10),MS.Shop_CreateTime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @BRANCHID<>''
 		SET @StrSql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
