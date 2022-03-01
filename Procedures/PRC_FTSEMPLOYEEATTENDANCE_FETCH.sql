@@ -1,4 +1,4 @@
---EXEC PRC_FTSEMPLOYEEATTENDANCE_FETCH '2020-04-01','2021-11-30','1','',378
+--EXEC PRC_FTSEMPLOYEEATTENDANCE_FETCH '2022-02-27','2022-02-28','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEATTENDANCE_FETCH]') AND type in (N'P', N'PC'))
 BEGIN
@@ -18,6 +18,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 18/11/2021
 Module	   : Employee Attendance.Refer: 0024461
+1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -107,8 +108,12 @@ BEGIN
 	SET @SqlStr+='SELECT BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @SqlStr+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
-	SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,DAYSTARTEND.DAYSTTIME,DAYSTARTEND.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTO,'
-	SET @SqlStr+='HRPTTO.HRPTTODESG FROM tbl_master_employee EMP '
+	--Rev 1.0
+	--SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,DAYSTARTEND.DAYSTTIME,DAYSTARTEND.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTO,'
+	--SET @SqlStr+='HRPTTO.HRPTTODESG FROM tbl_master_employee EMP '
+	SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,DAYSTARTEND.DAYSTTIME,DAYSTARTEND.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,'
+	SET @SqlStr+='HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG FROM tbl_master_employee EMP '
+	--End of Rev 1.0
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
@@ -119,7 +124,10 @@ BEGIN
 	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @SqlStr+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS REPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
-	SET @SqlStr+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+	--Rev 1.0
+	--SET @SqlStr+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+	SET @SqlStr+='DESG.deg_designation AS RPTTODESG,CNT.cnt_UCC AS REPORTTOUID FROM tbl_master_employee EMP '
+	--End of Rev 1.0
 	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN ('
@@ -128,7 +136,10 @@ BEGIN
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL '
 	SET @SqlStr+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 	SET @SqlStr+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS HREPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS HREPORTTO,'
-	SET @SqlStr+='DESG.deg_designation AS HRPTTODESG FROM tbl_master_employee EMP '
+	--Rev 1.0
+	--SET @SqlStr+='DESG.deg_designation AS HRPTTODESG FROM tbl_master_employee EMP '
+	SET @SqlStr+='DESG.deg_designation AS HRPTTODESG,CNT.cnt_UCC AS HREPORTTOUID FROM tbl_master_employee EMP '
+	--End of Rev 1.0
 	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN ('
@@ -165,7 +176,10 @@ BEGIN
 	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) '
 	SET @SqlStr+='GROUP BY DAYSTEND.User_Id '
 	SET @SqlStr+=') DAYSTEND GROUP BY USERID) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id '
-	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
+	--Rev 1.0
+	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
+	SET @SqlStr+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
+	--End of Rev 1.0
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 	IF @EMPID<>''
