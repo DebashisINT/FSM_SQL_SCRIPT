@@ -31,6 +31,7 @@ Purpose : For API/FaceRegistration/UserList & API/FaceRegistration/FaceMatch API
 10.0	v2.0.26		Debashis	18-01-2022		A new fields has been added.Row No: 613
 11.0	v2.0.26		Debashis	31-01-2022		A new fields has been added.Row No: 630 & 631
 12.0	v2.0.27		Debashis	23-02-2022		A new fields has been added.Row No: 657
+13.0	v2.0.27		Debashis	02-03-2022		A new fields has been added.Row No: 664
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 1.0
@@ -68,8 +69,11 @@ BEGIN
 			USR.IsShowManualPhotoRegnInApp,USR.IsTeamAttenWithoutPhoto,
 			--End of Rev 11.0
 			--Rev 12.0
-			USR.IsAllowClickForVisitForSpecificUser
+			USR.IsAllowClickForVisitForSpecificUser,
 			--End of Rev 12.0
+			--Rev 13.0
+			CASE WHEN USR.user_inactive='N' THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsActiveUser
+			--End of Rev 13.0
 			FROM FTS_EmployeeShopMap MAP
 			INNER JOIN TBL_MASTER_USER USR ON MAP.USER_ID=USR.USER_ID
 			--Rev 4.0
