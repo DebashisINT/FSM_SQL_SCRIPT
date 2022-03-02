@@ -1,9 +1,11 @@
+--EXEC [Proc_FTC_OrderListDetails_ShopList] 11986,''
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Proc_FTC_OrderListDetails_ShopList]') AND type in (N'P', N'PC')) 
  BEGIN 
  EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Proc_FTC_OrderListDetails_ShopList] AS'  
  END 
  GO 
- ---exec [Proc_FTC_OrderListDetails_ShopList] 11734,'2021-04-12'
+ 
 ALTER PROCEDURE [dbo].[Proc_FTC_OrderListDetails_ShopList]
 (
 @user_id varchar(60)=NULL,
@@ -22,11 +24,10 @@ BEGIN
 	SET @SQL='select  OrderCode as order_id,convert(varchar(50),isnull(count(OrderId),0)) as total_orderlist_count  from 
 	 tbl_trans_fts_Orderupdate ordr
 			group by OrderCode,userID,ORDERDATE
-			having   userID='+@user_id+' ' 
+			having userID='+@user_id+' ' 
  
 	if(ISNULL(@Date,'')<>'')
-			SET @SQL +='
-			and  CONVERT(NVARCHAR(10),ORDERDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@Date+''',120) AND CONVERT(NVARCHAR(10),'''+@Date+''',120)'
+			SET @SQL +=' and  CONVERT(NVARCHAR(10),ORDERDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@Date+''',120) AND CONVERT(NVARCHAR(10),'''+@Date+''',120)'
 
 	EXEC SP_EXECUTESQL @SQL
 
@@ -66,7 +67,7 @@ BEGIN
 		SET @SQL+=',ORDDET.Product_Qty as qty  '
 		SET @SQL+=',ORDDET.Product_Price as total_price  '
 		SET @SQL+=',ORDDET.Product_Rate as rate,'
-		SET @SQL+='ORDDET.Scheme_Qty AS scheme_qty,ORDDET.Scheme_Rate AS scheme_rate,ORDDET.Total_Scheme_Price AS total_scheme_price,ORDDET.MRP '
+		SET @SQL+='ISNULL(ORDDET.Scheme_Qty,0.00) AS scheme_qty,ISNULL(ORDDET.Scheme_Rate,0.00) AS scheme_rate,ISNULL(ORDDET.Total_Scheme_Price,0.00) AS total_scheme_price,ISNULL(ORDDET.MRP,0.00) AS MRP '
 		SET @SQL+='FROM tbl_trans_fts_Orderupdate as ORDHEAD	'
 		SET @SQL+='INNER JOIN tbl_FTs_OrderdetailsProduct ORDDET ON ORDHEAD.OrderId=ORDDET.Order_ID	'
 		SET @SQL+='INNER JOIN Master_sProducts PROD ON PROD.sProducts_ID=ORDDET.Product_Id	'
