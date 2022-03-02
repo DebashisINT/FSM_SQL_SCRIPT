@@ -119,6 +119,7 @@ BEGIN
 	102.0		Debashis	21-02-2022	ADD SETTINGS @Action='UserCheck' IsNewQuotationNumberManual,ShowQuantityNewQuotation & ShowAmountNewQuotation.Row 653
 	103.0		Debashis	21-02-2022	ADD SETTINGS @Action='GlobalCheck' NewQuotationRateCaption & NewQuotationShowTermsAndCondition. Row 654
 	104.0		Debashis	23-02-2022	ADD SETTINGS @Action='UserCheck' IsAllowClickForPhotoRegister & IsAllowClickForVisit.Row 656
+	105.0		Debashis	01-03-2022	ADD SETTINGS @Action='UserCheck' ShowUserwiseLeadMenu.Row 659
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1259,5 +1260,10 @@ BEGIN
 		SELECT 'IsAllowClickForVisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowClickForVisit) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 104.0
+		--Rev 105.0
+		UNION ALL
+		SELECT 'ShowUserwiseLeadMenu' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwiseLeadMenu) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 105.0
 	END
 END
