@@ -19,6 +19,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 18/11/2021
 Module	   : Employee Attendance Summary.Refer: 0024461
+1.0		v2.0.27		Debashis	03/03/2022		Enhancement done.Refer: 0024715
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -168,7 +169,10 @@ BEGIN
 	SET @SqlStr+='AND NOT EXISTS(SELECT DAYSTEND.User_Id FROM FSMUSERWISEDAYSTARTEND DAYSTEND WHERE ATTEN.User_Id=DAYSTEND.USER_ID AND ISEND=0) '
 	SET @SqlStr+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @SqlStr+=') NLD GROUP BY USERID,cnt_internalId) NOLOGOUT ON NOLOGOUT.cnt_internalId=CNT.cnt_internalId AND NOLOGOUT.USERID=USR.user_id '
-	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
+	--Rev 1.0
+	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
+	SET @SqlStr+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
+	--End of Rev 1.0
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 	IF @EMPID<>''
