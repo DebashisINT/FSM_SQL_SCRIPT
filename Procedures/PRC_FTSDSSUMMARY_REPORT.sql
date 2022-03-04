@@ -1,4 +1,4 @@
---EXEC PRC_FTSDSSUMMARY_REPORT '2022-02-27','2022-02-27','','',378
+--EXEC PRC_FTSDSSUMMARY_REPORT '2022-01-01','2022-02-28','1,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSDSSUMMARY_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -19,6 +19,7 @@ AS
 Written by : Debashis Talukder ON 22/11/2021
 Module	   : Employee DS Summary.Refer: 0024492
 1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
+2.0		v2.0.27		Debashis	04/03/2022		Query optimized.Refer: 0024733
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -105,6 +106,33 @@ BEGIN
 			INSERT INTO #TEMPCONTACT
 			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 		END
+
+	--Rev 2.0
+	IF OBJECT_ID('tempdb..#TMPATTENLOGINOUT') IS NOT NULL
+		DROP TABLE #TMPATTENLOGINOUT
+	CREATE TABLE #TMPATTENLOGINOUT
+	(USERID BIGINT,LOGGEDIN NVARCHAR(10),LOGEDOUT NVARCHAR(10),cnt_internalId NVARCHAR(10),Login_datetime NVARCHAR(10))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINOUT(USERID,cnt_internalId,Login_datetime)
+
+	SET @SqlStr=''
+	SET @SqlStr='INSERT INTO #TMPATTENLOGINOUT(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime) '
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,'
+	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL '
+	SET @SqlStr+='AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,'
+	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NULL '
+	SET @SqlStr+='AND Logout_datetime IS NOT NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+
+	--SELECT @SqlStr
+	EXEC SP_EXECUTESQL @SqlStr
+	--End of Rev 2.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSDSSUMMARY_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -203,24 +231,30 @@ BEGIN
 	SET @SqlStr+='WHERE EMPCTC.emp_effectiveuntil IS NULL) HRPTTO ON HRPTTO.emp_cntId=RPTTO.REPORTTOID '
 	SET @SqlStr+='INNER JOIN ('
 	SET @SqlStr+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime FROM( '
-	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
-	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-	SET @SqlStr+='UNION ALL '
-	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
-	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
-	SET @SqlStr+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	--Rev 2.0
+	--SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
+	--SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	--SET @SqlStr+='UNION ALL '
+	--SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
+	--SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	--SET @SqlStr+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	SET @SqlStr+='SELECT USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime FROM #TMPATTENLOGINOUT '
+	--End of Rev 2.0
 	SET @SqlStr+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT User_Id,cnt_internalId,VISITED_TIME,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,'
-	SET @SqlStr+='SUM(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(SPENT_DURATION,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(SPENT_DURATION,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)) AS SPENT_DURATION '
+	--Rev 2.0
+	--SET @SqlStr+='SUM(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(SPENT_DURATION,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(SPENT_DURATION,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT)) AS SPENT_DURATION '
+	SET @SqlStr+='SUM(CAST(SUBSTRING(SPENT_DURATION,1,2) AS INT)*60+CAST(SUBSTRING(SPENT_DURATION,4,2) AS INT)) AS SPENT_DURATION '
+	--End of Rev 2.0
 	SET @SqlStr+='FROM('
 	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
@@ -274,6 +308,9 @@ BEGIN
 	DROP TABLE #BRANCH_LIST
 	DROP TABLE #TEMPCONTACT
 	DROP TABLE #EMPLOYEE_LIST
+	--Rev 2.0
+	DROP TABLE #TMPATTENLOGINOUT
+	--End of Rev 2.0
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 	BEGIN
