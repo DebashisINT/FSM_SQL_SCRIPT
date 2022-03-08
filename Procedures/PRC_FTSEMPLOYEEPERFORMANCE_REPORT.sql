@@ -48,6 +48,8 @@ Module	   : Employee Performance Details
 18.0	v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 19.0	v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
 20.0	v2.0.27		Debashis	16/02/2022		New Type=Lead (16) to be considered in the report.Refer: 0024676
+21.0	v2.0.27		Debashis	08/03/2022		Some new TYPES have been added as "Architect","Fabricator","Consultant","Dealer","Builder","Corporate","Govt. Bodies",
+												"End User" & "Distributor".Refer: 0024734
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -193,7 +195,10 @@ BEGIN
 			  DATEOFJOINING NVARCHAR(10),
 			  REPORTTO NVARCHAR(300) NULL,
 			  RPTTODESG NVARCHAR(50) NULL,
-			  SHOP_TYPE NVARCHAR(10),
+			  --Rev 21.0
+			  --SHOP_TYPE NVARCHAR(10),
+			  SHOP_TYPE NVARCHAR(50),
+			  --End of Rev 21.0
 			  SHOP_CODE NVARCHAR(100),
 			  SHOP_NAME NVARCHAR(300) NULL,
 			  --Rev 10.0
@@ -556,8 +561,11 @@ BEGIN
 	--Rev 9.0
 	--SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' WHEN TYPE=5 THEN ''Diamond'' END AS SHOP_TYPE '
 	--Rev 20.0 && A new TYPE has been added as "Lead".
-	SET @Strsql+='CASE WHEN shop.TYPE=1 THEN ''Shop'' WHEN shop.TYPE=2 THEN ''PP'' WHEN shop.TYPE=3 THEN ''New Party'' WHEN shop.TYPE=4 THEN ''DD'' WHEN shop.TYPE=5 THEN ''Diamond'' '
-	SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=16 THEN ''Lead'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
+	--Rev 21.0 && Some new TYPES have been added as "Architect","Fabricator","Consultant","Dealer","Builder","Corporate","Govt. Bodies","End User" & "Distributor".
+	SET @Strsql+='CASE WHEN shop.TYPE=1 THEN ''Shop'' WHEN shop.TYPE=2 THEN ''Prime Partner'' WHEN shop.TYPE=3 THEN ''New Party'' WHEN shop.TYPE=4 THEN ''Distributor'' WHEN shop.TYPE=5 THEN ''Diamond'' '
+	SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=16 THEN ''Lead'' '
+	SET @Strsql+='WHEN shop.TYPE=17 THEN ''Architect'' WHEN shop.TYPE=18 THEN ''Fabricator'' WHEN shop.TYPE=19 THEN ''Consultant'' WHEN shop.TYPE=20 THEN ''Dealer'' WHEN shop.TYPE=21 THEN ''Builder'' '
+	SET @Strsql+='WHEN shop.TYPE=22 THEN ''Corporate'' WHEN shop.TYPE=23 THEN ''Govt. Bodies'' WHEN shop.TYPE=24 THEN ''End User'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
 	--Rev 18.0
 	SET @Strsql+='shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,'
 	--End of Rev 18.0
