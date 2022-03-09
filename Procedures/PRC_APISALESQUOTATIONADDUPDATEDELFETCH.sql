@@ -127,7 +127,7 @@ BEGIN
 			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
 			LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL 
 			GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=CNT.cnt_internalId
-			LEFT OUTER JOIN TBL_MASTER_EMAIL ME ON CNT.cnt_internalId=ME.eml_internalId AND ME.eml_type='Official'
+			LEFT OUTER JOIN TBL_MASTER_EMAIL ME ON CNT.cnt_internalId=ME.eml_cntId AND ME.eml_type='Official'
 			LEFT OUTER JOIN TBL_MASTER_PHONEFAX MP ON CNT.cnt_internalId=MP.phf_cntId AND MP.phf_type='Office'
 			) SM ON QH.SALESMAN_USER_ID=SM.user_id
 			WHERE QH.QUOTATION_NUMBER=@QUOTATION_NUMBER
