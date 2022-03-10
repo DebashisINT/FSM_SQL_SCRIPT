@@ -50,6 +50,8 @@ Module	   : Employee Performance Details
 20.0	v2.0.27		Debashis	16/02/2022		New Type=Lead (16) to be considered in the report.Refer: 0024676
 21.0	v2.0.27		Debashis	08/03/2022		Some new TYPES have been added as "Architect","Fabricator","Consultant","Dealer","Builder","Corporate","Govt. Bodies",
 												"End User" & "Distributor".Refer: 0024734
+22.0	v2.0.28		Debashis	10/203/2022		System is getting logout while generating Performance summary in Nordusk.This was happening due to "Address" field with
+												too much SPACE.Now it has been rectified.Refer: 0024744
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -179,7 +181,10 @@ BEGIN
 			  --Rev 14.0
 			  BRANCHDESC NVARCHAR(300),
 			  --End of Rev 14.0
-			  OFFICE_ADDRESS NVARCHAR(300),
+			  --Rev 22.0
+			  --OFFICE_ADDRESS NVARCHAR(300),
+			  OFFICE_ADDRESS NVARCHAR(2000),
+			  --End of Rev 22.0
 			  ATTEN_STATUS NVARCHAR(20),
 			  --Rev 3.0
 			  WORK_LEAVE_TYPE NVARCHAR(2000) NULL,
