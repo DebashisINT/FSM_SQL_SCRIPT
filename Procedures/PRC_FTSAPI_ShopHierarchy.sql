@@ -1,4 +1,4 @@
---EXEC PRC_FTSAPI_ShopHierarchy @user_id=12201,@area_id='858',@SHOP_CODE=''
+--EXEC PRC_FTSAPI_ShopHierarchy @user_id=11722,@area_id='',@SHOP_CODE=''
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSAPI_ShopHierarchy]') AND type in (N'P', N'PC'))
 BEGIN
@@ -13,7 +13,7 @@ ALTER PROC [dbo].[PRC_FTSAPI_ShopHierarchy]
 @user_id BIGINT
 ) --WITH ENCRYPTION
 AS  
-/************************************************************************************************
+/************************************************************************************************************************************************************************************************
 1.0		V2.0.7		TANMOY		02-03-2020		CREATE SP 
 2.0		V2.0.8		TANMOY		03-03-2020		shope details show empty
 3.0				    TANMOY		11-05-2020		add column Entity_Code
@@ -21,7 +21,9 @@ AS
 5.0					TANMOY		20-05-2020		ONLY ACTIVE SHOP show in  LIST
 6.0					TANMOY		12-06-2020		Extar column show
 7.0					TANMOY		23-06-2020		Extar column show
-************************************************************************************************/ 
+8.0		v2.0.27		Debashis	10-03-2022		New types are not coming in the All team view party section.Architect, fabricator,Consultant,Dealer,Builder,Corporate,Govt. Bodies,End User.
+												Refer: 0024743
+************************************************************************************************************************************************************************************************/ 
 BEGIN
 	 DECLARE @SHOP_TYPE NVARCHAR(10)
 	 SET @SHOP_TYPE=(SELECT TYPE FROM tbl_Master_shop WHERE Shop_Code=@SHOP_CODE)
@@ -62,6 +64,19 @@ BEGIN
 				INSERT INTO #tMPFirst_Id VaLUeS(8)
 				--END OF REV DEBASHIS
 			END
+			--Rev 8.0
+			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(17,18,19,20,21,22,23,24) AND Shop_CreateUser=@user_id)
+			BEGIN
+				INSERT INTO #tMPFirst_Id VaLUeS(17)
+				INSERT INTO #tMPFirst_Id VaLUeS(18)
+				INSERT INTO #tMPFirst_Id VaLUeS(19)
+				INSERT INTO #tMPFirst_Id VaLUeS(20)
+				INSERT INTO #tMPFirst_Id VaLUeS(21)
+				INSERT INTO #tMPFirst_Id VaLUeS(22)
+				INSERT INTO #tMPFirst_Id VaLUeS(23)
+				INSERT INTO #tMPFirst_Id VaLUeS(24)
+			END
+			--End of Rev 8.0
 			ELSE
 			BEGIN
 				--REV DEBASHIS
@@ -100,6 +115,19 @@ BEGIN
 				INSERT INTO #tMPFirst_Id VaLUeS(8)
 				--END OF REV DEBASHIS
 			END
+			--Rev 8.0
+			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(17,18,19,20,21,22,23,24) AND Shop_CreateUser=@user_id)
+			BEGIN
+				INSERT INTO #tMPFirst_Id VaLUeS(17)
+				INSERT INTO #tMPFirst_Id VaLUeS(18)
+				INSERT INTO #tMPFirst_Id VaLUeS(19)
+				INSERT INTO #tMPFirst_Id VaLUeS(20)
+				INSERT INTO #tMPFirst_Id VaLUeS(21)
+				INSERT INTO #tMPFirst_Id VaLUeS(22)
+				INSERT INTO #tMPFirst_Id VaLUeS(23)
+				INSERT INTO #tMPFirst_Id VaLUeS(24)
+			END
+			--End of Rev 8.0
 			ELSE
 			BEGIN
 				--SET @First_Id='0'
