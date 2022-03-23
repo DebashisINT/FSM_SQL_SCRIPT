@@ -22,12 +22,16 @@ ALTER PROCEDURE [dbo].[PRC_FTSTEAMVISITDASHBOARD_REPORT]
 @EMPID NVARCHAR(MAX)=NULL,
 @ACTION NVARCHAR(20),
 @RPTTYPE NVARCHAR(20),
+--Rev 1.0
+@BRANCHID NVARCHAR(MAX)=NULL,
+--End of Rev 1.0
 @USERID INT
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 09/02/2022
 Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
+1.0		v2.0.28		Debashis	23-03-2022		FSM - Portal: Branch selection required in 'Team Visit' against the selected 'State'.Refer: 0024742
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -68,6 +72,20 @@ BEGIN
 			SET @SqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@EMPID+')'
 			EXEC SP_EXECUTESQL @SqlStrTable
 		END
+
+	--Rev 1.0
+	IF OBJECT_ID('tempdb..#BRANCHID_LIST') IS NOT NULL
+		DROP TABLE #BRANCHID_LIST
+	CREATE TABLE #BRANCHID_LIST (Branch_Id INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #BRANCHID_LIST (Branch_Id ASC)
+	IF @BRANCHID <> ''
+		BEGIN
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable=''
+			SET @sqlStrTable=' INSERT INTO #BRANCHID_LIST SELECT branch_id from tbl_master_branch where branch_id in('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+	--End of Rev 1.0
 
 	IF OBJECT_ID('tempdb..#TEMPNOTLOGIN') IS NOT NULL
 		DROP TABLE #TEMPNOTLOGIN
@@ -163,8 +181,19 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			IF @STATEID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			--IF @STATEID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			IF @STATEID<>'' AND @BRANCHID=''
+				SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			IF @STATEID='' AND @BRANCHID<>''
+				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			IF @STATEID<>'' AND @BRANCHID<>''
+				BEGIN
+					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+				END
+			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 
@@ -183,6 +212,10 @@ BEGIN
 			SET @Strsql+='WHERE USR.user_inactive=''N'' '
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC (@Strsql)
 
@@ -199,9 +232,14 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,ATTEN.Isonleave) ATTEN '
-			SET @Strsql+='ON ATTEN.cnt_internalId=CNT.cnt_internalId WHERE USR.user_inactive=''N'' '
+			SET @Strsql+='ON ATTEN.cnt_internalId=CNT.cnt_internalId '
+			SET @Strsql+='WHERE USR.user_inactive=''N'' '
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC (@Strsql)
 
@@ -213,8 +251,19 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			IF @STATEID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			--IF @STATEID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			IF @STATEID<>'' AND @BRANCHID=''
+				SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			IF @STATEID='' AND @BRANCHID<>''
+				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			IF @STATEID<>'' AND @BRANCHID<>''
+				BEGIN
+					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+				END
+			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK,0 AS ON_LEAVE '
 			SET @Strsql+='FROM tbl_master_employee EMP '
@@ -229,6 +278,10 @@ BEGIN
 			SET @Strsql+='WHERE USR.user_inactive=''N'' '
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(ATTENLILO.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTENLILO.ON_LEAVE) END AS ON_LEAVE '
 			SET @Strsql+='FROM tbl_master_employee EMP '
@@ -244,6 +297,10 @@ BEGIN
 			SET @Strsql+='WHERE USR.user_inactive=''N'' '
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--Rev 1.0
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--End of Rev 1.0
 			SET @Strsql+=') AS NOTLOGIN '
 			--SELECT @Strsql
 			EXEC (@Strsql)
@@ -939,6 +996,9 @@ BEGIN
 	DROP TABLE #TEMPCONTACT
 	DROP TABLE #TEMPNOTLOGIN
 	DROP TABLE #TEMPSHOPUSER
+	--Rev 1.0
+	DROP TABLE #BRANCHID_LIST
+	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END
