@@ -4,7 +4,7 @@ EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Proc_FTSShopRegister_EDI
 END
 GO
 
-ALTER  Proc [dbo].[Proc_FTSShopRegister_EDIT]
+ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 (
 @session_token  varchar(MAX),
 @user_id  varchar(MAX),
@@ -126,6 +126,9 @@ As
 14.0	v2.0.26		Debashis		09-12-2021			Two fields added as Agency_Name & Lead_Contact_Number.
 15.0	v2.0.26		Debashis		19-01-2022			Two fields added as Project_Name & Landline_Number.
 16.0	v2.0.27		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 639,642 & 643
+17.0	v2.0.28		Debashis		24-03-2022			UPDATE ADDRESS - API CALL FROM APP IS MAKING BLANK TBL_MASTER_SHOP FOR FEW FIELDS 
+														LIKE 'ENTITY CODE'. There may be some more fields that to be coditional with ISNULL CHECK.
+														Refer: 0024762
 ************************************************************************************************************************************************/
 BEGIN
 	
@@ -229,72 +232,175 @@ BEGIN
 	IF @shop_image='' OR @shop_image IS NULL
 		BEGIN
 	--End of Rev 13.0
-			UPDATE  [tbl_Master_shop] SET [Shop_Name]=@shop_name,[Address]=@address,[Pincode]=@pin_code,[Shop_Lat]=@shop_lat,[Shop_Long]=@shop_long         
-			,[Shop_Owner]=@owner_name,[Shop_Owner_Email]=@owner_email,[Shop_Owner_Contact]=@owner_contact_no,[type]=@type,dob=@dob,stateId=@StateID
-			--Rev 13.0
-			--,date_aniversary=@date_aniversary,[Shop_Image]=@shop_image,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id
-			,date_aniversary=@date_aniversary,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id
-			--End of Rev 13.0
-			,Amount=@amount
-			--Rev 3.0 Start
-			,EntityCode=@EntityCode,Entity_Location=@Entity_Location,Alt_MobileNo=@Alt_MobileNo,Entity_Status=@Entity_Status,Entity_Type=@Entity_Type,
-			ShopOwner_PAN=@ShopOwner_PAN,ShopOwner_Aadhar=@ShopOwner_Aadhar,Remarks=@EntityRemarks,Area_id=@AreaId,Shop_City=@CityId
-			--Rev 3.0 End
-			--Rev 4.0 Start
-			,LastUpdated_By=@Entered_by,LastUpdated_On=GETDATE()
-			--Rev 4.0 End
-			--Rev 7.0 Start
-			,Model_id=@model_id,Primary_id=@primary_app_id,Secondary_id=@secondary_app_id,Lead_id=@lead_id,FunnelStage_id=@funnel_stage_id,
-			Stage_id=@stage_id,Booking_amount=@booking_amount
-			--Rev 7.0 End
-			--Rev 8.0 Start
-			,PartyType_id=@PartyType_id
-			--Rev 8.0 End
-			--Rev 9.0 Start
-			,Entity_Id=@entity_id,Party_status_id=@party_status_id
-			--Rev 9.0 End
-			--Rev 10.0 Start
-			,retailer_id=@retailer_id,dealer_id=@dealer_id,beat_id=@beat_id
-			--Rev 10.0 End
-			--Rev 11.0 Start
-			,assigned_to_shop_id=@assigned_to_shop_id
-			--Rev 11.0 End
-			--Rev 12.0 Start
-			,actual_address=@actual_address
-			--Rev 12.0 End
-			--Rev 14.0
-			,Agency_Name=@agency_name,Lead_Contact_Number=@lead_contact_number
-			--End of Rev 14.0
-			--Rev 15.0
-			,Project_Name=@project_name,Landline_Number=@landline_number
-			--End of Rev 15.0
-			--Rev 16.0
-			,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
-			--End of Rev 16.0
+			--Rev 17.0
+			--UPDATE  [tbl_Master_shop] SET [Shop_Name]=@shop_name,[Address]=@address,[Pincode]=@pin_code,[Shop_Lat]=@shop_lat,[Shop_Long]=@shop_long         
+			--,[Shop_Owner]=@owner_name,[Shop_Owner_Email]=@owner_email,[Shop_Owner_Contact]=@owner_contact_no,[type]=@type,dob=@dob,stateId=@StateID
+			----Rev 13.0
+			----,date_aniversary=@date_aniversary,[Shop_Image]=@shop_image,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id
+			--,date_aniversary=@date_aniversary,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id
+			----End of Rev 13.0
+			--,Amount=@amount
+			----Rev 3.0 Start
+			--,EntityCode=@EntityCode,Entity_Location=@Entity_Location,Alt_MobileNo=@Alt_MobileNo,Entity_Status=@Entity_Status,Entity_Type=@Entity_Type,
+			--ShopOwner_PAN=@ShopOwner_PAN,ShopOwner_Aadhar=@ShopOwner_Aadhar,Remarks=@EntityRemarks,Area_id=@AreaId,Shop_City=@CityId
+			----Rev 3.0 End
+			----Rev 4.0 Start
+			--,LastUpdated_By=@Entered_by,LastUpdated_On=GETDATE()
+			----Rev 4.0 End
+			----Rev 7.0 Start
+			--,Model_id=@model_id,Primary_id=@primary_app_id,Secondary_id=@secondary_app_id,Lead_id=@lead_id,FunnelStage_id=@funnel_stage_id,
+			--Stage_id=@stage_id,Booking_amount=@booking_amount
+			----Rev 7.0 End
+			----Rev 8.0 Start
+			--,PartyType_id=@PartyType_id
+			----Rev 8.0 End
+			----Rev 9.0 Start
+			--,Entity_Id=@entity_id,Party_status_id=@party_status_id
+			----Rev 9.0 End
+			----Rev 10.0 Start
+			--,retailer_id=@retailer_id,dealer_id=@dealer_id,beat_id=@beat_id
+			----Rev 10.0 End
+			----Rev 11.0 Start
+			--,assigned_to_shop_id=@assigned_to_shop_id
+			----Rev 11.0 End
+			----Rev 12.0 Start
+			--,actual_address=@actual_address
+			----Rev 12.0 End
+			----Rev 14.0
+			--,Agency_Name=@agency_name,Lead_Contact_Number=@lead_contact_number
+			----End of Rev 14.0
+			----Rev 15.0
+			--,Project_Name=@project_name,Landline_Number=@landline_number
+			----End of Rev 15.0
+			----Rev 16.0
+			--,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
+			----End of Rev 16.0
+			-- where Shop_Code=@shop_id
+			 
+			 UPDATE [tbl_Master_shop] SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
+			 [Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
+			 [Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
+			 [Shop_Lat]=CASE WHEN @shop_lat IS NULL OR @shop_lat='' THEN [Shop_Lat] ELSE @shop_lat END,
+			 [Shop_Long]=CASE WHEN @shop_long IS NULL OR @shop_long='' THEN [Shop_Long] ELSE @shop_long END,
+			 [Shop_Owner]=CASE WHEN @owner_name IS NULL OR @owner_name='' THEN [Shop_Owner] ELSE @owner_name END,
+			 [Shop_Owner_Email]=CASE WHEN @owner_email IS NULL OR @owner_email='' THEN [Shop_Owner_Email] ELSE @owner_email END,
+			 [Shop_Owner_Contact]=CASE WHEN @owner_contact_no IS NULL OR @owner_contact_no='' THEN [Shop_Owner_Contact] ELSE @owner_contact_no END,
+			 [type]=CASE WHEN @type IS NULL OR @type='' THEN [type] ELSE @type END,
+			 dob=CASE WHEN @dob IS NULL OR @dob='' THEN [dob] ELSE @dob END,
+			 stateId=CASE WHEN @StateID IS NULL OR @StateID='' THEN [stateId] ELSE @StateID END,
+			 date_aniversary=CASE WHEN @date_aniversary IS NULL OR @date_aniversary='' THEN [date_aniversary] ELSE @date_aniversary END,
+			 assigned_to_pp_id=CASE WHEN @assigned_to_pp_id IS NULL OR @assigned_to_pp_id='' THEN [assigned_to_pp_id] ELSE @assigned_to_pp_id END,
+			 assigned_to_dd_id=CASE WHEN @assigned_to_dd_id IS NULL OR @assigned_to_dd_id='' THEN [assigned_to_dd_id] ELSE @assigned_to_dd_id END,
+			 Amount=CASE WHEN @amount IS NULL OR @amount='' THEN [Amount] ELSE @amount END,
+			 EntityCode=CASE WHEN @EntityCode IS NULL OR @EntityCode='' THEN EntityCode ELSE @EntityCode END,
+			 Entity_Location=CASE WHEN @Entity_Location IS NULL OR @Entity_Location='' THEN Entity_Location ELSE @Entity_Location END,
+			 Alt_MobileNo=CASE WHEN @Alt_MobileNo IS NULL OR @Alt_MobileNo='' THEN [Alt_MobileNo] ELSE @Alt_MobileNo END,
+			 Entity_Status=CASE WHEN @Entity_Status IS NULL OR @Entity_Status='' THEN [Entity_Status] ELSE @Entity_Status END,
+			 Entity_Type=CASE WHEN @Entity_Type IS NULL OR @Entity_Type='' THEN [Entity_Type] ELSE @Entity_Type END,
+			 ShopOwner_PAN=CASE WHEN @ShopOwner_PAN IS NULL OR @ShopOwner_PAN='' THEN [ShopOwner_PAN] ELSE @ShopOwner_PAN END,
+			 ShopOwner_Aadhar=CASE WHEN @ShopOwner_Aadhar IS NULL OR @ShopOwner_Aadhar='' THEN [ShopOwner_Aadhar] ELSE @ShopOwner_Aadhar END,
+			 Remarks=CASE WHEN @EntityRemarks IS NULL OR @EntityRemarks='' THEN [Remarks] ELSE @EntityRemarks END,
+			 Area_id=CASE WHEN @AreaId IS NULL OR @AreaId='' THEN [Area_id] ELSE @AreaId END,
+			 Shop_City=CASE WHEN @CityId IS NULL OR @CityId='' THEN [Shop_City] ELSE @CityId END,
+			 LastUpdated_By=CASE WHEN @Entered_by IS NULL OR @Entered_by='' THEN [LastUpdated_By] ELSE @Entered_by END,LastUpdated_On=GETDATE(),
+			 Model_id=CASE WHEN @model_id IS NULL OR @model_id=0 THEN [Model_id] ELSE @model_id END,
+			 Primary_id=CASE WHEN @primary_app_id IS NULL OR @primary_app_id=0 THEN [Primary_id] ELSE @primary_app_id END,
+			 Secondary_id=CASE WHEN @secondary_app_id IS NULL OR @secondary_app_id=0 THEN [Secondary_id] ELSE @secondary_app_id END,
+			 Lead_id=CASE WHEN @lead_id IS NULL OR @lead_id=0 THEN [Lead_id] ELSE @lead_id END,
+			 FunnelStage_id=CASE WHEN @funnel_stage_id IS NULL OR @funnel_stage_id='' THEN [FunnelStage_id] ELSE @funnel_stage_id END,
+			 Stage_id=CASE WHEN @stage_id IS NULL OR @stage_id='' THEN [Stage_id] ELSE @stage_id END,
+			 Booking_amount=@booking_amount,
+			 PartyType_id=CASE WHEN @PartyType_id IS NULL OR @PartyType_id=0 THEN [PartyType_id] ELSE @PartyType_id END,
+			 Entity_Id=CASE WHEN @entity_id IS NULL OR @entity_id='' THEN [Entity_Id] ELSE @entity_id END,
+			 Party_status_id=CASE WHEN @party_status_id IS NULL OR @party_status_id='' THEN [Party_Status_id] ELSE @party_status_id END,
+			 retailer_id=CASE WHEN @retailer_id IS NULL OR @retailer_id='' THEN [retailer_id] ELSE @retailer_id END,
+			 dealer_id=CASE WHEN @dealer_id IS NULL OR @dealer_id='' THEN [dealer_id] ELSE @dealer_id END,
+			 beat_id=CASE WHEN @beat_id IS NULL OR @beat_id='' THEN [beat_id] ELSE @beat_id END,
+			 assigned_to_shop_id=CASE WHEN @assigned_to_shop_id IS NULL OR @assigned_to_shop_id='' THEN [assigned_to_shop_id] ELSE @assigned_to_shop_id END,
+			 actual_address=CASE WHEN @actual_address IS NULL OR @actual_address='' THEN [actual_address] ELSE @actual_address END,
+			 Agency_Name=CASE WHEN @agency_name IS NULL OR @agency_name='' THEN [Agency_Name] ELSE @agency_name END,
+			 Lead_Contact_Number=CASE WHEN @lead_contact_number IS NULL OR @lead_contact_number='' THEN [Lead_Contact_Number] ELSE @lead_contact_number END,
+			 Project_Name=CASE WHEN @project_name IS NULL OR @project_name='' THEN [Project_Name] ELSE @project_name END,
+			 Landline_Number=CASE WHEN @landline_number IS NULL OR @landline_number='' THEN [Landline_Number] ELSE @landline_number END,
+			 AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
+			 WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END
 			 where Shop_Code=@shop_id
+			 --End of Rev 17.0
 	--Rev 13.0
 		END
 	ELSE IF @shop_image<>'' OR @shop_image IS NOT NULL
 		BEGIN
-			UPDATE [tbl_Master_shop] SET [Shop_Name]=@shop_name,[Address]=@address,[Pincode]=@pin_code,[Shop_Lat]=@shop_lat,[Shop_Long]=@shop_long,
-			[Shop_Owner]=@owner_name,[Shop_Owner_Email]=@owner_email,[Shop_Owner_Contact]=@owner_contact_no,[type]=@type,dob=@dob,stateId=@StateID,
-			date_aniversary=@date_aniversary,[Shop_Image]=@shop_image,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id,Amount=@amount,
-			EntityCode=@EntityCode,Entity_Location=@Entity_Location,Alt_MobileNo=@Alt_MobileNo,Entity_Status=@Entity_Status,Entity_Type=@Entity_Type,
-			ShopOwner_PAN=@ShopOwner_PAN,ShopOwner_Aadhar=@ShopOwner_Aadhar,Remarks=@EntityRemarks,Area_id=@AreaId,Shop_City=@CityId,
-			LastUpdated_By=@Entered_by,LastUpdated_On=GETDATE(),
-			Model_id=@model_id,Primary_id=@primary_app_id,Secondary_id=@secondary_app_id,Lead_id=@lead_id,FunnelStage_id=@funnel_stage_id,
-			Stage_id=@stage_id,Booking_amount=@booking_amount,PartyType_id=@PartyType_id,Entity_Id=@entity_id,Party_status_id=@party_status_id,
-			retailer_id=@retailer_id,dealer_id=@dealer_id,beat_id=@beat_id,assigned_to_shop_id=@assigned_to_shop_id,actual_address=@actual_address
-			--Rev 14.0
-			,Agency_Name=@agency_name,Lead_Contact_Number=@lead_contact_number
-			--End of Rev 14.0
-			--Rev 15.0
-			,Project_Name=@project_name,Landline_Number=@landline_number
-			--End of Rev 15.0
-			--Rev 16.0
-			,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
-			--End of Rev 16.0
+			 --Rev 17.0
+			--UPDATE [tbl_Master_shop] SET [Shop_Name]=@shop_name,[Address]=@address,[Pincode]=@pin_code,[Shop_Lat]=@shop_lat,[Shop_Long]=@shop_long,
+			--[Shop_Owner]=@owner_name,[Shop_Owner_Email]=@owner_email,[Shop_Owner_Contact]=@owner_contact_no,[type]=@type,dob=@dob,stateId=@StateID,
+			--date_aniversary=@date_aniversary,[Shop_Image]=@shop_image,assigned_to_pp_id=@assigned_to_pp_id,assigned_to_dd_id=@assigned_to_dd_id,Amount=@amount,
+			--EntityCode=@EntityCode,
+			--Entity_Location=@Entity_Location,Alt_MobileNo=@Alt_MobileNo,Entity_Status=@Entity_Status,Entity_Type=@Entity_Type,
+			--ShopOwner_PAN=@ShopOwner_PAN,ShopOwner_Aadhar=@ShopOwner_Aadhar,Remarks=@EntityRemarks,Area_id=@AreaId,Shop_City=@CityId,
+			--LastUpdated_By=@Entered_by,LastUpdated_On=GETDATE(),
+			--Model_id=@model_id,Primary_id=@primary_app_id,Secondary_id=@secondary_app_id,Lead_id=@lead_id,FunnelStage_id=@funnel_stage_id,
+			--Stage_id=@stage_id,Booking_amount=@booking_amount,PartyType_id=@PartyType_id,Entity_Id=@entity_id,Party_status_id=@party_status_id,
+			--retailer_id=@retailer_id,dealer_id=@dealer_id,beat_id=@beat_id,assigned_to_shop_id=@assigned_to_shop_id,actual_address=@actual_address
+			----Rev 14.0
+			--,Agency_Name=@agency_name,Lead_Contact_Number=@lead_contact_number
+			----End of Rev 14.0
+			----Rev 15.0
+			--,Project_Name=@project_name,Landline_Number=@landline_number
+			----End of Rev 15.0
+			----Rev 16.0
+			--,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
+			----End of Rev 16.0
+			--WHERE Shop_Code=@shop_id
+			UPDATE [tbl_Master_shop] SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
+			[Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
+			[Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
+			[Shop_Lat]=CASE WHEN @shop_lat IS NULL OR @shop_lat='' THEN [Shop_Lat] ELSE @shop_lat END,
+			[Shop_Long]=CASE WHEN @shop_long IS NULL OR @shop_long='' THEN [Shop_Long] ELSE @shop_long END,
+			[Shop_Owner]=CASE WHEN @owner_name IS NULL OR @owner_name='' THEN [Shop_Owner] ELSE @owner_name END,
+			[Shop_Owner_Email]=CASE WHEN @owner_email IS NULL OR @owner_email='' THEN [Shop_Owner_Email] ELSE @owner_email END,
+			[Shop_Owner_Contact]=CASE WHEN @owner_contact_no IS NULL OR @owner_contact_no='' THEN [Shop_Owner_Contact] ELSE @owner_contact_no END,
+			[type]=CASE WHEN @type IS NULL OR @type='' THEN [type] ELSE @type END,
+			dob=CASE WHEN @dob IS NULL OR @dob='' THEN [dob] ELSE @dob END,
+			stateId=CASE WHEN @StateID IS NULL OR @StateID='' THEN [stateId] ELSE @StateID END,
+			date_aniversary=CASE WHEN @date_aniversary IS NULL OR @date_aniversary='' THEN [date_aniversary] ELSE @date_aniversary END,
+			[Shop_Image]=@shop_image,
+			assigned_to_pp_id=CASE WHEN @assigned_to_pp_id IS NULL OR @assigned_to_pp_id='' THEN [assigned_to_pp_id] ELSE @assigned_to_pp_id END,
+			assigned_to_dd_id=CASE WHEN @assigned_to_dd_id IS NULL OR @assigned_to_dd_id='' THEN [assigned_to_dd_id] ELSE @assigned_to_dd_id END,
+			Amount=CASE WHEN @amount IS NULL OR @amount='' THEN [Amount] ELSE @amount END,
+			EntityCode=CASE WHEN @EntityCode IS NULL OR @EntityCode='' THEN EntityCode ELSE @EntityCode END,
+			Entity_Location=CASE WHEN @Entity_Location IS NULL OR @Entity_Location='' THEN Entity_Location ELSE @Entity_Location END,
+			Alt_MobileNo=CASE WHEN @Alt_MobileNo IS NULL OR @Alt_MobileNo='' THEN [Alt_MobileNo] ELSE @Alt_MobileNo END,
+			Entity_Status=CASE WHEN @Entity_Status IS NULL OR @Entity_Status='' THEN [Entity_Status] ELSE @Entity_Status END,
+			Entity_Type=CASE WHEN @Entity_Type IS NULL OR @Entity_Type='' THEN [Entity_Type] ELSE @Entity_Type END,
+			ShopOwner_PAN=CASE WHEN @ShopOwner_PAN IS NULL OR @ShopOwner_PAN='' THEN [ShopOwner_PAN] ELSE @ShopOwner_PAN END,
+			ShopOwner_Aadhar=CASE WHEN @ShopOwner_Aadhar IS NULL OR @ShopOwner_Aadhar='' THEN [ShopOwner_Aadhar] ELSE @ShopOwner_Aadhar END,
+			Remarks=CASE WHEN @EntityRemarks IS NULL OR @EntityRemarks='' THEN [Remarks] ELSE @EntityRemarks END,
+			Area_id=CASE WHEN @AreaId IS NULL OR @AreaId='' THEN [Area_id] ELSE @AreaId END,
+			Shop_City=CASE WHEN @CityId IS NULL OR @CityId='' THEN [Shop_City] ELSE @CityId END,
+			LastUpdated_By=CASE WHEN @Entered_by IS NULL OR @Entered_by='' THEN [LastUpdated_By] ELSE @Entered_by END,LastUpdated_On=GETDATE(),
+			Model_id=CASE WHEN @model_id IS NULL OR @model_id=0 THEN [Model_id] ELSE @model_id END,
+			Primary_id=CASE WHEN @primary_app_id IS NULL OR @primary_app_id=0 THEN [Primary_id] ELSE @primary_app_id END,
+			Secondary_id=CASE WHEN @secondary_app_id IS NULL OR @secondary_app_id=0 THEN [Secondary_id] ELSE @secondary_app_id END,
+			Lead_id=CASE WHEN @lead_id IS NULL OR @lead_id=0 THEN [Lead_id] ELSE @lead_id END,
+			FunnelStage_id=CASE WHEN @funnel_stage_id IS NULL OR @funnel_stage_id='' THEN [FunnelStage_id] ELSE @funnel_stage_id END,
+			Stage_id=CASE WHEN @stage_id IS NULL OR @stage_id='' THEN [Stage_id] ELSE @stage_id END,
+			Booking_amount=@booking_amount,
+			PartyType_id=CASE WHEN @PartyType_id IS NULL OR @PartyType_id=0 THEN [PartyType_id] ELSE @PartyType_id END,
+			Entity_Id=CASE WHEN @entity_id IS NULL OR @entity_id='' THEN [Entity_Id] ELSE @entity_id END,
+			Party_status_id=CASE WHEN @party_status_id IS NULL OR @party_status_id='' THEN [Party_Status_id] ELSE @party_status_id END,
+			retailer_id=CASE WHEN @retailer_id IS NULL OR @retailer_id='' THEN [retailer_id] ELSE @retailer_id END,
+			dealer_id=CASE WHEN @dealer_id IS NULL OR @dealer_id='' THEN [dealer_id] ELSE @dealer_id END,
+			beat_id=CASE WHEN @beat_id IS NULL OR @beat_id='' THEN [beat_id] ELSE @beat_id END,
+			assigned_to_shop_id=CASE WHEN @assigned_to_shop_id IS NULL OR @assigned_to_shop_id='' THEN [assigned_to_shop_id] ELSE @assigned_to_shop_id END,
+			actual_address=CASE WHEN @actual_address IS NULL OR @actual_address='' THEN [actual_address] ELSE @actual_address END,
+			Agency_Name=CASE WHEN @agency_name IS NULL OR @agency_name='' THEN [Agency_Name] ELSE @agency_name END,
+			Lead_Contact_Number=CASE WHEN @lead_contact_number IS NULL OR @lead_contact_number='' THEN [Lead_Contact_Number] ELSE @lead_contact_number END,
+			Project_Name=CASE WHEN @project_name IS NULL OR @project_name='' THEN [Project_Name] ELSE @project_name END,
+			Landline_Number=CASE WHEN @landline_number IS NULL OR @landline_number='' THEN [Landline_Number] ELSE @landline_number END,
+			AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
+			WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END
 			WHERE Shop_Code=@shop_id
+			 --End of Rev 17.0
 		END
 	--End of Rev 13.0
 
