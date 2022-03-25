@@ -20,6 +20,8 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 04/03/2022
 Module	   : Team Visit Attendance Summary.Refer: 0024720
+1.0		v2.0.28		Debashis	25/03/2022		FSM : Team Visit report and Employee Attendance report Chages required:
+												'Total Days absent' should be calculated (Total working days - (minus) Total Days Present).Refer: 0024763
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -152,8 +154,13 @@ BEGIN
 	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN ('
-	SET @SqlStr+='SELECT EC.ch_id,EC.ch_Channel AS CHANNEL,ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
+	--Rev 1.0
+	--SET @SqlStr+='SELECT EC.ch_id,EC.ch_Channel AS CHANNEL,ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
+	--SET @SqlStr+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID '
+	SET @SqlStr+='SELECT ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
 	SET @SqlStr+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID '
+	SET @SqlStr+='GROUP BY ECM.EP_EMP_CONTACTID '
+	--End of Rev 1.0
 	SET @SqlStr+=') CH ON CNT.cnt_internalId=CH.EP_EMP_CONTACTID '
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT USERID,(DAYSTTIME) AS DAYSTTIME,(DAYENDTIME) AS DAYENDTIME FROM('
