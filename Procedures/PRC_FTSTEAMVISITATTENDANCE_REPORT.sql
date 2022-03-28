@@ -22,6 +22,7 @@ Written by : Debashis Talukder ON 04/03/2022
 Module	   : Dynamic Team Visit Attendance.Refer: 0024720
 1.0		v2.0.28		Debashis	25/03/2022		FSM : Team Visit report and Employee Attendance report Chages required:
 												'Total Days absent' should be calculated (Total working days - (minus) Total Days Present).Refer: 0024763
+2.0		v2.0.28		Debashis	28/03/2022		Implement field type number for Team Visit Report.Refer: 0024775
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -142,7 +143,10 @@ BEGIN
 					SET @SqlStrTable=''
 					SET @SqlStrTable='ALTER TABLE #EMPLOYEEATTENDANCE ADD '
 					SET @SqlStrTable+='['+RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']' + ' NVARCHAR(50) NULL,'
-					SET @SqlStrTable+='[PA_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL ' 
+					--Rev 2.0
+					--SET @SqlStrTable+='[PA_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL ' 
+					SET @SqlStrTable+='[PA_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' INT NULL ' 
+					--End of Rev 2.0
 
 					EXEC SP_EXECUTESQL @SqlStrTable
 
