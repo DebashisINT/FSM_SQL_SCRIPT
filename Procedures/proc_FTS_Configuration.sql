@@ -121,6 +121,8 @@ BEGIN
 	104.0		Debashis	23-02-2022	ADD SETTINGS @Action='UserCheck' IsAllowClickForPhotoRegister & IsAllowClickForVisit.Row 656
 	105.0		Debashis	01-03-2022	ADD SETTINGS @Action='UserCheck' ShowUserwiseLeadMenu.Row 659
 	106.0		Debashis	22-03-2022	ADD SETTINGS @Action='UserCheck' AllowProfileUpdate & GeofencingRelaxationinMeter.Row 671
+	107.0		Debashis	30-03-2022	ADD SETTINGS @Action='UserCheck' LogoutWithLogFile & InAppUpdateApplicable.Row 672
+	108.0		Debashis	31-03-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackHistoryActivated & IsAutoLeadActivityDateTime.Row 674
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1274,5 +1276,21 @@ BEGIN
 		SELECT 'GeofencingRelaxationinMeter' AS [Key],CONVERT(NVARCHAR(15),USR.GeofencingRelaxationinMeter) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 106.0
+		--Rev 107.0
+		UNION ALL
+		SELECT 'LogoutWithLogFile' AS [Key],CONVERT(NVARCHAR(15),USR.LogoutWithLogFile) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'InAppUpdateApplicable' AS [Key],CONVERT(NVARCHAR(15),USR.InAppUpdateApplicable) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 107.0
+		--Rev 108.0
+		UNION ALL
+		SELECT 'IsFeedbackHistoryActivated' AS [Key],CONVERT(NVARCHAR(15),USR.IsFeedbackHistoryActivated) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsAutoLeadActivityDateTime' AS [Key],CONVERT(NVARCHAR(15),USR.IsAutoLeadActivityDateTime) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 108.0
 	END
 END
