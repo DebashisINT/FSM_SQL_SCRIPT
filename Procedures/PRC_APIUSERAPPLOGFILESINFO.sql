@@ -1,0 +1,43 @@
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_APIUSERAPPLOGFILESINFO]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_APIUSERAPPLOGFILESINFO] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_APIUSERAPPLOGFILESINFO]
+(
+@ACTION NVARCHAR(20),
+@USER_ID BIGINT=NULL,
+@PathAPPFiles NVARCHAR(500)=NULL
+) --WITH ENCRYPTION
+AS
+/***************************************************************************************************************************************************************************************************
+Written By : Debashis Talukder On 31/03/2022
+Purpose : For APP Log Files Detection API.Row: 673
+***************************************************************************************************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	IF @ACTION='SAVEAPPLOGFILES'
+		BEGIN
+			IF EXISTS(SELECT USER_ID FROM FSMUSERAPPLOGFILES WHERE USER_ID=@USER_ID)
+				BEGIN
+					DELETE FROM FSMUSERAPPLOGFILES WHERE USER_ID=@USER_ID
+
+					INSERT INTO FSMUSERAPPLOGFILES(USER_ID,LOGDOCUMENTPATH,CREATEDBY,CREATEDON)
+					SELECT @USER_ID,@PathAPPFiles,@USER_ID,GETDATE()
+
+					SELECT USER_ID,LOGDOCUMENTPATH FROM FSMUSERAPPLOGFILES WHERE USER_ID=@USER_ID
+				END
+
+			IF NOT EXISTS(SELECT USER_ID FROM FSMUSERAPPLOGFILES WHERE USER_ID=@USER_ID)
+				BEGIN
+					INSERT INTO FSMUSERAPPLOGFILES(USER_ID,LOGDOCUMENTPATH,CREATEDBY,CREATEDON)
+					SELECT @USER_ID,@PathAPPFiles,@USER_ID,GETDATE()
+
+					SELECT USER_ID,LOGDOCUMENTPATH FROM FSMUSERAPPLOGFILES WHERE USER_ID=@USER_ID
+				END
+		END
+
+	SET NOCOUNT OFF
+END
