@@ -41,7 +41,7 @@ BEGIN
 			IF @FROMDATE<>'' AND @TODATE<>''
 				SET @SqlStr+='AND CONVERT(NVARCHAR(10),visited_time,120) BETWEEN '''+@FROMDATE+''' AND '''+@TODATE+''' '
 			SET @SqlStr+=') SHOP '
-			SET @SqlStr+='ORDER BY Shop_Id '
+			SET @SqlStr+='GROUP BY User_Id,Shop_Id ORDER BY Shop_Id '
 			--SELECT @SqlStr
 			EXEC(@SqlStr)
 
