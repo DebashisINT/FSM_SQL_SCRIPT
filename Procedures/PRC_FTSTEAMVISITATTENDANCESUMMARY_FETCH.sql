@@ -157,9 +157,9 @@ BEGIN
 	--Rev 1.0
 	--SET @SqlStr+='SELECT EC.ch_id,EC.ch_Channel AS CHANNEL,ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
 	--SET @SqlStr+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID '
-	SET @SqlStr+='SELECT ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
+	SET @SqlStr+='SELECT EC.ch_id,ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
 	SET @SqlStr+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID '
-	SET @SqlStr+='GROUP BY ECM.EP_EMP_CONTACTID '
+	SET @SqlStr+='GROUP BY EC.ch_id,ECM.EP_EMP_CONTACTID '
 	--End of Rev 1.0
 	SET @SqlStr+=') CH ON CNT.cnt_internalId=CH.EP_EMP_CONTACTID '
 	SET @SqlStr+='LEFT OUTER JOIN ('
