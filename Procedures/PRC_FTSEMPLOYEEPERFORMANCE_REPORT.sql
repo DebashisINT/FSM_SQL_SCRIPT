@@ -1,5 +1,5 @@
 --EXEC PRC_FTSEMPLOYEEPERFORMANCE_REPORT '2020-06-19','2020-06-19','','','EMB0000002',378
---EXEC PRC_FTSEMPLOYEEPERFORMANCE_REPORT '2021-01-01','2022-01-12','','','',378
+--EXEC PRC_FTSEMPLOYEEPERFORMANCE_REPORT '2022-03-01','2022-03-31','','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEPERFORMANCE_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -52,6 +52,7 @@ Module	   : Employee Performance Details
 												"End User" & "Distributor".Refer: 0024734
 22.0	v2.0.28		Debashis	10/203/2022		System is getting logout while generating Performance summary in Nordusk.This was happening due to "Address" field with
 												too much SPACE.Now it has been rectified.Refer: 0024744
+23.0	v2.0.28		Debashis	05/04/2022		Performance Summary Optimization.Taking 5.50 mins to generate 400000 records in ITC LIVE.Now solved.Refer: 0024793
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -165,6 +166,88 @@ BEGIN
 
 		END
 	--End of Rev 17.0
+
+	--Rev 23.0
+	IF OBJECT_ID('tempdb..#TMPATTENLOGINOUT') IS NOT NULL
+		DROP TABLE #TMPATTENLOGINOUT
+
+	CREATE TABLE #TMPATTENLOGINOUT(USERID BIGINT,LOGGEDIN NVARCHAR(10),LOGEDOUT NVARCHAR(10),cnt_internalId NVARCHAR(10),Login_datetime NVARCHAR(10),ATTEN_STATUS NVARCHAR(20))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINOUT(USERID,cnt_internalId,Login_datetime)
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO #TMPATTENLOGINOUT(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS) '
+	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
+	SET @Strsql+='UNION ALL '
+	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	IF OBJECT_ID('tempdb..#TMPSHOPSUBMITACT') IS NOT NULL
+		DROP TABLE #TMPSHOPSUBMITACT
+
+	CREATE TABLE #TMPSHOPSUBMITACT(USER_ID BIGINT,cnt_internalId NVARCHAR(10),Shop_Id VARCHAR(100),NEWSHOP_VISITED INT,RE_VISITED INT,TOTMETTING INT,SPENT_DURATION VARCHAR(100),DISTANCE_TRAVELLED DECIMAL(18,2),
+	visited_time VARCHAR(20),VISITREMARKS NVARCHAR(1000),MEETINGREMARKS NVARCHAR(1000),MEETING_ADDRESS NVARCHAR(1000))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPSHOPSUBMITACT(USER_ID,cnt_internalId,Shop_Id)
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO #TMPSHOPSUBMITACT(USER_ID,cnt_internalId,Shop_Id,NEWSHOP_VISITED,RE_VISITED,TOTMETTING,SPENT_DURATION,DISTANCE_TRAVELLED,visited_time,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS) '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
+	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=1 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
+	SET @Strsql+='UNION ALL '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
+	SET @Strsql+='UNION ALL '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,COUNT(SHOPACT.Shop_Id) AS TOTMETTING,SPENT_DURATION,0 AS DISTANCE_TRAVELLED,'
+	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,'''' AS VISITREMARKS,SHOPACT.REMARKS AS MEETINGREMARKS,SHOPACT.MEETING_ADDRESS FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.ISMEETING=1 AND SHOPACT.MEETING_TYPEID IS NOT NULL '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS,SHOPACT.MEETING_ADDRESS '
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+	
+	IF OBJECT_ID('tempdb..#TMPATTENLOGINLOGOUT') IS NOT NULL
+		DROP TABLE #TMPATTENLOGINLOGOUT
+
+	CREATE TABLE #TMPATTENLOGINLOGOUT(ID BIGINT,USER_ID BIGINT,Login_datetime DATETIME,Logout_datetime DATETIME,Work_Desc VARCHAR(MAX),Work_datetime DATETIME,Isonleave VARCHAR(50),WrkActvtyDescription VARCHAR(MAX))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINLOGOUT(ID,USER_ID,Login_datetime,Logout_datetime,Isonleave)
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO #TMPATTENLOGINLOGOUT(ID,USER_ID,Login_datetime,Logout_datetime,Work_Desc,Work_datetime,Isonleave,WrkActvtyDescription) '
+	SET @Strsql+='SELECT UATTEN.Id,UATTEN.User_Id,UATTEN.Login_datetime,UATTEN.Logout_datetime,UATTEN.Work_Desc,UATTEN.Work_datetime,UATTEN.Isonleave,WRKACT.WrkActvtyDescription '
+	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout UATTEN '
+	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=UATTEN.User_Id AND UATTEN.Id=ATTENWRKTYP.attendanceid '
+	SET @Strsql+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+	--End of Rev 23.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEPERFORMANCE_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -326,20 +409,26 @@ BEGIN
 	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 	--SET @Strsql+='GROUP BY WRKACT.WrkActvtyDescription FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(WRKACT.WrkActvtyDescription)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
-	SET @Strsql+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=UATTEN.User_Id AND UATTEN.Id=ATTENWRKTYP.attendanceid '
-	SET @Strsql+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '   
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
-	SET @Strsql+='GROUP BY WRKACT.WrkActvtyDescription FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	--End of Rev 15.0
-	--Rev 5.0
-	SET @Strsql+='REPLACE((SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(ISNULL(A.Work_Desc,''''))) From tbl_fts_UserAttendanceLoginlogout AS A '
-	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=A.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),A.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND A.Login_datetime IS NOT NULL AND A.Logout_datetime IS NULL AND A.Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),A.Work_datetime,105) '
-	SET @Strsql+='FOR XML PATH('''')),1,1,''''),'''')),'','','''') AS REMARKS,'
+	--Rev 23.0
+	--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(WRKACT.WrkActvtyDescription)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--SET @Strsql+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=UATTEN.User_Id AND UATTEN.Id=ATTENWRKTYP.attendanceid '
+	--SET @Strsql+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '   
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
+	--SET @Strsql+='GROUP BY WRKACT.WrkActvtyDescription FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+	----End of Rev 15.0
+	----Rev 5.0
+	--SET @Strsql+='REPLACE((SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(ISNULL(A.Work_Desc,''''))) From tbl_fts_UserAttendanceLoginlogout AS A '
+	--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=A.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),A.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND A.Login_datetime IS NOT NULL AND A.Logout_datetime IS NULL AND A.Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),A.Work_datetime,105) '
+	--SET @Strsql+='FOR XML PATH('''')),1,1,''''),'''')),'','','''') AS REMARKS,'
+	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(UATTEN.WrkActvtyDescription)) From #TMPATTENLOGINLOGOUT AS UATTEN '
+	SET @Strsql+='WHERE UATTEN.USER_ID=USR.USER_ID AND UATTEN.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+	SET @Strsql+='REPLACE((SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(ISNULL(A.Work_Desc,''''))) From #TMPATTENLOGINLOGOUT AS A '
+	SET @Strsql+='WHERE A.USER_ID=USR.USER_ID AND A.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),A.Work_datetime,105) FOR XML PATH('''')),1,1,''''),'''')),'','','''') AS REMARKS,'
+	--End of Rev 23.0
 	--End of Rev 5.0
 	--Rev 9.0
 	--SET @Strsql+='SHOP.SHOP_TYPE,SHOP.Shop_Code,SHOP.Shop_Name,'
@@ -436,34 +525,41 @@ BEGIN
 	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
 	--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND SHOP.Shop_Code=SHOPACT.Shop_Id '
 	--End of Rev 1.0
-	SET @Strsql+='INNER JOIN ( '
-	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
-	--Rev 12.0
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--End of Rev 12.0
-	SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
-	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
-	SET @Strsql+='UNION ALL '
-	--Rev 12.0
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--End of Rev 12.0
-	SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
-	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
-	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
-	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '	
-	--Rev 1.0
-	--SET @Strsql+='AND ATTEN.USERID=SHOPACT.User_Id AND ATTEN.Login_datetime=SHOPACT.visited_time AND ATTEN.Login_datetime IS NOT NULL '
-	SET @Strsql+='AND ATTEN.USERID=USR.user_id '
+	--Rev 23.0
+	--SET @Strsql+='INNER JOIN ( '
+	--SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
+	----Rev 12.0
+	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	----End of Rev 12.0
+	--SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
+	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
+	--SET @Strsql+='UNION ALL '
+	----Rev 12.0
+	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	----End of Rev 12.0
+	--SET @Strsql+='CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
+	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	--SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave '
+	--SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '	
+	----Rev 1.0
+	----SET @Strsql+='AND ATTEN.USERID=SHOPACT.User_Id AND ATTEN.Login_datetime=SHOPACT.visited_time AND ATTEN.Login_datetime IS NOT NULL '
+	--SET @Strsql+='AND ATTEN.USERID=USR.user_id '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM('
+	SET @Strsql+='SELECT USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM #TMPATTENLOGINOUT '
+	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS '
+	SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	--End of Rev 23.0
 	--SET @Strsql+='LEFT OUTER JOIN ('
 	--SET @Strsql+='SELECT DISTINCT Shop_Code,Shop_CreateUser,Shop_Name,Address,Shop_Owner_Contact,assigned_to_pp_id,assigned_to_dd_id,CONVERT(NVARCHAR(10),Shop_CreateTime,105) AS Shop_CreateTime FROM tbl_Master_shop '
 	--SET @Strsql+=') SHOP ON SHOP.Shop_CreateUser=USR.user_id AND ATTEN.Login_datetime=SHOP.Shop_CreateTime '
@@ -474,82 +570,90 @@ BEGIN
 	--SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact FROM tbl_Master_shop A '
 	--SET @Strsql+=') SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
 	--End of Rev 1.0
-	SET @Strsql+='LEFT OUTER JOIN ( '
-	--Rev 4.0
-	--SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,VISITED_TIME FROM( '
-	--Rev 13.0
-	--SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_TIME FROM( '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(TOTMETTING) AS TOTMETTING,SPENT_DURATION,'
-	SET @Strsql+='SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_TIME,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS FROM('
-	--End of Rev 13.0
-	--End of Rev 4.0
-	--Rev 2.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.total_visit_count) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time FROM tbl_trans_shopActivitysubmit SHOPACT '
-	--Rev 4.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	--Rev 13.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
-	--SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
-	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
-	--End of Rev 13.0
-	--End of Rev 4.0
-	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
-	--End of Rev 2.0
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
-	--Rev 13.0
-	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
-	--End of Rev 13.0
-	SET @Strsql+='UNION ALL '
-	--Rev 2.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.total_visit_count) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time FROM tbl_trans_shopActivitysubmit SHOPACT '
-	--Rev 4.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	--Rev 13.0
-	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
-	--SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
-	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
-	--End of Rev 13.0
-	--End of Rev 4.0
-	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
-	--End of Rev 2.0
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--Rev 13.0
-	--SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 '	
-	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
-	SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
-	--MEETING
-	SET @Strsql+='UNION ALL '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,COUNT(SHOPACT.Shop_Id) AS TOTMETTING,SPENT_DURATION,0 AS DISTANCE_TRAVELLED,'
-	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,'''' AS VISITREMARKS,SHOPACT.REMARKS AS MEETINGREMARKS,SHOPACT.MEETING_ADDRESS '
-	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND SHOPACT.ISMEETING=1 AND SHOPACT.MEETING_TYPEID IS NOT NULL '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS,SHOPACT.MEETING_ADDRESS '
-	--End of Rev 13.0
-	--Rev 2.0
-	--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '--AND SHOP.Shop_Code=SHOPACT.Shop_Id '
-	--Rev 13.0
-	--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME,VISITREMARKS,SPENT_DURATION,MEETINGREMARKS,MEETING_ADDRESS) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
-	SET @Strsql+='AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	--Rev 23.0
+	--SET @Strsql+='LEFT OUTER JOIN ( '
+	----Rev 4.0
+	----SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,VISITED_TIME FROM( '
+	----Rev 13.0
+	----SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_TIME FROM( '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(TOTMETTING) AS TOTMETTING,SPENT_DURATION,'
+	--SET @Strsql+='SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_TIME,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS FROM('
+	----End of Rev 13.0
+	----End of Rev 4.0
+	----Rev 2.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.total_visit_count) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time FROM tbl_trans_shopActivitysubmit SHOPACT '
+	----Rev 4.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	----Rev 13.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	----SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	--SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
+	----End of Rev 13.0
+	----End of Rev 4.0
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	----End of Rev 2.0
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
+	----Rev 13.0
+	----SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
+	----End of Rev 13.0
+	--SET @Strsql+='UNION ALL '
+	----Rev 2.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.total_visit_count) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time FROM tbl_trans_shopActivitysubmit SHOPACT '
+	----Rev 4.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	----Rev 13.0
+	----SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	----SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
+	--SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
+	----End of Rev 13.0
+	----End of Rev 4.0
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	----End of Rev 2.0
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	----Rev 13.0
+	----SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 '	
+	----SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
+	--SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS '
+	----MEETING
+	--SET @Strsql+='UNION ALL '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,COUNT(SHOPACT.Shop_Id) AS TOTMETTING,SPENT_DURATION,0 AS DISTANCE_TRAVELLED,'
+	--SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time,'''' AS VISITREMARKS,SHOPACT.REMARKS AS MEETINGREMARKS,SHOPACT.MEETING_ADDRESS '
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND SHOPACT.ISMEETING=1 AND SHOPACT.MEETING_TYPEID IS NOT NULL '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION,SHOPACT.REMARKS,SHOPACT.MEETING_ADDRESS '
+	----End of Rev 13.0
+	----Rev 2.0
+	----SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '--AND SHOP.Shop_Code=SHOPACT.Shop_Id '
+	----Rev 13.0
+	----SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	----Rev 16.0 && A new field added as SPENT_DURATION
+	--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME,VISITREMARKS,SPENT_DURATION,MEETINGREMARKS,MEETING_ADDRESS) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
+	--SET @Strsql+='AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(TOTMETTING) AS TOTMETTING,SPENT_DURATION,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,'
+	SET @Strsql+='VISITED_TIME,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS FROM('
+	SET @Strsql+='SELECT USER_ID,cnt_internalId,Shop_Id,NEWSHOP_VISITED,RE_VISITED,TOTMETTING,SPENT_DURATION,DISTANCE_TRAVELLED,visited_time,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS FROM #TMPSHOPSUBMITACT '
+	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME,VISITREMARKS,SPENT_DURATION,MEETINGREMARKS,MEETING_ADDRESS '
+	SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	--End of Rev 23.0
 	--End of Rev 13.0
 	--End of Rev 2.0
 	--Rev 1.0
@@ -631,12 +735,16 @@ BEGIN
 	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' '
 	--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
-	SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=UATTEN.Leave_Type '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
-	SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+	--Rev 23.0
+	--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=UATTEN.Leave_Type '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
+	--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(UATTEN.WrkActvtyDescription)) From #TMPATTENLOGINLOGOUT AS UATTEN '
+	SET @Strsql+='WHERE UATTEN.USER_ID=USR.USER_ID AND UATTEN.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+	--End of Rev 23.0
 	--End of Rev 15.0
 	--Rev 5.0
 	SET @Strsql+=''''' AS REMARKS,'
@@ -688,30 +796,37 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	--End of Rev 6.0
 	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-	SET @Strsql+='INNER JOIN ( '
-	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
-	--Rev 12.0
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--End of Rev 12.0
-	SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
-	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-	SET @Strsql+='UNION ALL '
-	--Rev 12.0
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--End of Rev 12.0
-	SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
-	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	--Rev 23.0
+	--SET @Strsql+='INNER JOIN ( '
+	--SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
+	----Rev 12.0
+	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	----End of Rev 12.0
+	--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
+	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	--SET @Strsql+='UNION ALL '
+	----Rev 12.0
+	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+	----End of Rev 12.0
+	--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
+	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+	--SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM('
+	SET @Strsql+='SELECT USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM #TMPATTENLOGINOUT '
+	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS '
+	SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	--End of Rev 23.0
 	--End of Rev 3.0
 	SET @Strsql+=') AS DB '
 	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -755,5 +870,10 @@ BEGIN
 		DROP TABLE #EMPHRS
 	END
 	--End of Rev 4.0
+	--Rev 23.0
+	DROP TABLE #TMPATTENLOGINLOGOUT
+	DROP TABLE #TMPATTENLOGINOUT
+	DROP TABLE #TMPSHOPSUBMITACT
+	--End of Rev 23.0
 	SET NOCOUNT OFF
 END
