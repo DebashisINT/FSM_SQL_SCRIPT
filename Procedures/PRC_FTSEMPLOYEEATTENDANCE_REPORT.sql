@@ -1,4 +1,5 @@
---EXEC PRC_FTSEMPLOYEEATTENDANCE_REPORT '2022-02-27','2022-02-28','','',378
+--EXEC PRC_FTSEMPLOYEEATTENDANCE_REPORT '2022-03-28','2022-04-04','1','EMB0000008',378
+--EXEC PRC_FTSEMPLOYEEATTENDANCE_REPORT '2022-03-28','2022-04-04','1','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEATTENDANCE_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -21,6 +22,8 @@ Module	   : Dynamic Employee Attendance.Refer: 0024461
 1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
 2.0		v2.0.28		Debashis	25/03/2022		FSM : Team Visit report and Employee Attendance report Chages required:
 												'Total Days absent' should be calculated (Total working days - (minus) Total Days Present).Refer: 0024763
+3.0		v2.0.28		Debashis	05/04/2022		EMPLOYEE ATTENDANCE report: the attendance is getting repeating line by line instead there are date wise column.
+												Refer: 0024779 & 0024786
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -186,6 +189,10 @@ BEGIN
 					SET @SqlStrTable+='[Day_End_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(100) NULL '
 
 					EXEC SP_EXECUTESQL @SqlStrTable
+
+					--Rev 3.0
+					SET @TODATE=@COLUMN_DATE
+					--End of Rev 3.0
 
 					INSERT INTO #TMPATTENDACE EXEC [PRC_FTSEMPLOYEEATTENDANCE_FETCH] @COLUMN_DATE,@TODATE,@BRANCHID,@EMPID,@USERID
 
