@@ -123,6 +123,7 @@ BEGIN
 	106.0		Debashis	22-03-2022	ADD SETTINGS @Action='UserCheck' AllowProfileUpdate & GeofencingRelaxationinMeter.Row 671
 	107.0		Debashis	30-03-2022	ADD SETTINGS @Action='UserCheck' LogoutWithLogFile & InAppUpdateApplicable.Row 672
 	108.0		Debashis	31-03-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackHistoryActivated & IsAutoLeadActivityDateTime.Row 674
+	109.0		Debashis	07-04-2022	ADD SETTINGS @Action='UserCheck' ShowAutoRevisitInDashboard & ShowAutoRevisitInAppMenu.Row 679
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1292,5 +1293,13 @@ BEGIN
 		SELECT 'IsAutoLeadActivityDateTime' AS [Key],CONVERT(NVARCHAR(15),USR.IsAutoLeadActivityDateTime) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 108.0
+		--Rev 109.0
+		UNION ALL
+		SELECT 'ShowAutoRevisitInDashboard' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAutoRevisitInDashboard) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowAutoRevisitInAppMenu' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAutoRevisitInAppMenu) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 109.0
 	END
 END
