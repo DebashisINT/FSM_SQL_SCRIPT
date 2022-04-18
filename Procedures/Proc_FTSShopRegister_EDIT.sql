@@ -105,8 +105,11 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 --End of Rev 15.0
 --Rev 16.0
 @alternateNoForCustomer NVARCHAR(100)=NULL,
-@whatsappNoForCustomer NVARCHAR(100)=NULL
+@whatsappNoForCustomer NVARCHAR(100)=NULL,
 --End of Rev 16.0
+--Rev 18.0
+@shopStatusUpdate BIT=NULL
+--End of Rev 18.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -129,6 +132,7 @@ As
 17.0	v2.0.28		Debashis		24-03-2022			UPDATE ADDRESS - API CALL FROM APP IS MAKING BLANK TBL_MASTER_SHOP FOR FEW FIELDS 
 														LIKE 'ENTITY CODE'. There may be some more fields that to be coditional with ISNULL CHECK.
 														Refer: 0024762
+18.0	v2.0.28		Debashis		18-04-2022			New parameter added as @shopStatusUpdate.Refer: 682
 ************************************************************************************************************************************************/
 BEGIN
 	
@@ -323,7 +327,10 @@ BEGIN
 			 Project_Name=CASE WHEN @project_name IS NULL OR @project_name='' THEN [Project_Name] ELSE @project_name END,
 			 Landline_Number=CASE WHEN @landline_number IS NULL OR @landline_number='' THEN [Landline_Number] ELSE @landline_number END,
 			 AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
-			 WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END
+			 WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END,
+			 --Rev 18.0
+			 ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END
+			 --End of Rev 18.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
 	--Rev 13.0
@@ -398,7 +405,10 @@ BEGIN
 			Project_Name=CASE WHEN @project_name IS NULL OR @project_name='' THEN [Project_Name] ELSE @project_name END,
 			Landline_Number=CASE WHEN @landline_number IS NULL OR @landline_number='' THEN [Landline_Number] ELSE @landline_number END,
 			AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
-			WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END
+			WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END,
+			--Rev 18.0
+			ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END
+			--End of Rev 18.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
 		END
@@ -426,8 +436,11 @@ BEGIN
 				   ,@project_name AS project_name,@landline_number AS landline_number
 				   --End of Rev 15.0
 				   --Rev 16.0
-				   ,@alternateNoForCustomer AS alternateNoForCustomer,@whatsappNoForCustomer AS whatsappNoForCustomer
+				   ,@alternateNoForCustomer AS alternateNoForCustomer,@whatsappNoForCustomer AS whatsappNoForCustomer,
 				   --End of Rev 16.0
+				   --Rev 18.0
+				   @shopStatusUpdate AS shopStatusUpdate
+				   --End of Rev 18.0
 		END
 
 
