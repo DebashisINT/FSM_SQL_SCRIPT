@@ -124,6 +124,7 @@ BEGIN
 	107.0		Debashis	30-03-2022	ADD SETTINGS @Action='UserCheck' LogoutWithLogFile & InAppUpdateApplicable.Row 672
 	108.0		Debashis	31-03-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackHistoryActivated & IsAutoLeadActivityDateTime.Row 674
 	109.0		Debashis	07-04-2022	ADD SETTINGS @Action='UserCheck' ShowAutoRevisitInDashboard & ShowAutoRevisitInAppMenu.Row 679
+	110.0		Debashis	18-04-2022	ADD SETTINGS @Action='UserCheck' IsShowNearByTeam,IsShowRevisitRemarksPopup & IsAllowShopStatusUpdate.Row 680 & 681
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1301,5 +1302,16 @@ BEGIN
 		SELECT 'ShowAutoRevisitInAppMenu' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAutoRevisitInAppMenu) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 109.0
+		--Rev 110.0
+		UNION ALL
+		SELECT 'IsShowNearByTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowNearByTeam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowRevisitRemarksPopup' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowRevisitRemarksPopup) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsAllowShopStatusUpdate' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowShopStatusUpdate) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 110.0
 	END
 END
