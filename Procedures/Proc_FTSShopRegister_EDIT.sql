@@ -414,6 +414,11 @@ BEGIN
 		END
 	--End of Rev 13.0
 
+	--Rev 18.0
+	IF @shopStatusUpdate=0
+		UPDATE [tbl_Master_shop] SET Entity_Status=0 WHERE Shop_Code=@shop_id
+	--End of Rev 18.0
+
 	 IF(ISNULL(@stage_id,'')<>'')
 		BEGIN
 			INSERT INTO FTS_STAGEMAP(SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
