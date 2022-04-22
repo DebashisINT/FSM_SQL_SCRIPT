@@ -53,6 +53,7 @@ Module	   : Employee Performance Details
 22.0	v2.0.28		Debashis	10/203/2022		System is getting logout while generating Performance summary in Nordusk.This was happening due to "Address" field with
 												too much SPACE.Now it has been rectified.Refer: 0024744
 23.0	v2.0.28		Debashis	05/04/2022		Performance Summary Optimization.Taking 5.50 mins to generate 400000 records in ITC LIVE.Now solved.Refer: 0024793
+24.0	v2.0.29		Debashis	22/04/2022		Shop type will show the exact name from Tbl_Master_Shop table while generating performance summary report.Refer: 0024833
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -671,10 +672,13 @@ BEGIN
 	--SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' WHEN TYPE=5 THEN ''Diamond'' END AS SHOP_TYPE '
 	--Rev 20.0 && A new TYPE has been added as "Lead".
 	--Rev 21.0 && Some new TYPES have been added as "Architect","Fabricator","Consultant","Dealer","Builder","Corporate","Govt. Bodies","End User" & "Distributor".
-	SET @Strsql+='CASE WHEN shop.TYPE=1 THEN ''Shop'' WHEN shop.TYPE=2 THEN ''Prime Partner'' WHEN shop.TYPE=3 THEN ''New Party'' WHEN shop.TYPE=4 THEN ''Distributor'' WHEN shop.TYPE=5 THEN ''Diamond'' '
-	SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=16 THEN ''Lead'' '
-	SET @Strsql+='WHEN shop.TYPE=17 THEN ''Architect'' WHEN shop.TYPE=18 THEN ''Fabricator'' WHEN shop.TYPE=19 THEN ''Consultant'' WHEN shop.TYPE=20 THEN ''Dealer'' WHEN shop.TYPE=21 THEN ''Builder'' '
-	SET @Strsql+='WHEN shop.TYPE=22 THEN ''Corporate'' WHEN shop.TYPE=23 THEN ''Govt. Bodies'' WHEN shop.TYPE=24 THEN ''End User'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
+	--Rev 24.0
+	--SET @Strsql+='CASE WHEN shop.TYPE=1 THEN ''Shop'' WHEN shop.TYPE=2 THEN ''Prime Partner'' WHEN shop.TYPE=3 THEN ''New Party'' WHEN shop.TYPE=4 THEN ''Distributor'' WHEN shop.TYPE=5 THEN ''Diamond'' '
+	--SET @Strsql+='WHEN shop.TYPE=6 THEN ''Stockist'' WHEN shop.TYPE=7 THEN ''Chemist'' WHEN shop.TYPE=8 THEN ''Doctor'' WHEN shop.TYPE=16 THEN ''Lead'' '
+	--SET @Strsql+='WHEN shop.TYPE=17 THEN ''Architect'' WHEN shop.TYPE=18 THEN ''Fabricator'' WHEN shop.TYPE=19 THEN ''Consultant'' WHEN shop.TYPE=20 THEN ''Dealer'' WHEN shop.TYPE=21 THEN ''Builder'' '
+	--SET @Strsql+='WHEN shop.TYPE=22 THEN ''Corporate'' WHEN shop.TYPE=23 THEN ''Govt. Bodies'' WHEN shop.TYPE=24 THEN ''End User'' WHEN shop.TYPE=999 THEN ''Meeting'' END AS SHOP_TYPE,'
+	SET @Strsql+='CASE WHEN shop.TYPE=999 THEN ''Meeting'' ELSE SHOPTYPE.Name END AS SHOP_TYPE,'
+	--End of Rev 24.0
 	--Rev 18.0
 	SET @Strsql+='shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,'
 	--End of Rev 18.0
@@ -684,6 +688,9 @@ BEGIN
 	--End of Rev 9.0
 	--End of Rev 8.0
 	SET @Strsql+='FROM tbl_Master_shop shop '
+	--Rev 24.0
+	SET @Strsql+='INNER JOIN tbl_shoptype SHOPTYPE ON shop.TYPE=SHOPTYPE.shop_typeId '
+	--End of Rev 24.0
 	--Rev 18.0
 	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 	--End of Rev 18.0
