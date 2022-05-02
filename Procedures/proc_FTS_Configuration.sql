@@ -125,6 +125,7 @@ BEGIN
 	108.0		Debashis	31-03-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackHistoryActivated & IsAutoLeadActivityDateTime.Row 674
 	109.0		Debashis	07-04-2022	ADD SETTINGS @Action='UserCheck' ShowAutoRevisitInDashboard & ShowAutoRevisitInAppMenu.Row 679
 	110.0		Debashis	18-04-2022	ADD SETTINGS @Action='UserCheck' IsShowNearByTeam,IsShowRevisitRemarksPopup & IsAllowShopStatusUpdate.Row 680 & 681
+	111.0		Debashis	02-05-2022	ADD SETTINGS @Action='UserCheck' ShowTotalVisitAppMenu & OfflineShopAccuracy.Row 683
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1313,5 +1314,13 @@ BEGIN
 		SELECT 'IsAllowShopStatusUpdate' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowShopStatusUpdate) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 110.0
+		--Rev 111.0
+		UNION ALL
+		SELECT 'ShowTotalVisitAppMenu' AS [Key],CONVERT(NVARCHAR(15),USR.ShowTotalVisitAppMenu) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'OfflineShopAccuracy' AS [Key],CONVERT(NVARCHAR(15),USR.OfflineShopAccuracy) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 111.0
 	END
 END
