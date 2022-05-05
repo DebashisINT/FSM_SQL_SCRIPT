@@ -127,6 +127,7 @@ BEGIN
 	110.0		Debashis	18-04-2022	ADD SETTINGS @Action='UserCheck' IsShowNearByTeam,IsShowRevisitRemarksPopup & IsAllowShopStatusUpdate.Row 680 & 681
 	111.0		Debashis	02-05-2022	ADD SETTINGS @Action='UserCheck' ShowTotalVisitAppMenu & OfflineShopAccuracy.Row 683
 	112.0		Debashis	04-05-2022	ADD SETTINGS @Action='UserCheck' AutoRevisitTimeInSeconds.Row 684
+	113.0		Debashis	05-05-2022	ADD SETTINGS @Action='UserCheck' PartyUpdateAddrMandatory.Row 685
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1328,5 +1329,10 @@ BEGIN
 		SELECT 'AutoRevisitTimeInSeconds' AS [Key],CONVERT(NVARCHAR(15),USR.AutoRevisitTimeInSeconds) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 112.0
+		--Rev 113.0
+		UNION ALL
+		SELECT 'PartyUpdateAddrMandatory' AS [Key],CONVERT(NVARCHAR(15),USR.PartyUpdateAddrMandatory) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 113.0
 	END
 END
