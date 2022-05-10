@@ -1,5 +1,5 @@
 --EXEC PRC_FTSEMPLOYEEATTENDANCE_FETCH '2022-03-28','2022-04-04','1','EMB0000008',378
---EXEC PRC_FTSEMPLOYEEATTENDANCE_FETCH '2022-03-28','2022-04-04','1','',378
+--EXEC PRC_FTSEMPLOYEEATTENDANCE_FETCH '2022-01-01','2022-05-10','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEATTENDANCE_FETCH]') AND type in (N'P', N'PC'))
 BEGIN
@@ -22,6 +22,10 @@ Module	   : Employee Attendance.Refer: 0024461
 1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
 2.0		v2.0.28		Debashis	05/04/2022		EMPLOYEE ATTENDANCE report: the attendance is getting repeating line by line instead there are date wise column.
 												Refer: 0024779 & 0024786
+3.0		v2.0.29		Debashis	10/05/2022		FSM > MIS Reports > Employee Attendance
+												There, two columns required after DS ID column :
+												a) DS/TL Name [Contact table]
+												b) DS/TL Type [FaceRegTypeID from tbl_master_user].Refer: 0024870
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -230,6 +234,7 @@ BEGIN
 	--SELECT @SqlStr
 	EXEC SP_EXECUTESQL @SqlStr
 
+	--THIS IS DONE FOR MAINTAIN EVERY EMPLOYEE IN A SINGLE LINE LOGIN,LOGOUT,DAYSTTIME & DAYENDTIME
 	UPDATE A SET A.LOGEDOUT=B.LOGEDOUT
 	FROM #TMPATTENDANCE A
 	INNER JOIN #TMPATTENLOGOUT B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.Login_datetime
@@ -246,6 +251,9 @@ BEGIN
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
+	--Rev 3.0
+	SET @SqlStr+='STG.Stage AS DSTLTYPE,'
+	--End of Rev 3.0
 	SET @SqlStr+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
 	--Rev 1.0
 	--SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,DAYSTARTEND.DAYSTTIME,DAYSTARTEND.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTO,'
@@ -319,6 +327,9 @@ BEGIN
 	--SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	--SET @SqlStr+='GROUP BY DAYSTEND.User_Id '
 	--SET @SqlStr+=') DAYSTEND GROUP BY USERID) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id '
+	--Rev 3.0
+	SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG ON USR.FaceRegTypeID=STG.StageID '
+	--End of Rev 3.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT USERID,LOGGEDIN,LOGEDOUT,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,Login_datetime FROM #TMPATTENDANCE '
 	SET @SqlStr+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
