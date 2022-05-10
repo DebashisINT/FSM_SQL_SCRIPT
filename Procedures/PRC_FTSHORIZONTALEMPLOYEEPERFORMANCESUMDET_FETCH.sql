@@ -487,7 +487,7 @@ BEGIN
 		BEGIN
 			SET @Strsql='SELECT ROW_NUMBER() OVER(ORDER BY CONVERT(NVARCHAR(10),SHOPACT.visited_time,108) DESC) AS SEQ,MU.USER_ID,CNT.CNT_INTERNALID,MS.Shop_Name AS CUSTNAME,MS.ADDRESS,'
 			SET @Strsql+='MS.Shop_Owner_Contact AS MOBILENO,ST.NAME AS SHOPTYPE,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITDATE,CONVERT(NVARCHAR(10),SHOPACT.visited_time,108) AS VISITTIME,'
-			SET @Strsql+='SHOPACT.distance_travelled AS SPENTDURATION '
+			SET @Strsql+='SHOPACT.spent_duration AS SPENTDURATION '
 			SET @Strsql+='FROM tbl_shoptype ST '
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
 			SET @Strsql+='INNER JOIN tbl_master_user MU ON MS.Shop_CreateUser=MU.USER_ID AND MU.user_inactive=''N'' '
