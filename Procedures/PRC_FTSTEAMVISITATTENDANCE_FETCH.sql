@@ -20,6 +20,10 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 04/03/2022
 Module	   : Team Visit Attendance.Refer: 0024720
+1.0		v2.0.29		Debashis	10/05/2022		FSM > MIS Reports > Team Visit Report
+												There, two columns required after DS ID column :
+												a) DS/TL Name [Contact table]
+												b) DS/TL Type [FaceRegTypeID from tbl_master_user].Refer: 0024870
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -120,6 +124,9 @@ BEGIN
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
+	--Rev 1.0
+	SET @SqlStr+='STG.Stage AS DSTLTYPE,'
+	--End of Rev 1.0
 	SET @SqlStr+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
 	SET @SqlStr+='USR.user_loginId AS CONTACTNO,CH.CH_ID,CH.CHANNEL,CASE WHEN DAYSTARTEND.DAYSTTIME<>'''' OR DAYSTARTEND.DAYSTTIME IS NOT NULL THEN 1 ELSE 0 END AS PRESENTABSENT,RPTTO.REPORTTOID,'
 	SET @SqlStr+='RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG FROM tbl_master_employee EMP '
@@ -145,6 +152,9 @@ BEGIN
 	SET @SqlStr+='SELECT EC.ch_id,EC.ch_Channel AS CHANNEL,ECM.EP_EMP_CONTACTID FROM Employee_Channel EC '
 	SET @SqlStr+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID '
 	SET @SqlStr+=') CH ON CNT.cnt_internalId=CH.EP_EMP_CONTACTID '
+	--Rev 1.0
+	SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG ON USR.FaceRegTypeID=STG.StageID '
+	--End of Rev 1.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT USERID,MIN(DAYSTTIME) AS DAYSTTIME,MAX(DAYENDTIME) AS DAYENDTIME FROM('
 	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYSTTIME,NULL AS DAYENDTIME '
