@@ -24,6 +24,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 09/05/2022
 Module	   : Horizontal Performance Summary & Detail.Refer: 0024858
+1.0		v2.0.29		Debashis	11/05/2022		Userwise hierarchy setting required.Refer: 0024880
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -95,6 +96,36 @@ BEGIN
 	INSERT INTO #TEMPCONTACT
 	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 
+	--Rev 1.0
+	IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			DECLARE @empcodes VARCHAR(50)=(SELECT user_contactId FROM Tbl_master_user WHERE user_id=@USERID)		
+			CREATE TABLE #EMPHRS
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHRS
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME ON TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(SELECT	EMPCODE,RPTTOEMPCODE FROM #EMPHRS WHERE EMPCODE IS NULL OR EMPCODE=@empcodes  
+			UNION ALL
+			SELECT a.EMPCODE,a.RPTTOEMPCODE FROM #EMPHRS a
+			join cte b ON a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			SELECT EMPCODE,RPTTOEMPCODE FROM cte 
+		END
+	--End of Rev 1.0
+
 	IF @REPORTTYPE='Summary'
 		BEGIN
 			IF OBJECT_ID('tempdb..#TMPATTENLOGINLOGOUT') IS NOT NULL
@@ -109,6 +140,10 @@ BEGIN
 			SET @Strsql+='SELECT UATTEN.Id,UATTEN.User_Id,UATTEN.Login_datetime,UATTEN.Logout_datetime,UATTEN.Work_Desc,UATTEN.Work_datetime,UATTEN.Isonleave,WRKACT.WrkActvtyDescription '
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout UATTEN '
 			SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=MUSR.user_contactId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=UATTEN.User_Id AND UATTEN.Id=ATTENWRKTYP.attendanceid '
 			SET @Strsql+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
@@ -137,6 +172,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMPCTC.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_EmpWorkingHours EMPWH ON EMPWH.Id=EMPCTC.emp_workinghours '
 			SET @Strsql+='INNER JOIN('
@@ -169,6 +208,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMPCTC.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_EmpWorkingHours EMPWH ON EMPWH.Id=EMPCTC.emp_workinghours '
 			SET @Strsql+='INNER JOIN('
@@ -216,6 +259,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMPCTC.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_EmpWorkingHours EMPWH ON EMPWH.Id=EMPCTC.emp_workinghours '
 			SET @Strsql+='INNER JOIN('
@@ -248,6 +295,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMPCTC.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_EmpWorkingHours EMPWH ON EMPWH.Id=EMPCTC.emp_workinghours '
 			SET @Strsql+='INNER JOIN('
@@ -338,6 +389,10 @@ BEGIN
 			SET @Strsql+='SHPTYPE.SHOPTYPEID,SHPTYPE.SHOPTYPENAME,SHPTYPE.SHOPVISITED '
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -350,6 +405,10 @@ BEGIN
 			SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN ( '
 			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
@@ -368,6 +427,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
 			SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,CAST(SHOPACT.visited_time AS DATE) '
@@ -376,7 +439,11 @@ BEGIN
 			SET @Strsql+='MIN(visited_time) AS FCALLTIME,MAX(visited_time) AS LCALLTIME '
 			SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '	
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
 			SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,CAST(SHOPACT.visited_time AS DATE) '
@@ -388,6 +455,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='WHERE IsFirstVisit=1 '
 			SET @Strsql+='AND CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,IsOutStation,CAST(SHOPACT.visited_time AS DATE) '
@@ -398,6 +469,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_FTS_GPSSubmission GPS '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=GPS.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),GPS.GPsDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='GROUP BY GPS.User_Id,CNT.cnt_internalId,GPS.GPsDate) GPSSM ON GPSSM.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=GPSSM.GPsDate '
 			SET @Strsql+='LEFT OUTER JOIN ('
@@ -413,6 +488,10 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
 			SET @Strsql+='INNER JOIN tbl_master_user MU ON MS.Shop_CreateUser=MU.USER_ID AND MU.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON MU.user_contactId=CNT.cnt_internalId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_trans_shopActivitysubmit SHOPACT ON MU.user_id=SHOPACT.User_Id AND MS.Shop_Code=SHOPACT.Shop_Id '
 			SET @Strsql+='WHERE ST.IsActive=1 AND SHOPACT.Is_Newshopadd IN(0,1) AND SHOPACT.ISMEETING=0 '
 			SET @Strsql+='AND CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
@@ -433,6 +512,10 @@ BEGIN
 			SET @Strsql+='0 AS SHOPTYPEID,'''' AS SHOPTYPENAME,0 AS SHOPVISITED '
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -445,6 +528,10 @@ BEGIN
 			SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN ( '
 			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
@@ -492,6 +579,10 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
 			SET @Strsql+='INNER JOIN tbl_master_user MU ON MS.Shop_CreateUser=MU.USER_ID AND MU.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON MU.user_contactId=CNT.cnt_internalId '
+			--Rev 1.0
+			IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+				SET @Strsql+='INNER JOIN #EMPHR_EDIT EMPHR ON EMPHR.EMPCODE=CNT.cnt_internalId '
+			--End of Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state STAT ON STAT.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN tbl_trans_shopActivitysubmit SHOPACT ON MU.user_id=SHOPACT.User_Id AND MS.Shop_Code=SHOPACT.Shop_Id '
@@ -517,6 +608,13 @@ BEGIN
 			DROP TABLE #TMPATTENLOGINOUT
 			DROP TABLE #TMPLEAVELOGINOUT
 		END
+	--Rev 1.0
+	IF ((SELECT IsHierarchyforHorizontalPerformanceReport FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			DROP TABLE #EMPHR_EDIT
+			DROP TABLE #EMPHRS
+		END
+	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END
