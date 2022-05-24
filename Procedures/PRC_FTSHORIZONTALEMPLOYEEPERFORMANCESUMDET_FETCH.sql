@@ -25,6 +25,9 @@ AS
 Written by : Debashis Talukder On 09/05/2022
 Module	   : Horizontal Performance Summary & Detail.Refer: 0024858
 1.0		v2.0.29		Debashis	11/05/2022		Userwise hierarchy setting required.Refer: 0024880
+2.0		v2.0.30		Debashis	24/05/2022		Zero visit/revisit data will also considered in horizontal summary report.
+												If an user logged into the application & only make the attendance but not doing any visit/revisit for the day, those records 
+												also to be considered in the horizontal performance summary report.Refer: 0024904
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -482,7 +485,10 @@ BEGIN
 			SET @Strsql+='CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(start_ideal_date_time,''00:00:00'')) * 60) AS FLOAT) + CAST(DATEPART(MINUTE,ISNULL(start_ideal_date_time,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS IDEAL_TIME '
 			SET @Strsql+='FROM FTS_Ideal_Loaction WHERE CONVERT(NVARCHAR(10),start_ideal_date_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+=') IDLE GROUP BY user_id,start_ideal_date_time) IDEALLOACTION ON IDEALLOACTION.user_id=USR.user_id AND ATTEN.Login_datetime=IDEALLOACTION.start_ideal_date_time '
-			SET @Strsql+='INNER JOIN('
+			--Rev 2.0
+			--SET @Strsql+='INNER JOIN('
+			SET @Strsql+='LEFT OUTER JOIN ('
+			--End of Rev 2.0
 			SET @Strsql+='SELECT ST.shop_typeId AS SHOPTYPEID,ST.Name AS SHOPTYPENAME,MU.user_id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITDATE,COUNT(SHOPACT.Shop_Id) AS SHOPVISITED '
 			SET @Strsql+='FROM tbl_shoptype ST '
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
