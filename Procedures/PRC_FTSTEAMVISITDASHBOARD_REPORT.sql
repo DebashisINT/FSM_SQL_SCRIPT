@@ -1,4 +1,4 @@
---EXEC PRC_FTSTEAMVISITDASHBOARD_REPORT '2022-02-09','15','','','ALL','Summary',53028
+--EXEC PRC_FTSTEAMVISITDASHBOARD_REPORT '2022-05-24','5','','','ALL','Summary',136,108390
 --EXEC PRC_FTSTEAMVISITDASHBOARD_REPORT '2022-02-09','','','','EMP','Detail',53028
 --EXEC PRC_FTSTEAMVISITDASHBOARD_REPORT '2022-02-09','','','','ALL','Summary',53028
 --EXEC PRC_FTSTEAMVISITDASHBOARD_REPORT '2022-02-09','','','','AT_WORK','Detail',53028
@@ -33,11 +33,15 @@ Written by : Debashis Talukder on 09/02/2022
 Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 1.0		v2.0.28		Debashis	23-03-2022		FSM - Portal: Branch selection required in 'Team Visit' against the selected 'State'.Refer: 0024742
 2.0		v2.0.29		Debashis	12-05-2022		ITC : FSM : Dashboard added few columns.Refer: 0024887
+3.0		v2.0.30		Debashis	24-05-2022		FSM Dashboard : Team Visit functionality change.Refer: 0024909
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @Strsql NVARCHAR(MAX),@SqlStrTable NVARCHAR(MAX),@EmpDefaultType NVARCHAR(50)=NULL
+	--Rev 3.0
+	DECLARE @EMPCODE NVARCHAR(50)=NULL,@CHCIRSECTYPE NVARCHAR(MAX)
+	--End of Rev 3.0
 
 	IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
 		DROP TABLE #STATEID_LIST
@@ -82,9 +86,9 @@ BEGIN
 	IF @BRANCHID <> ''
 		BEGIN
 			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
-			SET @sqlStrTable=''
-			SET @sqlStrTable=' INSERT INTO #BRANCHID_LIST SELECT branch_id from tbl_master_branch where branch_id in('+@BRANCHID+')'
-			EXEC SP_EXECUTESQL @sqlStrTable
+			SET @SqlStrTable=''
+			SET @SqlStrTable=' INSERT INTO #BRANCHID_LIST SELECT branch_id from tbl_master_branch where branch_id in('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
 		END
 	--End of Rev 1.0
 
@@ -108,6 +112,42 @@ BEGIN
 	SELECT User_Id,distance_covered,SDate FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120)=CONVERT(NVARCHAR(10),@TODAYDATE,120) AND distance_covered IS NOT NULL
 
 	SET @EmpDefaultType=(SELECT EMP.DefaultType FROM tbl_master_employee EMP WHERE EXISTS(SELECT USR.USER_ID FROM TBL_MASTER_USER USR WHERE EMP.emp_contactId=USR.user_contactId AND USR.USER_ID=@USERID))
+	--Rev 3.0
+	SET @EMPCODE=(SELECT EMP.emp_contactId FROM tbl_master_employee EMP WHERE EXISTS(SELECT USR.USER_ID FROM TBL_MASTER_USER USR WHERE EMP.emp_contactId=USR.user_contactId AND USR.USER_ID=@USERID))
+
+	IF @EmpDefaultType='Channel'
+		BEGIN
+			SET @CHCIRSECTYPE=(SELECT 
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT ',' + CAST(ch_id AS NVARCHAR(50)) FROM 
+			(SELECT EC.ch_id FROM Employee_Channel EC 
+			INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID WHERE ECM.EP_EMP_CONTACTID=@EMPCODE
+			) AS CH FOR XML PATH(''))),1,1,' '))),'') AS CHANNEL)
+		END
+	ELSE IF @EmpDefaultType='Circle'
+		BEGIN
+			SET @CHCIRSECTYPE=(SELECT 
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT ',' + CAST(crl_id AS NVARCHAR(50)) FROM 
+			(SELECT EC.crl_id FROM Employee_Circle EC 
+			INNER JOIN Employee_CircleMap ECM ON EC.crl_id=ECM.EP_CRL_ID WHERE ECM.EP_EMP_CONTACTID=@EMPCODE
+			) AS CIR FOR XML PATH(''))),1,1,' '))),'') AS CIRCLE)
+		END
+	ELSE IF @EmpDefaultType='Section'
+		BEGIN
+			SET @CHCIRSECTYPE=(SELECT 
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT ',' + CAST(sec_id AS NVARCHAR(50)) FROM 
+			(SELECT ES.sec_id FROM Employee_Section ES 
+			INNER JOIN Employee_SectionMap ESM ON ES.sec_id=ESM.EP_SEC_ID WHERE ESM.EP_EMP_CONTACTID=@EMPCODE
+			) AS SEC FOR XML PATH(''))),1,1,' '))),'') AS SECTION)
+		END
+	ELSE IF @EmpDefaultType='' OR @EmpDefaultType IS NULL
+		BEGIN
+			SET @CHCIRSECTYPE=(SELECT 
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT ',' + CAST(ch_id AS NVARCHAR(50)) FROM 
+			(SELECT EC.ch_id FROM Employee_Channel EC 
+			INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID WHERE ECM.EP_EMP_CONTACTID=@EMPCODE
+			) AS CH FOR XML PATH(''))),1,1,' '))),'') AS CHANNEL)
+		END
+	--End of Rev 3.0
 
 	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
 		DROP TABLE #TEMPCONTACT
@@ -122,19 +162,52 @@ BEGIN
 			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	IF @EmpDefaultType<>'' OR @EmpDefaultType IS NOT NULL
+	--Rev 3.0
+	--IF @EmpDefaultType<>'' OR @EmpDefaultType IS NOT NULL
+	IF @EmpDefaultType<>''
+	--End of Rev 3.0
 		BEGIN
-			INSERT INTO #TEMPCONTACT
-			SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
-			INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId 
-			WHERE CNT.cnt_contactType IN('EM') AND EMP.DefaultType=@EmpDefaultType
+			--Rev 3.0
+			--INSERT INTO #TEMPCONTACT
+			--SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
+			--INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId 
+			--WHERE CNT.cnt_contactType IN('EM') AND EMP.DefaultType=@EmpDefaultType
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
+			SET @SqlStrTable+='SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT '
+			SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @SqlStrTable+='WHERE CNT.cnt_contactType IN(''EM'') '
+			IF @EmpDefaultType='Channel'
+				SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			ELSE IF @EmpDefaultType='Circle'
+				SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_CircleMap WHERE EP_CRL_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			ELSE IF @EmpDefaultType='Section'
+				SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_SectionMap WHERE EP_SEC_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			
+			--SELECT @SqlStrTable
+			EXEC SP_EXECUTESQL @SqlStrTable
+			--End of Rev 3.0
 		END
-	ELSE
+	--Rev 3.0
+	--ELSE
+	ELSE IF @EmpDefaultType=''
+	--End of Rev 3.0
 		BEGIN
-			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-		END
+			--Rev 3.0
+			--INSERT INTO #TEMPCONTACT
+			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
+			SET @SqlStrTable+='SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT '
+			SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @SqlStrTable+='WHERE CNT.cnt_contactType IN(''EM'') '
+			SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
 
+			--SELECT @SqlStrTable
+			EXEC SP_EXECUTESQL @SqlStrTable
+			--End of Rev 3.0
+		END
+				
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSTEAMVISITDASHBOARD_REPORT') AND TYPE IN (N'U'))
 		BEGIN
 			CREATE TABLE FTSTEAMVISITDASHBOARD_REPORT
@@ -370,15 +443,15 @@ BEGIN
 			SET @Strsql+='ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '', '' + ch_Channel FROM '
 			SET @Strsql+='(SELECT EC.ch_Channel FROM Employee_Channel EC '
 			SET @Strsql+='INNER JOIN Employee_ChannelMap ECM ON EC.ch_id=ECM.EP_CH_ID WHERE ECM.EP_EMP_CONTACTID=CNT.cnt_internalId '
-			SET @Strsql+=') AS REFINV FOR XML PATH(''''))),1,2,'' ''))),'''') AS CHANNEL,'
+			SET @Strsql+=') AS CH FOR XML PATH(''''))),1,2,'' ''))),'''') AS CHANNEL,'
 			SET @Strsql+='ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '', '' + crl_Circle FROM '
 			SET @Strsql+='(SELECT EC.crl_Circle FROM Employee_Circle EC '
 			SET @Strsql+='INNER JOIN Employee_CircleMap ECM ON EC.crl_id=ECM.EP_CRL_ID WHERE ECM.EP_EMP_CONTACTID=CNT.cnt_internalId '
-			SET @Strsql+=') AS REFINV FOR XML PATH(''''))),1,2,'' ''))),'''') AS CIRCLE,'
+			SET @Strsql+=') AS CIR FOR XML PATH(''''))),1,2,'' ''))),'''') AS CIRCLE,'
 			SET @Strsql+='ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '', '' + sec_Section FROM '
 			SET @Strsql+='(SELECT ES.sec_Section FROM Employee_Section ES '
 			SET @Strsql+='INNER JOIN Employee_SectionMap ESM ON ES.sec_id=ESM.EP_SEC_ID WHERE ESM.EP_EMP_CONTACTID=CNT.cnt_internalId '
-			SET @Strsql+=') AS REFINV FOR XML PATH(''''))),1,2,'' ''))),'''') AS SECTION '
+			SET @Strsql+=') AS SEC FOR XML PATH(''''))),1,2,'' ''))),'''') AS SECTION '
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
