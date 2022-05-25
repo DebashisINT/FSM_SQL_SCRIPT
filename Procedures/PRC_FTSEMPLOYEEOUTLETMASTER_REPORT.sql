@@ -20,6 +20,7 @@ AS
 Written by : Debashis Talukder ON 03/11/2021
 Module	   : Employee Outlet Master.Refer: 0024448
 1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
+2.0		v2.0.30		Debashis	25/05/2022		Employee Outlet Master : There Date parameter shall be ignored. It will be treated like As on.Refer: 0024905
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -209,7 +210,9 @@ BEGIN
 	--SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
 	SET @Strsql+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
 	--End of Rev 1.0
-	SET @Strsql+='AND CONVERT(NVARCHAR(10),MS.Shop_CreateTime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--Rev 2.0
+	--SET @Strsql+='AND CONVERT(NVARCHAR(10),MS.Shop_CreateTime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--End of Rev 2.0
 	IF @BRANCHID<>''
 		SET @StrSql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 	IF @EMPID<>''
