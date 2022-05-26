@@ -1,4 +1,4 @@
---exec proc_FTS_Configuration @Action='GlobalCheck',@UserID=11738
+--EXEC proc_FTS_Configuration @Action='GlobalCheck',@UserID=11738
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[proc_FTS_Configuration]') AND type in (N'P', N'PC'))
 BEGIN
