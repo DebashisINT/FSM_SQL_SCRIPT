@@ -144,8 +144,6 @@ BEGIN
 
 			--END
 
-
-
 			if(@@ROWCOUNT>0)
 			--select @user_id as user_id,@shop_id as shop_id,@collection as collection
 
@@ -153,7 +151,5 @@ BEGIN
 			select user_id, collcton.shop_id,collection,shp.Shop_Name,shp.Shop_Owner,shp.Shop_Owner_Contact from tbl_FTS_collection as collcton   
 			inner join tbl_Master_shop as shp on collcton.shop_id=shp.Shop_Code
 			where collcton.Collecpk_Id=@ColllectionUniqueId
-
-
 		END
 END
