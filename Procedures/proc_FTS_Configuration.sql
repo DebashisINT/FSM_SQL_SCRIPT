@@ -128,6 +128,9 @@ BEGIN
 	111.0		Debashis	02-05-2022	ADD SETTINGS @Action='UserCheck' ShowTotalVisitAppMenu & OfflineShopAccuracy.Row 683
 	112.0		Debashis	04-05-2022	ADD SETTINGS @Action='UserCheck' AutoRevisitTimeInSeconds.Row 684
 	113.0		Debashis	05-05-2022	ADD SETTINGS @Action='UserCheck' PartyUpdateAddrMandatory.Row 685
+	114.0		Debashis	26-05-2022	ADD SETTINGS @Action='UserCheck' IsCollectionOrderWise,ShowCollectionOnlywithInvoiceDetails,ShowCollectionAlert,ShowZeroCollectioninAlert,
+																		 & IsPendingCollectionRequiredUnderTeam.Row 686
+	115.0		Debashis	26-02-2022	ADD SETTINGS @Action='GlobalCheck' IsCollectionEntryConsiderOrderOrInvoice.Row 687
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -237,6 +240,9 @@ BEGIN
 	,@NewQuotationRateCaption NVARCHAR(50)
 	,@NewQuotationShowTermsAndCondition BIT
 	--End of Rev 103.0
+	--Rev 115.0
+	,@IsCollectionEntryConsiderOrderOrInvoice BIT
+	--End of Rev 115.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -397,6 +403,9 @@ BEGIN
 		SET @NewQuotationRateCaption =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NewQuotationRateCaption' AND IsActive=1)
 		SET @NewQuotationShowTermsAndCondition =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NewQuotationShowTermsAndCondition' AND IsActive=1)
 		--End of Rev 103.0
+		--Rev 115.0
+		SET @IsCollectionEntryConsiderOrderOrInvoice =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsCollectionEntryConsiderOrderOrInvoice' AND IsActive=1)
+		--End of Rev 115.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -536,6 +545,9 @@ BEGIN
 			,@NewQuotationRateCaption AS NewQuotationRateCaption
 			,@NewQuotationShowTermsAndCondition AS NewQuotationShowTermsAndCondition
 			--End of Rev 103.0
+			--Rev 115.0
+			,@IsCollectionEntryConsiderOrderOrInvoice AS IsCollectionEntryConsiderOrderOrInvoice
+			--End of Rev 115.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1334,5 +1346,22 @@ BEGIN
 		SELECT 'PartyUpdateAddrMandatory' AS [Key],CONVERT(NVARCHAR(15),USR.PartyUpdateAddrMandatory) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 113.0
+		--Rev 114.0
+		UNION ALL
+		SELECT 'IsCollectionOrderWise' AS [Key],CONVERT(NVARCHAR(15),USR.IsCollectionOrderWise) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowCollectionOnlywithInvoiceDetails' AS [Key],CONVERT(NVARCHAR(15),USR.ShowCollectionOnlywithInvoiceDetails) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowCollectionAlert' AS [Key],CONVERT(NVARCHAR(15),USR.ShowCollectionAlert) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowZeroCollectioninAlert' AS [Key],CONVERT(NVARCHAR(15),USR.ShowZeroCollectioninAlert) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsPendingCollectionRequiredUnderTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsPendingCollectionRequiredUnderTeam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 114.0
 	END
 END

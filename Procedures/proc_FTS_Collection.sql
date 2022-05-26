@@ -25,7 +25,10 @@ ALTER PROCEDURE [dbo].[proc_FTS_Collection]
 --END OF REV 2.0
 --Rev 3.0
 @Hospital NVARCHAR(200)=NULL,
-@Email_Address NVARCHAR(300)=NULL
+@Email_Address NVARCHAR(300)=NULL,
+--Rev 4.0
+@order_id NVARCHAR(400)=NULL
+--End of Rev 4.0
 --End of Rev 3.0
 ) --WITH ENCRYPTION
 AS
@@ -33,6 +36,7 @@ AS
 1.0					Tanmoy		30-11-2020		ADD NEW COLUMN IN COLLECTION
 2.0					TANMOY		10-04-2021		Extra patient details insert
 3.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 603
+4.0		v2.0.30		Debashis	26-05-2022		Order Number added for Row No. 688
 *************************************************************************************************/
 BEGIN
 	declare  @ColllectionUniqueId bigint
@@ -98,19 +102,20 @@ BEGIN
 
 			UPDATE tbl_FTS_BillingDetails SET Invoice_Unpaid=Invoice_Unpaid-@collection WHERE bill_id=@bill_id
 			--SET @collection=0
+			--Rev 4.0 && A new column has been added as ORDER_NUMBER
 			insert  into tbl_FTS_collection_invoicewise
 			 (collection_id,
 			user_id,
 			shop_id,
 			collection,
-			collection_date,INVOICE_NUMBER)
+			collection_date,INVOICE_NUMBER,ORDER_NUMBER)
 			values
 			(
 			@collection_id,
 			@user_id,
 			@shop_id,
 			@collection,
-			@collection_date,@bill_id
+			@collection_date,@bill_id,@order_id
 			)
 
 			--END
