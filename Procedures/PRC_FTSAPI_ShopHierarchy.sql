@@ -23,6 +23,7 @@ AS
 7.0					TANMOY		23-06-2020		Extar column show
 8.0		v2.0.27		Debashis	10-03-2022		New types are not coming in the All team view party section.Architect, fabricator,Consultant,Dealer,Builder,Corporate,Govt. Bodies,End User.
 												Refer: 0024743
+9.0		v2.0.30		Debashis	31-05-2022		Shop visited count will consider "tbl_trans_shopActivitysubmit" table to show the actual count while checking from team details.Refer: 0024918
 ************************************************************************************************************************************************************************************************/ 
 BEGIN
 	 DECLARE @SHOP_TYPE NVARCHAR(10)
@@ -139,8 +140,11 @@ BEGIN
 		END
 
 		SET @SQL=''
-		SET @SQL+=' SELECT SHOP.Shop_Code AS shop_id,SHOP.Shop_Name AS shop_name,SHOP.Shop_Lat AS shop_lat,SHOP.Shop_Long AS shop_long,SHOP.Address AS shop_address,  '
-		SET @SQL+=' SHOP.Pincode AS shop_pincode,SHOP.Shop_Owner_Contact AS shop_contact,CONVERT(NVARCHAR(10),SHOP.total_visitcount) AS total_visited,CONVERT(NVARCHAR(10),SHOP.Lastvisit_date,121) AS last_visit_date,  '
+		SET @SQL+=' SELECT SHOP.Shop_Code AS shop_id,SHOP.Shop_Name AS shop_name,SHOP.Shop_Lat AS shop_lat,SHOP.Shop_Long AS shop_long,SHOP.Address AS shop_address,'
+		--Rev 9.0
+		--SET @SQL+=' SHOP.Pincode AS shop_pincode,SHOP.Shop_Owner_Contact AS shop_contact,CONVERT(NVARCHAR(10),SHOP.total_visitcount) AS total_visited,CONVERT(NVARCHAR(10),SHOP.Lastvisit_date,121) AS last_visit_date,  '
+		SET @SQL+='SHOP.Pincode AS shop_pincode,SHOP.Shop_Owner_Contact AS shop_contact,CONVERT(NVARCHAR(10),SHOPACT.total_visited) AS total_visited,CONVERT(NVARCHAR(10),SHOP.Lastvisit_date,121) AS last_visit_date,  '
+		--End of Rev 9.0
 		SET @SQL+=' CONVERT(NVARCHAR(10),SHOP.type) AS shop_type,ISNULL(dd.Shop_Name,'''') AS dd_name,SHOP.EntityCode as entity_code  '
 		--Rev 6.0 Start
 		set @SQL+=' ,convert(nvarchar(10),SHOP.Model_id) as model_id,convert(nvarchar(10),SHOP.Primary_id) as primary_app_id,convert(nvarchar(10),SHOP.Secondary_id) as secondary_app_id   '
@@ -151,6 +155,10 @@ BEGIN
 		--Rev 7.0 End 
 		SET @SQL+='  FROM tbl_Master_shop SHOP  '
 		SET @SQL+=' LEFT OUTER JOIN tbl_Master_shop DD ON DD.Shop_Code=SHOP.assigned_to_dd_id  '
+		--Rev 9.0
+		SET @SQL+='LEFT OUTER JOIN (SELECT User_Id,Shop_Id,COUNT(Is_Newshopadd) AS total_visited FROM tbl_trans_shopActivitysubmit GROUP BY User_Id,Shop_Id) SHOPACT '
+		SET @SQL+='ON SHOP.Shop_Code=SHOPACT.Shop_Id '
+		--End of Rev 9.0
 		SET @SQL+=' WHERE SHOP.Entity_Status=1  '
 		
 		IF ISNULL(@SHOP_TYPE,'')='' AND ISNULL(@SHOP_CODE,'')='' --AND ISNULL(@area_id,'')=''
