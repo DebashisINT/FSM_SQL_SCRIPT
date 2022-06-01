@@ -27,6 +27,7 @@ Module	   : Employee Activity Report for Track
 5.0			v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 6.0			v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
 7.0			v2.0.26		Debashis	24/01/2022		Reports > Employee Tracking > Employee Activity, Unable to generate report, system is getting logout.Refer: 0024636
+8.0			v2.0.30		Debashis	01/06/2022		While generating the Employee Activity Report for 7 days, system getting logged out.Now solved.Refer: 0024921
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -86,9 +87,14 @@ BEGIN
 			  --Rev 3.0
 			  BRANCHDESC NVARCHAR(300),
 			  --End of Rev 3.0
-			  Designation NVARCHAR(100) NULL,
-			  Employee_Name NVARCHAR(100) NULL,
-			  SHOP_NAME NVARCHAR(100) null,
+			  --Rev 8.0
+			  --Designation NVARCHAR(100) NULL,
+			  --Employee_Name NVARCHAR(100) NULL,
+			  --SHOP_NAME NVARCHAR(100) NULL,
+			  Designation NVARCHAR(300) NULL,
+			  Employee_Name NVARCHAR(300) NULL,
+			  SHOP_NAME NVARCHAR(300) NULL,
+			  --End of Rev 8.0
 			  --Rev 5.0
 			  SHOP_DISTRICT NVARCHAR(50) NULL,
 			  SHOP_PINCODE NVARCHAR(120) NULL,
