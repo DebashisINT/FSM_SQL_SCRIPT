@@ -30,6 +30,7 @@ AS
 12.0		INDRANIL		17-02-2021			Get account_holder,account_no,bank_name,ifsc,upi_id
 13.0		Debashis		19-01-2022			Four fields added as Project_Name,Landline_Number,Agency_Name & Lead_Contact_Number.
 14.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 637
+15.0		Debashis		01-06-2022			One field added as IsShopDuplicate.Row: 694
 ************************************************************************************************************************************************/
 BEGIN
 
@@ -92,9 +93,11 @@ BEGIN
 			set @sql+='shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number,'
 			--End of Rev 13.0
 			--Rev 14.0
-			set @sql+='shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer '
+			set @sql+='shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer,'
 			--End of Rev 14.0
-
+			--Rev 15.0
+			set @sql+='CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate '
+			--End of Rev 15.0
 			set @sql+=' from tbl_Master_shop as shop  '
 			set @sql+=' INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type   '
@@ -166,9 +169,11 @@ BEGIN
 			shop.Project_Name AS project_name,shop.Landline_Number AS landline_number,shop.Agency_Name AS agency_name,shop.Lead_Contact_Number AS lead_contact_number,
 			--End of Rev 13.0
 			--Rev 14.0
-			shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer 
+			shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer, 
 			--End of Rev 14.0
-			
+			--Rev 15.0
+			CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate 
+			--End of Rev 15.0
 			from tbl_Master_shop as shop
 			INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id 
 			INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type
