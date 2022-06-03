@@ -131,6 +131,7 @@ BEGIN
 	114.0		Debashis	26-05-2022	ADD SETTINGS @Action='UserCheck' IsCollectionOrderWise,ShowCollectionOnlywithInvoiceDetails,ShowCollectionAlert,ShowZeroCollectioninAlert,
 																		 & IsPendingCollectionRequiredUnderTeam.Row 686
 	115.0		Debashis	26-02-2022	ADD SETTINGS @Action='GlobalCheck' IsCollectionEntryConsiderOrderOrInvoice.Row 687
+	116.0		Debashis	03-06-2022	ADD SETTINGS @Action='UserCheck' IsShowRepeatOrderinNotification & IsShowRepeatOrdersNotificationinTeam.Row 695
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1363,5 +1364,13 @@ BEGIN
 		SELECT 'IsPendingCollectionRequiredUnderTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsPendingCollectionRequiredUnderTeam) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 114.0
+		--Rev 116.0
+		UNION ALL
+		SELECT 'IsShowRepeatOrderinNotification' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowRepeatOrderinNotification) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowRepeatOrdersNotificationinTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowRepeatOrdersNotificationinTeam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 116.0
 	END
 END
