@@ -132,6 +132,8 @@ BEGIN
 																		 & IsPendingCollectionRequiredUnderTeam.Row 686
 	115.0		Debashis	26-02-2022	ADD SETTINGS @Action='GlobalCheck' IsCollectionEntryConsiderOrderOrInvoice.Row 687
 	116.0		Debashis	03-06-2022	ADD SETTINGS @Action='UserCheck' IsShowRepeatOrderinNotification & IsShowRepeatOrdersNotificationinTeam.Row 695
+	117.0		Debashis	08-06-2022	ADD SETTINGS @Action='UserCheck' AutoDDSelect & ShowPurposeInShopVisit.Row 696
+	118.0		Debashis	08-06-2022	ADD SETTINGS @Action='GlobalCheck' ContactNameText,ContactNumberText,EmailText,DobText & DateOfAnniversaryText. Row 697
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -244,6 +246,13 @@ BEGIN
 	--Rev 115.0
 	,@IsCollectionEntryConsiderOrderOrInvoice BIT
 	--End of Rev 115.0
+	--Rev 118.0
+	,@ContactNameText NVARCHAR(300)
+	,@ContactNumberText NVARCHAR(300)
+	,@EmailText NVARCHAR(300)
+	,@DobText NVARCHAR(300)
+	,@DateOfAnniversaryText NVARCHAR(300)
+	--End of Rev 118.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -407,6 +416,13 @@ BEGIN
 		--Rev 115.0
 		SET @IsCollectionEntryConsiderOrderOrInvoice =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsCollectionEntryConsiderOrderOrInvoice' AND IsActive=1)
 		--End of Rev 115.0
+		--Rev 118.0
+		SET @ContactNameText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ContactNameText' AND IsActive=1)
+		SET @ContactNumberText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ContactNumberText' AND IsActive=1)
+		SET @EmailText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='EmailText' AND IsActive=1)
+		SET @DobText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='DobText' AND IsActive=1)
+		SET @DateOfAnniversaryText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='DateOfAnniversaryText' AND IsActive=1)
+		--End of Rev 118.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -549,6 +565,13 @@ BEGIN
 			--Rev 115.0
 			,@IsCollectionEntryConsiderOrderOrInvoice AS IsCollectionEntryConsiderOrderOrInvoice
 			--End of Rev 115.0
+			--Rev 118.0
+			,@ContactNameText AS contactNameText
+			,@ContactNumberText AS contactNumberText
+			,@EmailText AS emailText
+			,@DobText AS dobText
+			,@DateOfAnniversaryText AS dateOfAnniversaryText
+			--End of Rev 118.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1372,5 +1395,13 @@ BEGIN
 		SELECT 'IsShowRepeatOrdersNotificationinTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowRepeatOrdersNotificationinTeam) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 116.0
+		--Rev 117.0
+		UNION ALL
+		SELECT 'AutoDDSelect' AS [Key],CONVERT(NVARCHAR(15),USR.AutoDDSelect) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowPurposeInShopVisit' AS [Key],CONVERT(NVARCHAR(15),USR.ShowPurposeInShopVisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 117.0
 	END
 END
