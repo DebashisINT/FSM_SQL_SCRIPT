@@ -134,6 +134,7 @@ BEGIN
 	116.0		Debashis	03-06-2022	ADD SETTINGS @Action='UserCheck' IsShowRepeatOrderinNotification & IsShowRepeatOrdersNotificationinTeam.Row 695
 	117.0		Debashis	08-06-2022	ADD SETTINGS @Action='UserCheck' AutoDDSelect & ShowPurposeInShopVisit.Row 696
 	118.0		Debashis	08-06-2022	ADD SETTINGS @Action='GlobalCheck' ContactNameText,ContactNumberText,EmailText,DobText & DateOfAnniversaryText. Row 697
+	119.0		Debashis	15-06-2022	ADD SETTINGS @Action='UserCheck' WillRoomDBShareinLogin & GPSAlertwithVibration.Row 698
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -1403,5 +1404,13 @@ BEGIN
 		SELECT 'ShowPurposeInShopVisit' AS [Key],CONVERT(NVARCHAR(15),USR.ShowPurposeInShopVisit) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 117.0
+		--Rev 119.0
+		UNION ALL
+		SELECT 'WillRoomDBShareinLogin' AS [Key],CONVERT(NVARCHAR(15),USR.WillRoomDBShareinLogin) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'GPSAlertwithVibration' AS [Key],CONVERT(NVARCHAR(15),USR.GPSAlertwithVibration) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 119.0
 	END
 END
