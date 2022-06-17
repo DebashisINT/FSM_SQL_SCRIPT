@@ -3,6 +3,8 @@ BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [SP_API_Getshoplists_Report] AS' 
 END
 GO
+--exec SP_API_Getshoplists_Report @Shoptype='2,4',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Prime Partner,Distributor'
+--exec SP_API_Getshoplists_Report @Shoptype='5',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Show All'
 
 ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 (
@@ -26,7 +28,7 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 @Shoptype varchar(MAX)=NULL,
 @AssignTo varchar(100)=NULL,
 @Create_UserId int=null
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
 1.0					Tanmoy		30-07-2019     change left outer join to inner join
@@ -35,6 +37,7 @@ AS
 4.0		v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 5.0		v2.0.26		Debashis	13/01/2022		Sub Type field required in some of the reports.Refer: 0024576
 6.0		v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
+7.0					Swatilekha	16/06/2022		Show All checkbox required for Shops report in fsm Refer: 24948
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -357,6 +360,9 @@ BEGIN
 	IF(@Action='Counter')
 		BEGIN
 			DECLARE @Strsql NVARCHAR(MAX),@sqlStrTable NVARCHAR(MAX)
+			--Rev 7.0
+			CREATE TABLE #TMPSHOPTYPENAME(SHOPTYPENAME NVARCHAR(MAX))
+			--End of Rev 7.0
 
 			--Rev 2.0
 			--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
@@ -393,6 +399,16 @@ BEGIN
 			SET @Shoptype = REPLACE(''''+@Shoptype+'''',',',''',''')
 
 			SET @Shoptype=REPLACE(@Shoptype,'''','')
+			
+			--Rev 7.0
+			SET @sql='INSERT INTO #TMPSHOPTYPENAME(SHOPTYPENAME) SELECT (
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '','' + [Name] FROM ShopTypeData WHERE [shop_typeId] IN('+@Shoptype+')	
+				FOR XML PATH(''''))),1,1,''''))),'''')) '
+			EXEC(@sql)
+			SET @sql=''
+			--End of Rev 7.0
+			
+
 			--SET @sqlStrTable=''
 			--SET @sqlStrTable=' INSERT INTO #Shop_List select branch_id from tbl_master_branch where branch_id in('+@Shoptype+')'
 
@@ -463,10 +479,19 @@ BEGIN
 					---set @sql +='and shop.stateId='+@StateId+''
 					SET @sql +='  AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=shop.stateId) '
 				END
-			if(isnull(@Shoptype,'')<>'')
-				BEGIN
-					SET @sql +=' and shop.type in ('+@Shoptype+')'
-				END
+			--Rev work start 7.0
+				--if(isnull(@Shoptype,'')<>'')
+				--BEGIN
+				--	SET @sql +=' and shop.type in ('+@Shoptype+')'
+				--END				 				 
+				 IF (SELECT SHOPTYPENAME FROM #TMPSHOPTYPENAME)<>'Show All'
+				  begin
+					if(isnull(@Shoptype,'')<>'')
+						BEGIN
+							SET @sql +=' and shop.type in ('+@Shoptype+')'
+						END
+				   end				
+			--Rev work close  7.0
 			--set @sql +=' 
 			--group by shop.Shop_ID,Shop_Code,Shop_Name,shop.Address,shop.Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_CreateUser,Shop_CreateTime,
 			--usr.user_name,
@@ -490,6 +515,9 @@ BEGIN
 			DROP TABLE #STATEID_LIST
 			DROP TABLE #TEMPCONTACT
 			--End of Rev 2.0
+			--Rev 7.0
+			DROP TABLE #TMPSHOPTYPENAME
+			--End of Rev 7.0
 		END
 
 	if(@Action='PPDDLIST')
@@ -547,3 +575,4 @@ BEGIN
 	SET NOCOUNT OFF
 	--End of Rev 2.0
 END
+GO
