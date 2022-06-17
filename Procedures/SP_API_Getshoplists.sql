@@ -31,6 +31,7 @@ AS
 13.0		Debashis		19-01-2022			Four fields added as Project_Name,Landline_Number,Agency_Name & Lead_Contact_Number.
 14.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 637
 15.0		Debashis		01-06-2022			One field added as IsShopDuplicate.Row: 694
+16.0		Debashis		17-06-2022			One field added as Purpose.Row: 704
 ************************************************************************************************************************************************/
 BEGIN
 
@@ -96,8 +97,11 @@ BEGIN
 			set @sql+='shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer,'
 			--End of Rev 14.0
 			--Rev 15.0
-			set @sql+='CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate '
+			set @sql+='CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate,'
 			--End of Rev 15.0
+			--Rev 16.0
+			set @sql+='ISNULL(shop.Purpose,'''') AS purpose '
+			--End of Rev 16.0
 			set @sql+=' from tbl_Master_shop as shop  '
 			set @sql+=' INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type   '
@@ -172,8 +176,11 @@ BEGIN
 			shop.AlternateNoForCustomer AS alternateNoForCustomer,shop.WhatsappNoForCustomer AS whatsappNoForCustomer, 
 			--End of Rev 14.0
 			--Rev 15.0
-			CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate 
+			CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate, 
 			--End of Rev 15.0
+			--Rev 16.0
+			ISNULL(shop.Purpose,'') AS purpose 
+			--End of Rev 16.0
 			from tbl_Master_shop as shop
 			INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id 
 			INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type

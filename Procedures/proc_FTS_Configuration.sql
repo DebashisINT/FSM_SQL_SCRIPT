@@ -135,6 +135,7 @@ BEGIN
 	117.0		Debashis	08-06-2022	ADD SETTINGS @Action='UserCheck' AutoDDSelect & ShowPurposeInShopVisit.Row 696
 	118.0		Debashis	08-06-2022	ADD SETTINGS @Action='GlobalCheck' ContactNameText,ContactNumberText,EmailText,DobText & DateOfAnniversaryText. Row 697
 	119.0		Debashis	15-06-2022	ADD SETTINGS @Action='UserCheck' WillRoomDBShareinLogin & GPSAlertwithVibration.Row 698
+	120.0		Debashis	17-06-2022	ADD SETTINGS @Action='GlobalCheck' ShopScreenAftVisitRevisit. Row 699
 	*****************************************************************************************************************************************************************************/ 
 
 
@@ -254,6 +255,9 @@ BEGIN
 	,@DobText NVARCHAR(300)
 	,@DateOfAnniversaryText NVARCHAR(300)
 	--End of Rev 118.0
+	--Rev 120.0
+	,@ShopScreenAftVisitRevisit BIT
+	--End of Rev 120.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -424,6 +428,9 @@ BEGIN
 		SET @DobText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='DobText' AND IsActive=1)
 		SET @DateOfAnniversaryText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='DateOfAnniversaryText' AND IsActive=1)
 		--End of Rev 118.0
+		--Rev 120.0
+		SET @ShopScreenAftVisitRevisit =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShopScreenAftVisitRevisit' AND IsActive=1)
+		--End of Rev 120.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -573,6 +580,9 @@ BEGIN
 			,@DobText AS dobText
 			,@DateOfAnniversaryText AS dateOfAnniversaryText
 			--End of Rev 118.0
+			--Rev 120.0
+			,@ShopScreenAftVisitRevisit AS ShopScreenAftVisitRevisit
+			--End of Rev 120.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1412,5 +1422,10 @@ BEGIN
 		SELECT 'GPSAlertwithVibration' AS [Key],CONVERT(NVARCHAR(15),USR.GPSAlertwithVibration) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 119.0
+		--Rev 121.0
+		UNION ALL
+		SELECT 'ShopScreenAftVisitRevisit' AS [Key],CONVERT(NVARCHAR(15),USR.ShopScreenAftVisitRevisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 121.0
 	END
 END
