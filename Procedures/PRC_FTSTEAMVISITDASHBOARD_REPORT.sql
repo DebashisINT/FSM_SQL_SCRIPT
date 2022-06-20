@@ -34,6 +34,8 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 1.0		v2.0.28		Debashis	23-03-2022		FSM - Portal: Branch selection required in 'Team Visit' against the selected 'State'.Refer: 0024742
 2.0		v2.0.29		Debashis	12-05-2022		ITC : FSM : Dashboard added few columns.Refer: 0024887
 3.0		v2.0.30		Debashis	24-05-2022		FSM Dashboard : Team Visit functionality change.Refer: 0024909
+4.0		v2.0.30		Debashis	20-06-2022		All Tab Data [Employee Strength, Employees at Work, Not Logged In] shall be showing the data of employees those having 
+												Designation = DS or TL.Refer: 0024963
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -176,6 +178,14 @@ BEGIN
 			SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
 			SET @SqlStrTable+='SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT '
 			SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 4.0
+			SET @SqlStrTable+='INNER JOIN ( '
+			SET @SqlStrTable+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
+			SET @SqlStrTable+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation '
+			SET @SqlStrTable+='WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN(''DS'',''TL'') '
+			SET @SqlStrTable+='GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
+			SET @SqlStrTable+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			--End of Rev 4.0
 			SET @SqlStrTable+='WHERE CNT.cnt_contactType IN(''EM'') '
 			IF @EmpDefaultType='Channel'
 				SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
@@ -200,6 +210,14 @@ BEGIN
 			SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
 			SET @SqlStrTable+='SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT '
 			SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 4.0
+			SET @SqlStrTable+='INNER JOIN ( '
+			SET @SqlStrTable+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
+			SET @SqlStrTable+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation '
+			SET @SqlStrTable+='WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN(''DS'',''TL'') '
+			SET @SqlStrTable+='GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
+			SET @SqlStrTable+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			--End of Rev 4.0
 			SET @SqlStrTable+='WHERE CNT.cnt_contactType IN(''EM'') '
 			SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
 
