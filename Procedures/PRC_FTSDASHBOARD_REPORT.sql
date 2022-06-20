@@ -47,11 +47,17 @@ Module	   : Dashboard Summary & Detail
 6.0		V2.0.29		Sanchita	08-03-2022		FSM - Portal: Branch selection required against the selected 'State'. Refer: 24729
 7.0		V2.0.30		Sanchita	30-03-2022		The branch selection taken care when clicked on Employee Strength, Employees At Work, Employees on Leave. Refer: 24765
 8.0		v2.0.29		Debashis	13-05-2022		ITC : FSM : Dashboard added few columns.Refer: 0024887
+9.0		v2.0.30		Debashis	20-06-2022		All Tab Data [Employee Strength, Employees at Work, Not Logged In] shall be showing the data of employees those having 
+												Designation = DS or TL.Refer: 0024963
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @Strsql NVARCHAR(MAX), @sqlStrTable NVARCHAR(MAX)
+	--Rev 9.0
+	DECLARE @IsShowOnlyDSTLInDashboard NVARCHAR(100)=''
+	SET @IsShowOnlyDSTLInDashboard=(SELECT [Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsShowOnlyDSTLInDashboard')
+	--End of Rev 9.0
 
 	--Rev 5.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
@@ -177,8 +183,6 @@ BEGIN
 		END
 	--End of Rev 6.0
 
-
-
 	--Rev 5.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
@@ -200,15 +204,58 @@ BEGIN
 	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
 		BEGIN
-			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
-			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE
-			 WHERE cnt_contactType IN('EM')
+			--Rev 9.0
+			--INSERT INTO #TEMPCONTACT
+			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+			--INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE
+			--WHERE cnt_contactType IN('EM')
+			IF @IsShowOnlyDSTLInDashboard='0'
+				BEGIN
+					INSERT INTO #TEMPCONTACT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+					INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE
+					WHERE cnt_contactType IN('EM')
+				END
+			ELSE
+				BEGIN
+					INSERT INTO #TEMPCONTACT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
+					INNER JOIN #EMPHR_EDIT ON CNT.cnt_internalId=EMPCODE
+					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					INNER JOIN (
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
+					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+					) DESG ON DESG.emp_cntId=EMP.emp_contactId
+					WHERE CNT.cnt_contactType IN('EM')
+				END
+			--End of Rev 9.0
 		END
-		ELSE
+	ELSE
 		BEGIN
-			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+			--Rev 9.0
+			--INSERT INTO #TEMPCONTACT
+			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+			IF @IsShowOnlyDSTLInDashboard='0'
+				BEGIN
+					INSERT INTO #TEMPCONTACT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+				END
+			ELSE
+				BEGIN
+					INSERT INTO #TEMPCONTACT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
+					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					INNER JOIN (
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
+					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+					) DESG ON DESG.emp_cntId=EMP.emp_contactId
+					WHERE CNT.cnt_contactType IN('EM')
+				END
+			--End of Rev 9.0
 		END
 	--End of Rev 6.0
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSDASHBOARD_REPORT') AND TYPE IN (N'U'))
