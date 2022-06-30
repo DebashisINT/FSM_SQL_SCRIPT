@@ -38,6 +38,7 @@ AS
 5.0		v2.0.26		Debashis	13/01/2022		Sub Type field required in some of the reports.Refer: 0024576
 6.0		v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
 7.0					Swatilekha	16/06/2022		Show All checkbox required for Shops report in fsm Refer: 24948
+8.0					Swatilekha	30/06/2022		GSTIN & Trade License number field required in Listing of Master - Shops Report in fsm Refer: 0024573
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -442,6 +443,9 @@ BEGIN
 			--Rev 6.0
 			SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
 			--End of Rev 6.0
+			--Rev work 8.0 start 30.06.2022
+			SET @sql+=',shop.gstn_number,shop.trade_licence_number '
+			--Rev work 8.0 start 30.06.2022
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
