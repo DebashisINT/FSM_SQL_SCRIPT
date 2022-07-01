@@ -18,7 +18,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALEMPLOYEEPERFORMANCESUMDET_FETCH]
 @SHOPTYPEID NVARCHAR(MAX)=NULL,
 @REPORTTYPE NVARCHAR(20)=NULL,
 @VISITTYPE NVARCHAR(50)=NULL,
-@USERID INT=NULL
+@USERID INT=NULL,
+--Rev 3.0
+@FIRSTTIME BIT=NULL
+--End of Rev 3.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -28,6 +31,10 @@ Module	   : Horizontal Performance Summary & Detail.Refer: 0024858
 2.0		v2.0.30		Debashis	24/05/2022		Zero visit/revisit data will also considered in horizontal summary report.
 												If an user logged into the application & only make the attendance but not doing any visit/revisit for the day, those records 
 												also to be considered in the horizontal performance summary report.Refer: 0024904
+3.0		v2.0.31		Debashis	01/07/2022		HORIZONTAL PERFORMANCE SUMMARY & DETAIL REPORT
+												For 1 month date range taking huge time.
+												Please optimize upto possible extent.
+												Checked in Eurobond live data.Refer: 0025004
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -487,7 +494,13 @@ BEGIN
 			SET @Strsql+=') IDLE GROUP BY user_id,start_ideal_date_time) IDEALLOACTION ON IDEALLOACTION.user_id=USR.user_id AND ATTEN.Login_datetime=IDEALLOACTION.start_ideal_date_time '
 			--Rev 2.0
 			--SET @Strsql+='INNER JOIN('
-			SET @Strsql+='LEFT OUTER JOIN ('
+			--SET @Strsql+='LEFT OUTER JOIN ('
+			--Rev 3.0 && This is done for optimization.First time we got all records and from second time just need only Shop Type data as per availability.
+			IF @FIRSTTIME=1
+				SET @Strsql+='LEFT OUTER JOIN ('
+			ELSE IF @FIRSTTIME=0
+				SET @Strsql+='INNER JOIN('
+			--End of Rev 3.0
 			--End of Rev 2.0
 			SET @Strsql+='SELECT ST.shop_typeId AS SHOPTYPEID,ST.Name AS SHOPTYPENAME,MU.user_id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITDATE,COUNT(SHOPACT.Shop_Id) AS SHOPVISITED '
 			SET @Strsql+='FROM tbl_shoptype ST '
