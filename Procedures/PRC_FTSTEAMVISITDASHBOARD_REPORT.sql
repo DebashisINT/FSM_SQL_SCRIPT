@@ -36,6 +36,11 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 3.0		v2.0.30		Debashis	24-05-2022		FSM Dashboard : Team Visit functionality change.Refer: 0024909
 4.0		v2.0.30		Debashis	20-06-2022		All Tab Data [Employee Strength, Employees at Work, Not Logged In] shall be showing the data of employees those having 
 												Designation = DS or TL.Refer: 0024963
+5.0		v2.0.31		Debashis	07-07-2022		ADDED TWO CTC RECORD, DATA SHOWING DUPLICATE IN
+												1. EMPLOYEE STRENGTH
+												2. EMPLOYEE AT WORK
+												3. ON LEAVE
+												4. NOT LOGGEDIN.Refer: 0025019
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -476,7 +481,10 @@ BEGIN
 			--Rev 1.0
 			SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			--End of Rev 1.0
-			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
+			--Rev 5.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev 5.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -545,7 +553,10 @@ BEGIN
 			SET @Strsql+='DEPT.cost_description AS DEPARTMENT '
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev 5.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev 5.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 1.0
@@ -713,7 +724,10 @@ BEGIN
 			SET @Strsql+='CONVERT(VARCHAR(10),ATTEN.LEAVEDATE,105) +'' ''+ CONVERT(VARCHAR(15),CAST(ATTEN.LEAVEDATE AS TIME),100) AS LEAVEDATE,DEPT.cost_description AS DEPARTMENT '
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
+			--Rev 5.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev 5.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department'' '
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 1.0
@@ -831,7 +845,10 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			--End of Rev 2.0
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev 5.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			SET @Strsql+='LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev 5.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
