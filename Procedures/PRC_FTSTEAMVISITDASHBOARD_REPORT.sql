@@ -41,6 +41,8 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 												2. EMPLOYEE AT WORK
 												3. ON LEAVE
 												4. NOT LOGGEDIN.Refer: 0025019
+6.0		v2.0.31		Debashis	07-07-2022		FSM Dashboard : Team Visit Employee details is not showing.Ignore NULL value.Refer: 0025027
+7.0		v2.0.31		Debashis	07-07-2022		FSM Dashboard : Supervisor ID and Supervisor Name is not showing.Refer: 0025024
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -121,6 +123,11 @@ BEGIN
 	SET @EmpDefaultType=(SELECT EMP.DefaultType FROM tbl_master_employee EMP WHERE EXISTS(SELECT USR.USER_ID FROM TBL_MASTER_USER USR WHERE EMP.emp_contactId=USR.user_contactId AND USR.USER_ID=@USERID))
 	--Rev 3.0
 	SET @EMPCODE=(SELECT EMP.emp_contactId FROM tbl_master_employee EMP WHERE EXISTS(SELECT USR.USER_ID FROM TBL_MASTER_USER USR WHERE EMP.emp_contactId=USR.user_contactId AND USR.USER_ID=@USERID))
+	
+	--Rev 6.0
+	IF @EmpDefaultType IS NULL
+		SET @EmpDefaultType=''
+	--End of Rev 6.0
 
 	IF @EmpDefaultType='Channel'
 		BEGIN
@@ -169,6 +176,20 @@ BEGIN
 			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+	--Rev 7.0
+	IF OBJECT_ID('tempdb..#TEMPCONTACTREPORTTO') IS NOT NULL
+		DROP TABLE #TEMPCONTACTREPORTTO
+	CREATE TABLE #TEMPCONTACTREPORTTO
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX1 ON #TEMPCONTACTREPORTTO(cnt_internalId,cnt_contactType ASC)
+	--End of Rev 7.0
 	--Rev 3.0
 	--IF @EmpDefaultType<>'' OR @EmpDefaultType IS NOT NULL
 	IF @EmpDefaultType<>''
@@ -230,6 +251,18 @@ BEGIN
 			EXEC SP_EXECUTESQL @SqlStrTable
 			--End of Rev 3.0
 		END
+	--Rev 7.0
+	INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
+	SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT 
+	INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId 
+	INNER JOIN ( 
+	SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+	LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation
+	WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation NOT IN('DS','TL') 
+	GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+	) DESG ON DESG.emp_cntId=EMP.emp_contactId 
+	WHERE CNT.cnt_contactType IN('EM')
+	--End of Rev 7.0
 				
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSTEAMVISITDASHBOARD_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -494,7 +527,11 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--End of Rev 7.0
 			--Rev 1.0
 			IF @BRANCHID<>''
 				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
@@ -570,7 +607,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN (SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId FROM('
@@ -668,7 +708,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT User_Id,SUM(CAST(DISTANCE_COVERED AS DECIMAL(18,2))) AS DISTANCE_COVERED FROM #TEMPSHOPUSER '
@@ -741,7 +784,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
@@ -858,7 +904,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE NOT EXISTS(SELECT EMPCODE FROM #TEMPNOTLOGIN WHERE EMPCODE=CNT.cnt_internalId) AND USR.user_inactive=''N'' '
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -915,7 +964,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--End of Rev 7.0
 			--Rev 1.0
 			IF @BRANCHID<>''
 				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
@@ -979,7 +1031,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN (SELECT User_Id,SUM(CAST(DISTANCE_COVERED AS DECIMAL(18,2))) AS DISTANCE_COVERED FROM tbl_trans_shopuser '
@@ -1072,7 +1127,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
@@ -1165,7 +1223,10 @@ BEGIN
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--Rev 7.0
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--End of Rev 7.0
 			SET @Strsql+='WHERE NOT EXISTS(SELECT EMPCODE FROM #TEMPNOTLOGIN WHERE EMPCODE=EMP.emp_contactId) AND USR.user_inactive=''N'' '
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -1208,6 +1269,9 @@ BEGIN
 	--Rev 1.0
 	DROP TABLE #BRANCHID_LIST
 	--End of Rev 1.0
+	--Rev 7.0
+	DROP TABLE #TEMPCONTACTREPORTTO
+	--End of Rev 7.0
 
 	SET NOCOUNT OFF
 END
