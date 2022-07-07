@@ -49,6 +49,11 @@ Module	   : Dashboard Summary & Detail
 8.0		v2.0.29		Debashis	13-05-2022		ITC : FSM : Dashboard added few columns.Refer: 0024887
 9.0		v2.0.30		Debashis	20-06-2022		All Tab Data [Employee Strength, Employees at Work, Not Logged In] shall be showing the data of employees those having 
 												Designation = DS or TL.Refer: 0024963
+10.0	v2.0.31		Debashis	07-07-2022		ADDED TWO CTC RECORD, DATA SHOWING DUPLICATE IN
+												1. EMPLOYEE STRENGTH
+												2. EMPLOYEE AT WORK
+												3. ON LEAVE
+												4. NOT LOGGEDIN.Refer: 0025019
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -580,7 +585,10 @@ BEGIN
 			--End of Rev 8.0
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev Debashis
+			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev Debashis
 			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -665,7 +673,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev Debashis
+			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev Debashis
 			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
@@ -848,7 +859,10 @@ BEGIN
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0 Start
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev Debashis
+			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev Debashis
 			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
@@ -1005,7 +1019,10 @@ BEGIN
 			--End of Rev 8.0
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0 Start
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			--Rev Debashis
+			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			--End of Rev Debashis
 			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
