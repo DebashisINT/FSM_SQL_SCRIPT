@@ -14,7 +14,9 @@ ALTER PROCEDURE [dbo].[prc_OutletListMapReport]
 @Month NVARCHAR(10),--MONTH ID
 @Year NVARCHAR(10),
 @CREATE_USERID BIGINT=NULL
+
 ) WITH ENCRYPTION
+
 /****************************************************************************************************************************************************************************
 1.0		v2.0.31		Debashis	07-07-2022		Optimization done.Refer: 0025028
 ****************************************************************************************************************************************************************************/
@@ -218,6 +220,7 @@ BEGIN
 	SET @sqlStr='SELECT shop_code,Shop_Name,Shop_Owner,Shop_Owner_Contact,Address,PARTYSTATUS,Shop_CreateUser,Shop_Lat,Shop_Long,State,MAP_COLOR,visitdate,Is_Newshopadd '
 	SET @sqlStr+='FROM #SHOPVISITREVIST_COLUR '
 	--SET @sqlStr+='ORDER BY SEQ '
+	SET @sqlStr+='ORDER BY SEQ '
 	--End of Rev 1.0
 	IF @PartyStatus!=2
 	BEGIN
@@ -226,7 +229,6 @@ BEGIN
 	-- Rev 1.0
 	SET @sqlStr+='ORDER BY SEQ '
 	-- end of Rev 1.0
-
 	EXEC SP_EXECUTESQL @sqlStr
 
 	DROP TABLE #SHOPVISITREVIST_COLUR

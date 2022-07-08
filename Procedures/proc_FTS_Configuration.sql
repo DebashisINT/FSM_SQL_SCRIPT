@@ -135,10 +135,11 @@ BEGIN
 	117.0		Debashis	08-06-2022	ADD SETTINGS @Action='UserCheck' AutoDDSelect & ShowPurposeInShopVisit.Row 696
 	118.0		Debashis	08-06-2022	ADD SETTINGS @Action='GlobalCheck' ContactNameText,ContactNumberText,EmailText,DobText & DateOfAnniversaryText. Row 697
 	119.0		Debashis	15-06-2022	ADD SETTINGS @Action='UserCheck' WillRoomDBShareinLogin & GPSAlertwithVibration.Row 698
-	120.0		Debashis	17-06-2022	ADD SETTINGS @Action='GlobalCheck' ShopScreenAftVisitRevisit. Row 699
+	120.0		Debashis	17-06-2022	ADD SETTINGS @Action='GlobalCheck' & 'UserCheck' ShopScreenAftVisitRevisit. Row 699 & 700
+	121.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackAvailableInShop.Row 705
+	122.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsAllowBreakageTracking,IsAllowBreakageTrackingunderTeam & IsRateEnabledforNewOrderScreenwithSize.Row 706
 	*****************************************************************************************************************************************************************************/ 
-
-
+	
 	DECLARE @max_accuracy varchar(50)
 	DECLARE @min_accuracy varchar(50)
 	DECLARE @min_distance varchar(50)
@@ -1422,10 +1423,26 @@ BEGIN
 		SELECT 'GPSAlertwithVibration' AS [Key],CONVERT(NVARCHAR(15),USR.GPSAlertwithVibration) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 119.0
-		--Rev 121.0
+		--Rev 120.0
 		UNION ALL
 		SELECT 'ShopScreenAftVisitRevisit' AS [Key],CONVERT(NVARCHAR(15),USR.ShopScreenAftVisitRevisit) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 120.0
+		--Rev 121.0
+		UNION ALL
+		SELECT 'IsFeedbackAvailableInShop' AS [Key],CONVERT(NVARCHAR(15),USR.IsFeedbackAvailableInShop) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 121.0
+		--Rev 122.0
+		UNION ALL
+		SELECT 'IsAllowBreakageTracking' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowBreakageTracking) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsAllowBreakageTrackingunderTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllowBreakageTrackingunderTeam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsRateEnabledforNewOrderScreenwithSize' AS [Key],CONVERT(NVARCHAR(15),USR.IsRateEnabledforNewOrderScreenwithSize) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 122.0
 	END
 END

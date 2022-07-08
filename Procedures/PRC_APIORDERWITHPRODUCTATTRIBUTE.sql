@@ -17,6 +17,7 @@ AS
 /****************************************************************************************************************
 Written By : Debashis Talukder On 02/09/2021
 Purpose : For New Order.
+1.0		v2.0.31		Debashis	06/07/2022		A new column added as RATE.Row: 710
 ****************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -30,14 +31,18 @@ BEGIN
 
 			SET @HEADERID=SCOPE_IDENTITY();
 
-			INSERT INTO ORDERPRODUCTATTRIBUTEDET(ID,USER_ID,ORDER_ID,PRODUCT_ID,PRODUCT_NAME,GENDER,SIZE,QTY,COLOR_ID)
+			--Rev Debashis && A new column added as RATE
+			INSERT INTO ORDERPRODUCTATTRIBUTEDET(ID,USER_ID,ORDER_ID,PRODUCT_ID,PRODUCT_NAME,GENDER,SIZE,QTY,COLOR_ID,RATE)
 			SELECT @HEADERID,@user_id,@order_id,
 			XMLproduct.value('(product_id/text())[1]','BIGINT') AS product_id,
 			XMLproduct.value('(product_name/text())[1]','NVARCHAR(300)') AS product_name,
 			XMLproduct.value('(gender/text())[1]','NVARCHAR(30)') AS gender,
 			XMLproduct.value('(size/text())[1]','NVARCHAR(20)') AS size,
 			XMLproduct.value('(qty/text())[1]','DECIMAL(18,2)') AS qty,
-			XMLproduct.value('(color_id/text())[1]','NVARCHAR(100)') AS color_id 
+			XMLproduct.value('(color_id/text())[1]','NVARCHAR(100)') AS color_id,
+			--Rev Debashis
+			XMLproduct.value('(rate/text())[1]','DECIMAL(18,2)') AS rate
+			--End of Rev Debashis
 			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 			INNER JOIN Master_sProducts MP ON MP.sProducts_ID=XMLproduct.value('(product_id/text())[1]','BIGINT')
 

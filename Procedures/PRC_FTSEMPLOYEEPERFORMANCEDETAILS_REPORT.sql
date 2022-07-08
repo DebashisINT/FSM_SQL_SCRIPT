@@ -20,7 +20,13 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 06/03/2021
 Module	   : Employee Performance Details.Refer: 0023845
-1.0		v2.0.21		Debashis	18/03/2020		"Visit Time" - required in Employee Performance report.Refer: 0023876
+1.0		v2.0.15		Debashis	18/03/2020		"Visit Time" - required in Employee Performance report.Refer: 0023876
+2.0					TANMOY		22-04-2021		Electrician type and Electrician name  correction Ref:0023987
+3.0		v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
+4.0		v2.0.25		Sancita		20/09/2021		Hierarchy not working when Select All taken
+5.0		v2.0.31		Debashis	23/06/2022		FSM : Report : MIS : EMPLOYEE PERFORMANCE
+												Required to connect from Archive table.
+												Because 3 months previous data are not showing in this report.Refer: 0024984
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -81,6 +87,83 @@ BEGIN
 	INSERT INTO #TEMPCONTACT
 	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 
+	--Rev 5.0
+	IF OBJECT_ID('tempdb..#tbl_trans_shopActivitysubmit') IS NOT NULL
+		DROP TABLE #tbl_trans_shopActivitysubmit
+	CREATE TABLE #tbl_trans_shopActivitysubmit(
+	[ActivityId] [bigint] IDENTITY(1,1) NOT NULL PRIMARY KEY CLUSTERED,
+	[User_Id] [bigint] NULL,
+	[Shop_Id] [varchar](100) NULL,
+	[visited_date] [date] NULL,
+	[visited_time] [datetime] NULL,
+	[spent_duration] [varchar](100) NULL,
+	[Createddate] [datetime] NULL,
+	[total_visit_count] [int] NULL,
+	[shopvisit_image] [nvarchar](max) NULL,
+	[Is_Newshopadd] [bit] NULL,
+	[distance_travelled] [decimal](18, 2) NULL,
+	[ISUSED] [int] NULL,
+	[LATITUDE] [nvarchar](100) NULL,
+	[LONGITUDE] [nvarchar](100) NULL,
+	[REMARKS] [nvarchar](500) NULL,
+	[MEETING_ADDRESS] [nvarchar](500) NULL,
+	[MEETING_PINCODE] [nvarchar](10) NULL,
+	[MEETING_TYPEID] [int] NULL,
+	[ISMEETING] [bit] NULL,
+	[IsOutStation] [bit] NULL,
+	[IsFirstVisit] [bit] NULL,
+	[Outstation_Distance] [numeric](18, 2) NULL,
+	[early_revisit_reason] [varchar](max) NULL,
+	[device_model] [varchar](200) NULL,
+	[android_version] [varchar](200) NULL,
+	[battery] [varchar](200) NULL,
+	[net_status] [varchar](200) NULL,
+	[net_type] [varchar](200) NULL,
+	[CheckIn_Time] [varchar](50) NULL,
+	[CheckIn_Address] [varchar](500) NULL,
+	[CheckOut_Time] [varchar](50) NULL,
+	[CheckOut_Address] [varchar](500) NULL,
+	[start_timestamp] [varchar](200) NULL,
+	[competitor_img] [nvarchar](500) NULL,
+	[Revisit_Code] [nvarchar](100) NULL,
+	[Ordernottaken_Status] [nvarchar](100) NULL,
+	[Ordernottaken_Remarks] [nvarchar](500) NULL
+	)
+	CREATE NONCLUSTERED INDEX IX_Code_userID ON #tbl_trans_shopActivitysubmit(Shop_Id ASC,User_Id ASC) INCLUDE (visited_time)
+	CREATE NONCLUSTERED INDEX IXSHIDSPNTVD ON #tbl_trans_shopActivitysubmit(Shop_Id ASC,visited_date ASC,spent_duration ASC) INCLUDE (distance_travelled,REMARKS)
+	CREATE NONCLUSTERED INDEX IXSPNTREM ON #tbl_trans_shopActivitysubmit(spent_duration ASC,distance_travelled ASC,REMARKS ASC)
+	CREATE NONCLUSTERED INDEX NCLIDX_20210218_182341 ON #tbl_trans_shopActivitysubmit(User_Id ASC,visited_date ASC)
+	CREATE NONCLUSTERED INDEX NCLIDX_20210218_234437 ON #tbl_trans_shopActivitysubmit(User_Id ASC,Createddate ASC,ISMEETING ASC)
+	CREATE NONCLUSTERED INDEX NCLIDX_tbl_trans_shopActivitysubmit_Is_Newshopadd ON #tbl_trans_shopActivitysubmit(Is_Newshopadd ASC) INCLUDE (User_Id,Shop_Id,visited_time,spent_duration,distance_travelled)
+	CREATE NONCLUSTERED INDEX NCLIDX_tbl_trans_shopActivitysubmit_User_Id_ISMEETING_Createddate ON #tbl_trans_shopActivitysubmit(User_Id ASC,ISMEETING ASC,Createddate ASC)
+	INCLUDE (visited_date,visited_time,spent_duration,distance_travelled,LATITUDE,LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID)
+	CREATE NONCLUSTERED INDEX NCLIDX_tbl_trans_shopActivitysubmit_User_Id_visited_date ON #tbl_trans_shopActivitysubmit(User_Id ASC,visited_date ASC)
+	INCLUDE (Shop_Id,spent_duration,total_visit_count,ISMEETING)
+	CREATE NONCLUSTERED INDEX Shop_ID_VISIT ON #tbl_trans_shopActivitysubmit(Shop_Id ASC,visited_date ASC)
+	CREATE NONCLUSTERED INDEX SHOPCREATE ON #tbl_trans_shopActivitysubmit(Is_Newshopadd ASC) INCLUDE (User_Id,Shop_Id,visited_time)
+	CREATE NONCLUSTERED INDEX USERIDSHOPCREATE ON #tbl_trans_shopActivitysubmit(User_Id ASC,Is_Newshopadd ASC) INCLUDE (Shop_Id,visited_time)
+
+	SET IDENTITY_INSERT #tbl_trans_shopActivitysubmit ON
+	INSERT INTO #tbl_trans_shopActivitysubmit(ActivityId,User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,
+	LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,competitor_img,Revisit_Code,Ordernottaken_Status,Ordernottaken_Remarks)
+
+	SELECT ActivityId,User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,
+	MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,competitor_img,Revisit_Code,Ordernottaken_Status,Ordernottaken_Remarks FROM(
+	SELECT ActivityId,User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,
+	MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,competitor_img,Revisit_Code,Ordernottaken_Status,Ordernottaken_Remarks
+	FROM tbl_trans_shopActivitysubmit
+	UNION ALL
+	SELECT ActivityId,User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,
+	MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,competitor_img,Revisit_Code,Ordernottaken_Status,Ordernottaken_Remarks
+	FROM tbl_trans_shopActivitysubmit_Archive
+	) SHOPACTIVITYSUBMIT ORDER BY ActivityId
+	SET IDENTITY_INSERT #tbl_trans_shopActivitysubmit OFF
+	--End of Rev 5.0
+
 	IF OBJECT_ID('tempdb..#TMPLOCATIONNAME') IS NOT NULL
 		DROP TABLE #TMPLOCATIONNAME
 	CREATE TABLE #TMPLOCATIONNAME(USER_ID BIGINT,LOCATION_NAME NVARCHAR(2000),SDATE NVARCHAR(10),SDATEORDBY NVARCHAR(10))
@@ -118,6 +201,43 @@ BEGIN
 		END
 	CLOSE @CURSOR_LOCATION
 	DEALLOCATE @CURSOR_LOCATION
+
+	--Rev 3.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			DECLARE @empcodes VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
+			CREATE TABLE #EMPHRS
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHRS
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHRS 
+			where EMPCODE IS NULL OR EMPCODE=@empcodes  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHRS a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+	--End of Rev 3.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEPERFORMANCEDETAILS_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -195,16 +315,31 @@ BEGIN
 	SET @Strsql+='ADDR.add_address1+'' ''+ISNULL(ADDR.add_address2,'''')+'' ''+ISNULL(ADDR.add_address3,'''') AS OFFICE_ADDRESS,EMP.emp_uniqueCode AS EMPID,ATTEN_STATUS,'
 	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(WRKACT.WrkActvtyDescription)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--Rev 3.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=MUSR.user_contactId '
+		END
+	--End of Rev 3.0
 	SET @Strsql+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=UATTEN.User_Id AND UATTEN.Id=ATTENWRKTYP.attendanceid '
 	SET @Strsql+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL '
 	SET @Strsql+='AND Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) GROUP BY WRKACT.WrkActvtyDescription FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
 	SET @Strsql+='REPLACE((SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(ISNULL(A.Work_Desc,''''))) From tbl_fts_UserAttendanceLoginlogout AS A '
 	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=A.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=MUSR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),A.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND A.Login_datetime IS NOT NULL AND A.Logout_datetime IS NULL '
 	SET @Strsql+='AND A.Isonleave=''false'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),A.Work_datetime,105) FOR XML PATH('''')),1,1,''''),'''')),'','','''') AS REMARKS,'
 	SET @Strsql+='SHOP.CUSTTYPE,SHOP.Shop_Code AS CUSTCODE,SHOP.Shop_Name AS CUSTNAME,SHOP.ENTITYCODE,SHOP.Address AS CUSTADD,SHOP.Shop_Owner_Contact AS CUSTMOB,SHOPPP.Shop_Name AS COMPNAME,'
-	SET @Strsql+='SHOP.ELECTRICIANADD,SHOP.ELECTRICIANMOB,SHOPDD.Shop_Name AS GPTPLNAME,SHOPDD.Address AS GPTPLADD,SHOPDD.Shop_Owner_Contact AS GPTPLMOB,SHOP.ELECTRICIAN,'
+	--Rev 2.0 Star
+	--SET @Strsql+='SHOP.ELECTRICIANADD,SHOP.ELECTRICIANMOB,SHOPDD.Shop_Name AS GPTPLNAME,SHOPDD.Address AS GPTPLADD,SHOPDD.Shop_Owner_Contact AS GPTPLMOB,SHOP.ELECTRICIAN,'
+	SET @Strsql+='SHOP.ELECTRICIANADD,SHOP.ELECTRICIANMOB,SHOPDD.Shop_Name AS GPTPLNAME,SHOPDD.Address AS GPTPLADD,SHOPDD.Shop_Owner_Contact AS GPTPLMOB,SHOPCUS.Shop_Name AS ELECTRICIAN,'
+	--Rev 2.0 eND
 	SET @Strsql+='CASE WHEN SHOP.CUSTTYPE=''Entity'' THEN SHOP.ENTITY ELSE '''' END AS ENTITYTYPE,SHOPACT.VISITTYPE,SHOPACT.SHPVISITTIME,SHOPACT.VISITREMARKS,SHOPACT.MEETINGREMARKS,SHOPACT.MEETING_ADDRESS,'
 	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0)+ISNULL(SHOPACT.TOTMETTING,0) AS TOTAL_VISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,'
 	SET @Strsql+='ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,ISNULL(SHOPACT.TOTMETTING,0) AS TOTMETTING,SPENT_DURATION,DISTANCE_TRAVELLED,ISNULL(ORDHEAD.Ordervalue,0) AS Total_Order_Booked_Value,'
@@ -213,6 +348,12 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 	SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 	SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
@@ -233,6 +374,12 @@ BEGIN
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetimeORDBY,CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL '
 	SET @Strsql+='AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120),ATTEN.Work_Address,ATTEN.Isonleave '
@@ -241,6 +388,12 @@ BEGIN
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetimeORDBY,CASE WHEN Isonleave=''false'' THEN ''At Work'' ELSE ''On Leave'' END AS ATTEN_STATUS '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL '
 	SET @Strsql+='AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120),ATTEN.Work_Address,ATTEN.Isonleave '
@@ -252,16 +405,36 @@ BEGIN
 	SET @Strsql+='VISITED_TIME,SHPVISITTIME,VISITTYPE,VISITREMARKS,MEETINGREMARKS,MEETING_ADDRESS FROM('
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,'
 	SET @Strsql+='SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME,CONVERT(VARCHAR(8),CAST(SHOPACT.visited_time AS TIME),108) AS SHPVISITTIME,'
-	SET @Strsql+='''New Visit'' AS VISITTYPE,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='''New Visit'' AS VISITTYPE,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
+	--Rev 5.0
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='FROM #tbl_trans_shopActivitysubmit SHOPACT '
+	--End of Rev 5.0
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=1 '
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.VISITED_TIME,SPENT_DURATION,SHOPACT.REMARKS '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,0 AS TOTMETTING,SPENT_DURATION,'
 	SET @Strsql+='SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME,CONVERT(VARCHAR(8),CAST(SHOPACT.visited_time AS TIME),108) AS SHPVISITTIME,'
-	SET @Strsql+='''ReVisit'' AS VISITTYPE,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='''ReVisit'' AS VISITTYPE,SHOPACT.REMARKS AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS '
+	--Rev 5.0
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='FROM #tbl_trans_shopActivitysubmit SHOPACT '
+	--End of Rev 5.0
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.VISITED_TIME,SPENT_DURATION,SHOPACT.REMARKS '
@@ -269,18 +442,31 @@ BEGIN
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,COUNT(SHOPACT.Shop_Id) AS TOTMETTING,SPENT_DURATION,0 AS DISTANCE_TRAVELLED,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME,CONVERT(VARCHAR(8),CAST(SHOPACT.visited_time AS TIME),108) AS SHPVISITTIME,''Meeting'' AS VISITTYPE,'''' AS VISITREMARKS,'
-	SET @Strsql+='SHOPACT.REMARKS AS MEETINGREMARKS,SHOPACT.MEETING_ADDRESS FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='SHOPACT.REMARKS AS MEETINGREMARKS,SHOPACT.MEETING_ADDRESS '
+	--Rev 5.0
+	--SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	SET @Strsql+='FROM #tbl_trans_shopActivitysubmit SHOPACT '
+	--End of Rev 5.0
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.ISMEETING=1 AND SHOPACT.MEETING_TYPEID IS NOT NULL '
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,SHOPACT.VISITED_TIME,SPENT_DURATION,SHOPACT.REMARKS,SHOPACT.MEETING_ADDRESS '
 	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME,SHPVISITTIME,VISITTYPE,VISITREMARKS,SPENT_DURATION,MEETINGREMARKS,MEETING_ADDRESS '
 	SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
 	SET @Strsql+='LEFT OUTER JOIN ('
-	SET @Strsql+='SELECT DISTINCT MS.Shop_Code,MS.Shop_CreateUser,MS.Shop_Name,MS.Address,MS.Shop_Owner_Contact,MS.assigned_to_pp_id,MS.assigned_to_dd_id,MS.type,MS.EntityCode,'
+	SET @Strsql+='SELECT DISTINCT MS.Shop_Code,MS.Shop_CreateUser,MS.Shop_Name,MS.Address,MS.Shop_Owner_Contact,MS.assigned_to_pp_id,MS.assigned_to_dd_id,MS.assigned_to_shop_id,MS.type,MS.EntityCode,'
 	SET @Strsql+='CASE WHEN TYPE=1 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.retailer_id) '
 	SET @Strsql+='WHEN TYPE=2 THEN ''Company Name'' '
-	SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id) END AS CUSTTYPE,'
+	--Rev 2.0 Star
+	--SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id) END AS CUSTTYPE,'
+	SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id) ELSE (SELECT STYPD.Name FROM TBL_SHOPTYPE STYPD WHERE STYPD.TypeId=MS.TYPE) END AS CUSTTYPE,'
+	--Rev 2.0 End
 	SET @Strsql+='ENT.ENTITY,CASE WHEN MS.type=11 THEN MS.Shop_Name ELSE '''' END AS ELECTRICIAN,'
 	SET @Strsql+='CASE WHEN MS.type=11 THEN MS.Address ELSE '''' END AS ELECTRICIANADD,'
 	SET @Strsql+='CASE WHEN MS.type=11 THEN MS.Shop_Owner_Contact ELSE '''' END AS ELECTRICIANMOB '
@@ -293,9 +479,18 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN('
 	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_pp_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A ) SHOPPP ON SHOP.assigned_to_pp_id=SHOPPP.Shop_Code ' 
 	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A ) SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+	--Rev 2.0 Star
+	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_shop_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A) SHOPCUS ON SHOP.assigned_to_shop_id=SHOPCUS.Shop_Code '
+	--Rev 2.0 End
 	SET @Strsql+='LEFT OUTER JOIN ('
 	SET @Strsql+='SELECT ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) AS ORDDATE FROM tbl_trans_fts_Orderupdate ORDH '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='GROUP BY ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) '
@@ -304,6 +499,12 @@ BEGIN
 	SET @Strsql+='SELECT COLLEC.user_id,COLLEC.shop_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue,CONVERT(NVARCHAR(10),COLLEC.collection_date,105) AS collection_date '
 	SET @Strsql+='FROM tbl_FTS_collection COLLEC '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='GROUP BY COLLEC.user_id,COLLEC.shop_id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),COLLEC.collection_date,105) '
@@ -315,6 +516,12 @@ BEGIN
 	SET @Strsql+='ADDR.add_address1+'' ''+ISNULL(ADDR.add_address2,'''')+'' ''+ISNULL(ADDR.add_address3,'''') AS OFFICE_ADDRESS,EMP.emp_uniqueCode AS EMPID,ATTEN_STATUS,'
 	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=MUSR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=UATTEN.Leave_Type '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL '
 	SET @Strsql+='AND Isonleave=''true'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
@@ -322,6 +529,12 @@ BEGIN
 	SET @Strsql+=''''' AS GPTPLADD,'''' AS GPTPLMOB,'''' AS ELECTRICIAN,'''' AS ENTITYTYPE,'''' AS VISITTYPE,NULL AS SHPVISITTIME,'''' AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS,0 AS TOTAL_VISIT,'
 	SET @Strsql+='0 AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,NULL AS SPENT_DURATION,0.00 AS DISTANCE_TRAVELLED,0.00 AS Total_Order_Booked_Value,0.00 AS Total_Collection FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	--Rev 3.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=CNT.cnt_internalId '
+		END
+	--End of Rev 3.0
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -344,6 +557,12 @@ BEGIN
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetimeORDBY,''On Leave'' AS ATTEN_STATUS '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL '
 	SET @Strsql+='AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) '
@@ -352,6 +571,12 @@ BEGIN
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetimeORDBY,''On Leave'' AS ATTEN_STATUS '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		SET @Strsql+='INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=USR.user_contactId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL '
 	SET @Strsql+='AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) '
@@ -393,6 +618,17 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATEID_LIST
 	DROP TABLE #TEMPCONTACT
+
+	--Rev 3.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR_EDIT
+		DROP TABLE #EMPHRS
+	END
+	--End of Rev 3.0
+	--End of Rev 5.0
+	DROP TABLE #tbl_trans_shopActivitysubmit
+	--End of Rev 5.0
 
 	SET NOCOUNT OFF
 END
