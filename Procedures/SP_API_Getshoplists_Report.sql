@@ -1,10 +1,12 @@
+--exec SP_API_Getshoplists_Report @Shoptype='2,4',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Prime Partner,Distributor'
+--exec SP_API_Getshoplists_Report @Shoptype='5',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Show All'
+--EXEC SP_API_Getshoplists_Report @Action='Counter',@Shoptype='1',@user_id=378,@Weburl=''
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[SP_API_Getshoplists_Report]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [SP_API_Getshoplists_Report] AS' 
 END
 GO
---exec SP_API_Getshoplists_Report @Shoptype='2,4',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Prime Partner,Distributor'
---exec SP_API_Getshoplists_Report @Shoptype='5',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Show All'
 
 ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 (
@@ -28,7 +30,7 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 @Shoptype varchar(MAX)=NULL,
 @AssignTo varchar(100)=NULL,
 @Create_UserId int=null
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
 1.0					Tanmoy		30-07-2019     change left outer join to inner join
@@ -38,6 +40,9 @@ AS
 5.0		v2.0.26		Debashis	13/01/2022		Sub Type field required in some of the reports.Refer: 0024576
 6.0		v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
 7.0					Swatilekha	16/06/2022		Show All checkbox required for Shops report in fsm Refer: 24948
+8.0					Swatilekha	30/06/2022		GSTIN & Trade License number field required in Listing of Master - Shops Report in fsm Refer: 0024573
+9.0		v2.0.31		Debashis	08/07/2022		While trying to generate the "Shops" report by selecting the type as "Dealer" in the National Plastic, 
+												the system is getting logged out.Now it has been taken care of.Refer: 0025031
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -412,7 +417,7 @@ BEGIN
 			--SET @sqlStrTable=''
 			--SET @sqlStrTable=' INSERT INTO #Shop_List select branch_id from tbl_master_branch where branch_id in('+@Shoptype+')'
 
-			SET @sql='select distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,Shop_Code as shop_id,CAST(Shop_Name as nvarchar(2500)) as shop_name,'
+			SET @sql='select distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,'
 			--Rev 2.0
 			SET @sql+='SHOP.EntityCode,SHOP.Entity_Location,CASE WHEN SHOP.Entity_Status=1 THEN ''Active'' ELSE ''Inactive'' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,'
 			SET @sql+='SHOP.ShopOwner_Aadhar,'
@@ -427,8 +432,11 @@ BEGIN
 			SET @sql +=',0 as countactivity '
 
 			--,Lastactivitydate=(select top 1 convert(varchar(50),visited_time,103) + '' '' + FORMAT(visited_time,''hh:mm tt'') as SDate1 from tbl_trans_shopActivitysubmit as shpusr  where  shpusr.user_id=usr.user_id and shpusr.Shop_Id=shop.Shop_Code order by visited_time desc)
-			SET @sql +=', PP=(select Shop_Name  from tbl_Master_shop as b where  b.Shop_Code=shop.assigned_to_pp_id )
-			,DD=(select Shop_Name from tbl_Master_shop as c where  c.Shop_Code=shop.assigned_to_dd_id ) '
+			--Rev 9.0
+			--SET @sql +=', PP=(select Shop_Name  from tbl_Master_shop as b where  b.Shop_Code=shop.assigned_to_pp_id )
+			--,DD=(select Shop_Name from tbl_Master_shop as c where  c.Shop_Code=shop.assigned_to_dd_id ) '
+			SET @sql +=',SHOPPP.Shop_Name AS PP,SHOPDD.Shop_Name AS DD '
+			--End of Rev 9.0
 			--,convert(varchar(50),T.visited_time,103) + '' '' + FORMAT(T.visited_time,''hh:mm tt'') as Lastactivitydate 
 			SET @sql +=', null as Lastactivitydate,'
 			--Rev 4.0
@@ -442,6 +450,9 @@ BEGIN
 			--Rev 6.0
 			SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
 			--End of Rev 6.0
+			--Rev work 8.0 start 30.06.2022
+			SET @sql+=',shop.gstn_number,shop.trade_licence_number '
+			--Rev work 8.0 start 30.06.2022
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
@@ -492,6 +503,14 @@ BEGIN
 						END
 				   end				
 			--Rev work close  7.0
+			--Rev 9.0
+			SET @sql +=' LEFT OUTER JOIN('
+			SET @sql +=' SELECT DISTINCT A.Shop_Code,A.assigned_to_pp_id,A.Shop_Name FROM tbl_Master_shop A '
+			SET @sql +=' ) SHOPPP ON SHOP.assigned_to_pp_id=SHOPPP.Shop_Code '
+			SET @sql +=' LEFT OUTER JOIN('
+			SET @sql +=' SELECT DISTINCT A.Shop_Code,A.assigned_to_dd_id,A.Shop_Name FROM tbl_Master_shop A '
+			SET @sql +=' ) SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+			--End of Rev 9.0
 			--set @sql +=' 
 			--group by shop.Shop_ID,Shop_Code,Shop_Name,shop.Address,shop.Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_CreateUser,Shop_CreateTime,
 			--usr.user_name,
@@ -506,7 +525,7 @@ BEGIN
 			--,Shop_Owner_Email
 			--,Shop_Owner_Contact,shop.assigned_to_pp_id,assigned_to_dd_id,T.visited_time
 			--order  by Shop_ID  desc'
-			SET @sql +='order by Shop_code desc '
+			SET @sql +='order by shop.Shop_code desc '
 			 --and  SessionToken=@session_token'
 			 --select @sql
 			EXEC (@sql)
