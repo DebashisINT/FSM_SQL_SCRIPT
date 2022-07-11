@@ -138,6 +138,7 @@ BEGIN
 	120.0		Debashis	17-06-2022	ADD SETTINGS @Action='GlobalCheck' & 'UserCheck' ShopScreenAftVisitRevisit. Row 699 & 700
 	121.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackAvailableInShop.Row 705
 	122.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsAllowBreakageTracking,IsAllowBreakageTrackingunderTeam & IsRateEnabledforNewOrderScreenwithSize.Row 706
+	123.0		Debashis	11-07-2022	ADD SETTINGS @Action='UserCheck' IgnoreNumberCheckwhileShopCreation.Row 711
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -1444,5 +1445,10 @@ BEGIN
 		SELECT 'IsRateEnabledforNewOrderScreenwithSize' AS [Key],CONVERT(NVARCHAR(15),USR.IsRateEnabledforNewOrderScreenwithSize) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 122.0
+		--Rev 123.0
+		UNION ALL
+		SELECT 'IgnoreNumberCheckwhileShopCreation' AS [Key],CONVERT(NVARCHAR(15),USR.IgnoreNumberCheckwhileShopCreation) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 123.0
 	END
 END

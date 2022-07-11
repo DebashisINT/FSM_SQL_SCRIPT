@@ -144,6 +144,7 @@ As
 18.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 638,640 & 641
 19.0		Debashis		01-06-2022			One field added as IsShopDuplicate.Row: 691,692 & 693
 20.0		Debashis		17-06-2022			One field added as Purpose.Row: 701,702 & 703
+21.0		Debashis		11-07-2022			A new setting implemented.Row: 713
 ************************************************************************************************************************************************/
 Begin
 
@@ -216,12 +217,17 @@ Begin
 		BEGIN
 		set @added_date=GETDATE()
 		END
+	--Rev 21.0
+	DECLARE @IgnoreNumberCheckwhileShopCreation BIT
+	SET @IgnoreNumberCheckwhileShopCreation=(SELECT IgnoreNumberCheckwhileShopCreation FROM tbl_master_user WHERE USER_ID=@user_id)
+	--End of Rev 21.0
 
 	if EXISTS(select  user_id  from tbl_master_user where user_id=@user_id)
 		BEGIN
-			if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Code=@shop_id  )
+			if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Code=@shop_id)
 				BEGIN
-					if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Owner_Contact=@owner_contact_no and Shop_CreateUser=@user_id )
+					--Rev 21.0
+					IF @IgnoreNumberCheckwhileShopCreation=1
 						BEGIN
 							set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin  inner join tbl_master_city as cty  on cty.city_id=pin.city_id  inner join tbl_master_state as stat on stat.id=cty.state_id where pin.pin_code=@pin_code)
 							if(isnull(@StateID,'')='')
@@ -233,77 +239,21 @@ Begin
 									LEFT OUTER  JOIN (
 											SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address  where add_addressType='Office'
 											)S on S.add_cntId=cont.cnt_internalId
-									--LEFT OUTER JOIN tbl_master_pinzip as pinzip on pinzip.pin_id=S.add_pin
 									LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
 									where usr.user_id=@user_id)
 								END
-
-							--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
-							--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
-							--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
-							--Rev 19.0 @@One field added as IsShopDuplicate
-							--Rev 20.0 @@One field added as Purpose
 							INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
-										--Rev 4.0 Start
-										,Entered_By,Entered_On
-										--Rev 4.0 End
-										--Rev 8.0 Start
-										,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount
-										--Rev 8.0 End
-										--Rev 9.0 Start
-										,PartyType_id
-										--Rev 9.0 End
-										--Rev 10.0 Start
-										,Entity_Id
-										,Party_Status_id
-										--Rev 10.0 End
-										--Rev 11.0 Start
-										,retailer_id
-										,dealer_id
-										,beat_id
-										--Rev 11.0 End
-										--Rev 12.0 Start
-										,assigned_to_shop_id
-										--Rev 12.0 End
-										--Rev 13.0 Start
-										,actual_address
-										--Rev 13.0 End
-										,competitor_img
-										,Agency_Name,Lead_Contact_Number
+										,Entered_By,Entered_On,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount,PartyType_id,Entity_Id,Party_Status_id,retailer_id
+										,dealer_id,beat_id,assigned_to_shop_id,actual_address,competitor_img,Agency_Name,Lead_Contact_Number
 										,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose
 										)
 								 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,@user_id,@added_date,@type,@dob,@date_aniversary
 										,@shop_image,@shop_id,1,@added_date,1,@assigned_to_pp_id,@assigned_to_dd_id,@StateID,@amount,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,
-										@Entity_Type,@ShopOwner_PAN,@ShopOwner_Aadhar,@EntityRemarks,@AreaId,@CityId
-										--Rev 4.0 Start
-										,@Entered_by,GETDATE()
-										--Rev 4.0 End
-										--Rev 8.0 Start
-										,@model_id,@primary_app_id,@secondary_app_id,@lead_id,@funnel_stage_id,@stage_id,@booking_amount
-										--Rev 8.0 End
-										--Rev 9.0 Start
-										,@PartyType_id
-										--Rev 9.0 End
-										--Rev 10.0 Start
-										,@entity_id
-										,@party_status_id
-										--Rev 10.0 End
-										--Rev 11.0 Start
-										,@retailer_id
-										,@dealer_id
-										,@beat_id
-										--Rev 11.0 End
-										--Rev 12.0 Start
-										,@assigned_to_shop_id
-										--Rev 12.0 End
-										--Rev 13.0 Start
-										,@actual_address
-										--Rev 13.0 End
-										,@competitor_img
-										,@agency_name,@lead_contact_number
-										,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+										@Entity_Type,@ShopOwner_PAN,@ShopOwner_Aadhar,@EntityRemarks,@AreaId,@CityId,@Entered_by,GETDATE(),@model_id,@primary_app_id,@secondary_app_id,@lead_id,
+										@funnel_stage_id,@stage_id,@booking_amount,@PartyType_id,@entity_id,@party_status_id,@retailer_id,@dealer_id,@beat_id,@assigned_to_shop_id,@actual_address
+										,@competitor_img,@agency_name,@lead_contact_number,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
 										)
 
 							SET @COUNT=SCOPE_IDENTITY();
@@ -324,11 +274,6 @@ Begin
 									,@shop_revisit_uniqKey
 									)
 
-									--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
-									--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
-									--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
-									--Rev 19.0 @@One field added as IsShopDuplicate
-									--Rev 20.0 @@One field added as Purpose
 									select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 									,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 									,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
@@ -336,23 +281,153 @@ Begin
 									@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 									@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
 
-									--1.0 Rev start
 									INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 									VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
-									--1.0 Rev End
 
-									--2.0 Rev start
 									INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
 									Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
 									VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
 											@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
-									--2.0 Rev End
 								END
 						END
 					ELSE
 						BEGIN
-							select '203' as returncode
+					--End of Rev 21.0
+							if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Owner_Contact=@owner_contact_no and Shop_CreateUser=@user_id )
+								BEGIN
+									set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin  inner join tbl_master_city as cty  on cty.city_id=pin.city_id  inner join tbl_master_state as stat on stat.id=cty.state_id where pin.pin_code=@pin_code)
+									if(isnull(@StateID,'')='')
+										BEGIN
+											set @StateID=(
+											select  top 1 STAT.id as [state]
+											FROM tbl_master_user as usr
+											LEFT OUTER JOIN tbl_master_contact  as cont on usr.user_contactId=cont.cnt_internalId
+											LEFT OUTER  JOIN (
+													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address  where add_addressType='Office'
+													)S on S.add_cntId=cont.cnt_internalId
+											--LEFT OUTER JOIN tbl_master_pinzip as pinzip on pinzip.pin_id=S.add_pin
+											LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
+											where usr.user_id=@user_id)
+										END
+
+									--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
+									--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
+									--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
+									--Rev 19.0 @@One field added as IsShopDuplicate
+									--Rev 20.0 @@One field added as Purpose
+									INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
+											   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
+												,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
+												--Rev 4.0 Start
+												,Entered_By,Entered_On
+												--Rev 4.0 End
+												--Rev 8.0 Start
+												,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount
+												--Rev 8.0 End
+												--Rev 9.0 Start
+												,PartyType_id
+												--Rev 9.0 End
+												--Rev 10.0 Start
+												,Entity_Id
+												,Party_Status_id
+												--Rev 10.0 End
+												--Rev 11.0 Start
+												,retailer_id
+												,dealer_id
+												,beat_id
+												--Rev 11.0 End
+												--Rev 12.0 Start
+												,assigned_to_shop_id
+												--Rev 12.0 End
+												--Rev 13.0 Start
+												,actual_address
+												--Rev 13.0 End
+												,competitor_img
+												,Agency_Name,Lead_Contact_Number
+												,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose
+												)
+										 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,@user_id,@added_date,@type,@dob,@date_aniversary
+												,@shop_image,@shop_id,1,@added_date,1,@assigned_to_pp_id,@assigned_to_dd_id,@StateID,@amount,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,
+												@Entity_Type,@ShopOwner_PAN,@ShopOwner_Aadhar,@EntityRemarks,@AreaId,@CityId
+												--Rev 4.0 Start
+												,@Entered_by,GETDATE()
+												--Rev 4.0 End
+												--Rev 8.0 Start
+												,@model_id,@primary_app_id,@secondary_app_id,@lead_id,@funnel_stage_id,@stage_id,@booking_amount
+												--Rev 8.0 End
+												--Rev 9.0 Start
+												,@PartyType_id
+												--Rev 9.0 End
+												--Rev 10.0 Start
+												,@entity_id
+												,@party_status_id
+												--Rev 10.0 End
+												--Rev 11.0 Start
+												,@retailer_id
+												,@dealer_id
+												,@beat_id
+												--Rev 11.0 End
+												--Rev 12.0 Start
+												,@assigned_to_shop_id
+												--Rev 12.0 End
+												--Rev 13.0 Start
+												,@actual_address
+												--Rev 13.0 End
+												,@competitor_img
+												,@agency_name,@lead_contact_number
+												,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+												)
+
+									SET @COUNT=SCOPE_IDENTITY();
+
+									IF(ISNULL(@stage_id,'')<>'')
+									BEGIN
+										INSERT INTO FTS_STAGEMAP(SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+										VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
+									END
+
+
+									if(@@ROWCOUNT)>0
+										BEGIN
+											INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
+											,Revisit_Code
+											)
+											values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
+											,@shop_revisit_uniqKey
+											)
+
+											--Rev 16.0 @@Two fields added as Agency_Name & Lead_Contact_Number
+											--Rev 17.0 @@Two fields added as Project_Name & Landline_Number
+											--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
+											--Rev 19.0 @@One field added as IsShopDuplicate
+											--Rev 20.0 @@One field added as Purpose
+											select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
+											,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
+											,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
+											,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
+											@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
+											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+
+											--1.0 Rev start
+											INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
+											VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
+											--1.0 Rev End
+
+											--2.0 Rev start
+											INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
+											Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
+											VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
+													@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
+											--2.0 Rev End
+										END
+								END
+							ELSE
+								BEGIN
+									select '203' as returncode
+								END
+						--Rev 21.0
 						END
+						--End of Rev 21.0
 				END
 			ELSE
 				BEGIN

@@ -18,6 +18,7 @@ AS
 Written By : Debashis Talukder On 02/09/2021
 Purpose : For New Order.
 1.0		v2.0.31		Debashis	06/07/2022		A new column added as RATE.Row: 710
+2.0		v2.0.31		Debashis	11/07/2022		A new column added as RATE.Row: 712
 ****************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -31,7 +32,7 @@ BEGIN
 
 			SET @HEADERID=SCOPE_IDENTITY();
 
-			--Rev Debashis && A new column added as RATE
+			--Rev 1.0 && A new column added as RATE
 			INSERT INTO ORDERPRODUCTATTRIBUTEDET(ID,USER_ID,ORDER_ID,PRODUCT_ID,PRODUCT_NAME,GENDER,SIZE,QTY,COLOR_ID,RATE)
 			SELECT @HEADERID,@user_id,@order_id,
 			XMLproduct.value('(product_id/text())[1]','BIGINT') AS product_id,
@@ -40,9 +41,9 @@ BEGIN
 			XMLproduct.value('(size/text())[1]','NVARCHAR(20)') AS size,
 			XMLproduct.value('(qty/text())[1]','DECIMAL(18,2)') AS qty,
 			XMLproduct.value('(color_id/text())[1]','NVARCHAR(100)') AS color_id,
-			--Rev Debashis
+			--Rev 1.0
 			XMLproduct.value('(rate/text())[1]','DECIMAL(18,2)') AS rate
-			--End of Rev Debashis
+			--End of Rev 1.0
 			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 			INNER JOIN Master_sProducts MP ON MP.sProducts_ID=XMLproduct.value('(product_id/text())[1]','BIGINT')
 
@@ -88,8 +89,9 @@ BEGIN
 		END
 	IF @ACTION='ORDERDETAILS'
 		BEGIN
+			--Rev 2.0 && A new field added as RATE
 			SELECT H.USER_ID AS user_id,H.ORDER_ID AS order_id,D.PRODUCT_ID AS product_id,D.PRODUCT_NAME AS product_name,D.GENDER AS gender,D.SIZE AS size,CAST(D.QTY AS INT) AS qty,
-			CONVERT(NVARCHAR(10),H.ORDER_DATE,120) AS order_date,H.shop_id,C.Color_ID AS color_id,C.COLOR_NAME AS color_name,CAST(1 AS BIT) AS isUploaded FROM ORDERPRODUCTATTRIBUTE H
+			CONVERT(NVARCHAR(10),H.ORDER_DATE,120) AS order_date,H.shop_id,C.Color_ID AS color_id,C.COLOR_NAME AS color_name,CAST(1 AS BIT) AS isUploaded,D.RATE AS rate FROM ORDERPRODUCTATTRIBUTE H
 			INNER JOIN ORDERPRODUCTATTRIBUTEDET D ON H.ID=D.ID
 			INNER JOIN (SELECT C.Color_ID,C.COLOR_CODE,C.COLOR_NAME,MAPPC.Products_ID FROM Master_Color C
 			INNER JOIN Mapping_ProductColor MAPPC ON C.Color_ID=MAPPC.Color_ID) C ON D.PRODUCT_ID=C.Products_ID AND D.COLOR_ID=CAST(C.Color_ID AS nvarchar(100))
