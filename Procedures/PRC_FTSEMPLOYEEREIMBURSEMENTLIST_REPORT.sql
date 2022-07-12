@@ -29,6 +29,10 @@ Module Functionality :
 														and change state joining from left join to inner join...if state is blank 
 														then no	data coming.
 2.0		Debashis			v2.0.4		02/01/2020		Year field required in the Monthly report.Refer: 0021574
+3.0		Pratik							12/11/2021		removed UpdatedOn from group by clause
+4.0		Pratik							18/11/2021		Updated logic for approved amount
+5.0		Pratik							29/11/2021		Changed FTS_Reimbursement_Application_Verified join to left join.
+6.0		Pratik							11/07/2022		removed UpdatedBy from group by clause.refer:25034
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -169,23 +173,42 @@ BEGIN
 	--LEFT OUTER JOIN TBL_MASTER_DESIGNATION DESG ON DESG.DEG_ID=CNT.EMP_DESIGNATION GROUP BY EMP_CNTID,DESG.DEG_DESIGNATION,DESG.DEG_ID) DE ON DE.EMP_CNTID=CTC.EMP_CNTID '
 	--SET @Strsql+=' LEFT OUTER JOIN (SELECT USERID,SUM(Amount) as AMOUNT,COUNT(*) AS COUNT_PEN,STATUS,UPDATEDBY,UPDATEDON FROM FTS_REIMBURSEMENT_APPLICATION '
 	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_DESIGNATION DESG ON DESG.DEG_ID=CNT.EMP_DESIGNATION WHERE CNT.emp_effectiveuntil IS NULL GROUP BY EMP_CNTID,DESG.DEG_DESIGNATION,DESG.DEG_ID) DE ON DE.EMP_CNTID=CTC.EMP_CNTID '
-	SET @Strsql+='LEFT OUTER JOIN (SELECT USERID,SUM(Amount) as AMOUNT,COUNT(*) AS COUNT_PEN,STATUS FROM FTS_REIMBURSEMENT_APPLICATION '
+	--rev 4.0
+	--SET @Strsql+='LEFT OUTER JOIN (SELECT USERID,SUM(Amount) as AMOUNT,COUNT(*) AS COUNT_PEN,STATUS FROM FTS_REIMBURSEMENT_APPLICATION '
+	SET @Strsql+='LEFT OUTER JOIN (SELECT REMAPP.UserID,SUM(REMAPP.Amount) as AMOUNT,COUNT(*) AS COUNT_PEN FROM FTS_REIMBURSEMENT_APPLICATION AS REMAPP(nolock) '
+	--rev 5.0
+	--SET @Strsql+='INNER JOIN FTS_Reimbursement_Application_Verified as REMAPPVER(nolock) on REMAPP.ApplicationID=REMAPPVER.ApplicationID '
+	SET @Strsql+='LEFT JOIN FTS_Reimbursement_Application_Verified as REMAPPVER(nolock) on REMAPP.ApplicationID=REMAPPVER.ApplicationID '
+	--End of rev 5.0
 	--End of Rev 1.0
-	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),REMAPP.Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	--Rev 1.0
 	--SET @Strsql+=' GROUP BY USERID,STATUS,UPDATEDBY,UPDATEDON ) H ON H.USERID=U.USER_ID'	
 	--SET @Strsql+=' LEFT OUTER JOIN (SELECT USERID,SUM(AMOUNT) AS ''APPROVED_AMOUNT'',COUNT(APPROVED) AS APPROVED,COUNT(REJECTED) AS REJECTED FROM( '
 	--SET @Strsql+='SELECT USERID,Amount,CASE WHEN status=1 THEN ''Approved'' ELSE NULL END AS APPROVED,CASE WHEN status=2 THEN ''Reject'' ELSE NULL END AS REJECTED '
-	SET @Strsql+=' GROUP BY USERID,STATUS) H ON H.USERID=U.USER_ID'
-	SET @Strsql+=' LEFT OUTER JOIN (SELECT USERID,SUM(AMOUNT) AS ''APPROVED_AMOUNT'',COUNT(APPROVED) AS APPROVED,COUNT(REJECTED) AS REJECTED,UpdatedBy,UpdatedOn FROM( '
-	SET @Strsql+='SELECT USERID,Amount,CASE WHEN status=1 THEN ''Approved'' ELSE NULL END AS APPROVED,CASE WHEN status=2 THEN ''Reject'' ELSE NULL END AS REJECTED,UpdatedBy,UpdatedOn '
+	--SET @Strsql+=' GROUP BY USERID,STATUS) H ON H.USERID=U.USER_ID'
+	SET @Strsql+=' GROUP BY REMAPP.USERID) H ON H.USERID=U.USER_ID'
+	--End of rev 4.0
+	--rev 3.0 [Changed updatedon to max MAX(UpdatedOn) on]
+	SET @Strsql+=' LEFT OUTER JOIN (SELECT USERID,SUM(AMOUNT) AS ''APPROVED_AMOUNT'',COUNT(APPROVED) AS APPROVED,COUNT(REJECTED) AS REJECTED,UpdatedBy,MAX(UpdatedOn) as UpdatedOn FROM( '
+	--rev 6.0
+	--SET @Strsql+='SELECT USERID,Amount,CASE WHEN status=1 THEN ''Approved'' ELSE NULL END AS APPROVED,CASE WHEN status=2 THEN ''Reject'' ELSE NULL END AS REJECTED,UpdatedBy,UpdatedOn '
+	SET @Strsql+='SELECT USERID,Amount,CASE WHEN status=1 THEN ''Approved'' ELSE NULL END AS APPROVED,CASE WHEN status=2 THEN ''Reject'' ELSE NULL END AS REJECTED,(select distinct UpdatedBy from FTS_Reimbursement_Application_Verified where UpdatedOn = (select MAX(UpdatedOn) from FTS_Reimbursement_Application_Verified where UserID =FS.UserId)) as UpdatedBy,UpdatedOn '
+	--End of rev 6.0
 	--End of Rev 1.0
-	SET @Strsql+='FROM FTS_Reimbursement_Application_Verified '
+	--rev 6.0
+	--SET @Strsql+='FROM FTS_Reimbursement_Application_Verified '
+	SET @Strsql+='FROM FTS_Reimbursement_Application_Verified FS '
+	--End of rev 6.0
 	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	--Rev 1.0
 	--SET @Strsql+=') AS AA GROUP BY USERID) HV ON HV.USERID=U.USER_ID '
 	--SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER U1 ON U1.user_id=H.UpdatedBy '
-	SET @Strsql+=') AS AA GROUP BY USERID,UpdatedBy,UpdatedOn) HV ON HV.USERID=U.USER_ID '
+	--rev 3.0 
+	--SET @Strsql+=') AS AA GROUP BY USERID,UpdatedBy,UpdatedOn) HV ON HV.USERID=U.USER_ID '
+	SET @Strsql+=') AS AA GROUP BY USERID,UpdatedBy) HV ON HV.USERID=U.USER_ID '
+	--End of rev 3.0 
 	SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER U1 ON U1.user_id=HV.UpdatedBy '
 	--End of Rev 1.0
 	SET @Strsql+=' LEFT OUTER JOIN (SELECT EMPCTC.EMP_CNTID,EMPCTC.EMP_REPORTTO,CNT.CNT_INTERNALID AS RPTTOEMPCODE,'
@@ -212,7 +235,7 @@ BEGIN
 
 	--SELECT @Strsql
 	EXEC SP_EXECUTESQL @Strsql
-
+	--select * from FTSEMPLOYEEREIMBURSEMENTLIST_REPORT
 	DROP TABLE #DESIGNATION_LIST
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATEID_LIST
