@@ -139,6 +139,7 @@ BEGIN
 	121.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsFeedbackAvailableInShop.Row 705
 	122.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsAllowBreakageTracking,IsAllowBreakageTrackingunderTeam & IsRateEnabledforNewOrderScreenwithSize.Row 706
 	123.0		Debashis	11-07-2022	ADD SETTINGS @Action='UserCheck' IgnoreNumberCheckwhileShopCreation.Row 711
+	124.0		Debashis	13-07-2022	ADD SETTINGS @Action='UserCheck' Showdistributorwisepartyorderreport.Row 714
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -1450,5 +1451,10 @@ BEGIN
 		SELECT 'IgnoreNumberCheckwhileShopCreation' AS [Key],CONVERT(NVARCHAR(15),USR.IgnoreNumberCheckwhileShopCreation) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 123.0
+		--Rev 124.0
+		UNION ALL
+		SELECT 'Showdistributorwisepartyorderreport' AS [Key],CONVERT(NVARCHAR(15),USR.Showdistributorwisepartyorderreport) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 124.0
 	END
 END
