@@ -1,4 +1,5 @@
---EXEC PRC_FTSMONTHLYPERFORMANCEOFSALESPERSONNEL_REPORT 'OCT','EMS0000006','','2021'
+--EXEC PRC_FTSMONTHLYPERFORMANCEOFSALESPERSONNEL_REPORT 'APR','EMG0000002','','2021'
+--EXEC PRC_FTSMONTHLYPERFORMANCEOFSALESPERSONNEL_REPORT 'JUL','EMP0000003','','2022'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSMONTHLYPERFORMANCEOFSALESPERSONNEL_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -14,18 +15,20 @@ ALTER PROCEDURE [dbo].[PRC_FTSMONTHLYPERFORMANCEOFSALESPERSONNEL_REPORT]
 --Rev 2.0
 @YEAR NVARCHAR(10)=NULL
 --End of Rev 2.0
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /**********************************************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 26/08/2019 
 Module	   : MONTHLY PERFORMANCE REPORT OF SALES PERSONNEL
-1.0		v2.0.3	Debashis	09/12/2019		Two value required in Monthly Performance of Sales Personnel Report.
-											While the user make the attendance from mobile app, under the 'On Leave' tab, options are there as 'Weekly Off' & 'Holiday'.
-											If the user selected either 'weekly off' or 'holiday' in the attendance, same value will be updated in the Monthly Performance of 
-											Sales Personnel Report for the day on column 'Remarks'.If the user provide remarks along with 'weekly off' then it will appear like "(Weekly Off) Remarks 
-											Text".Refer: 0021446
-2.0		v2.0.4	Debashis	03/01/2020		Year field required in the Monthly report.Refer: 0021574
-3.0		v2.0.18	Debashis	06/10/2020		Date check has been implemented.Refer: 0023233
+1.0		v2.0.3		Debashis	09/12/2019		Two value required in Monthly Performance of Sales Personnel Report.
+												While the user make the attendance from mobile app, under the 'On Leave' tab, options are there as 'Weekly Off' & 'Holiday'.
+												If the user selected either 'weekly off' or 'holiday' in the attendance, same value will be updated in the Monthly Performance of 
+												Sales Personnel Report for the day on column 'Remarks'.If the user provide remarks along with 'weekly off' then it will appear like "(Weekly Off) Remarks 
+												Text".Refer: 0021446
+2.0		v2.0.4		Debashis	03/01/2020		Year field required in the Monthly report.Refer: 0021574
+3.0		v2.0.18		Debashis	06/10/2020		Date check has been implemented.Refer: 0023233
+4.0		v2.0.31		Debashis	15/07/2022		Opening Stock is not matching while generating Daily Performance report for sales personnel.Now it has been solved.
+												Refer: 0025042
 **********************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -827,8 +830,17 @@ BEGIN
 	SET @Strsql+='FROM tbl_master_brand BR '
 	SET @Strsql+='INNER JOIN Master_sProducts PROD ON BR.Brand_Id=PROD.sProducts_Brand '
 	SET @Strsql+='INNER JOIN(SELECT SHOPACT.VISITDATE AS LOGGEDINDATE,CNT.cnt_internalId AS EMPCODE,SM.Shop_Code AS SHOP_CODE,ORDD.Product_Id,Product_Qty,ORDVALUE_OS FROM FTS_TransStockOpen ORDH '
-	SET @Strsql+='INNER JOIN (SELECT User_Id,Stock_ID,Product_Id,Shop_code,SUM(ISNULL(Product_Qty,0)) AS Product_Qty,SUM(ISNULL(Product_Price,0)) AS ORDVALUE_OS FROM FTS_StockdetailsProduct '
-	SET @Strsql+='GROUP BY User_Id,Stock_ID,Product_Id,Shop_code '
+	--Rev 4.0
+	--SET @Strsql+='INNER JOIN (SELECT User_Id,Stock_ID,Product_Id,Shop_code,SUM(ISNULL(Product_Qty,0)) AS Product_Qty,SUM(ISNULL(Product_Price,0)) AS ORDVALUE_OS FROM FTS_StockdetailsProduct '
+	--SET @Strsql+='GROUP BY User_Id,Stock_ID,Product_Id,Shop_code '
+	SET @Strsql+='INNER JOIN (SELECT STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,SUM(ISNULL(STKDOP.Product_Qty,0)) AS Product_Qty,SUM(ISNULL(STKDOP.Product_Price,0)) AS ORDVALUE_OS,'
+	SET @Strsql+='CONVERT(NVARCHAR(10),STKORDH.Orderdate,105) AS ORDERDATE '
+	SET @Strsql+='FROM FTS_StockdetailsProduct STKDOP '
+	SET @Strsql+='INNER JOIN tbl_FTs_OrderdetailsProduct STKD ON STKDOP.User_Id=STKD.User_Id AND STKDOP.Product_Id=STKD.Product_Id '
+	SET @Strsql+='INNER JOIN tbl_trans_fts_Orderupdate STKORDH ON STKORDH.userID=STKD.User_Id AND STKORDH.OrderId=STKD.Order_ID '
+	SET @Strsql+='AND CONVERT(NVARCHAR(10),Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='GROUP BY STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,CONVERT(NVARCHAR(10),STKORDH.Orderdate,105)  '
+	--End of Rev 4.0
 	SET @Strsql+=') ORDD ON ORDH.Shop_Code=ORDD.Shop_code AND ORDH.StockId=ORDD.Stock_ID AND ORDH.userID=ORDD.User_Id '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN tbl_master_employee EMP ON USR.user_contactId=EMP.emp_contactId '
@@ -836,7 +848,11 @@ BEGIN
 	SET @Strsql+='INNER JOIN tbl_Master_shop SM ON SM.Shop_Code=ORDH.Shop_Code AND SM.Shop_CreateUser=ORDH.userID AND SM.type=4 '
 	SET @Strsql+='INNER JOIN (SELECT User_Id,Shop_Id,CONVERT(NVARCHAR(10),visited_time,105) AS VISITDATE FROM tbl_trans_shopActivitysubmit '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @Strsql+='GROUP BY User_Id,Shop_Id,CONVERT(NVARCHAR(10),visited_time,105)) SHOPACT ON SHOPACT.Shop_Id=ORDH.Shop_Code AND SHOPACT.Shop_Id=SM.Shop_Code AND SHOPACT.VISITDATE=CONVERT(NVARCHAR(10),ORDH.Stock_date,105) '
+	SET @Strsql+='GROUP BY User_Id,Shop_Id,CONVERT(NVARCHAR(10),visited_time,105)'
+	SET @Strsql+=') SHOPACT ON SHOPACT.Shop_Id=ORDH.Shop_Code AND SHOPACT.Shop_Id=SM.Shop_Code AND SHOPACT.VISITDATE=CONVERT(NVARCHAR(10),ORDH.Stock_date,105) '
+	--Rev 4.0
+	SET @Strsql+='AND SHOPACT.VISITDATE=ORDD.ORDERDATE '
+	--End of Rev 4.0
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Stock_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @EMPID<>''
 		SET @Strsql+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
