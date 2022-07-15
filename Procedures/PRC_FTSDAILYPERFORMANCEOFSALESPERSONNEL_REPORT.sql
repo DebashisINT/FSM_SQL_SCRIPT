@@ -1,4 +1,5 @@
 --EXEC PRC_FTSDAILYPERFORMANCEOFSALESPERSONNEL_REPORT '2021-03-01','2021-03-01','',''
+--EXEC PRC_FTSDAILYPERFORMANCEOFSALESPERSONNEL_REPORT '2022-07-13','2022-07-13','EMP0000003',''
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSDAILYPERFORMANCEOFSALESPERSONNEL_REPORT]') AND TYPE in (N'P', N'PC'))
 BEGIN
@@ -23,6 +24,8 @@ Module	   : DAILY PERFORMANCE REPORT OF SALES PERSONNEL
 												to wrong ORDER BY.Now it has been taken care of.Refer: 0023910
 3.0		v2.0.22		Debashis	01/04/2021		Market worked column showing wrong value in Daily performance report for sales personnel.Now it has been taken care of.
 												Refer: 0023919
+4.0		v2.0.31		Debashis	15/07/2022		Opening Stock is not matching while generating Daily Performance report for sales personnel.Now it has been solved.
+												Refer: 0025042
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -622,8 +625,16 @@ BEGIN
 	SET @Strsql+='FROM tbl_master_brand BR '
 	SET @Strsql+='INNER JOIN Master_sProducts PROD ON BR.Brand_Id=PROD.sProducts_Brand '
 	SET @Strsql+='INNER JOIN(SELECT CNT.cnt_internalId AS EMPCODE,SM.Shop_Code AS SHOP_CODE,ORDD.Product_Id,Product_Qty,ORDVALUE_OS FROM FTS_TransStockOpen ORDH '
-	SET @Strsql+='INNER JOIN (SELECT User_Id,Stock_ID,Product_Id,Shop_code,SUM(ISNULL(Product_Qty,0)) AS Product_Qty,SUM(ISNULL(Product_Price,0)) AS ORDVALUE_OS FROM FTS_StockdetailsProduct '
-	SET @Strsql+='GROUP BY User_Id,Stock_ID,Product_Id,Shop_code '
+	--Rev 4.0
+	--SET @Strsql+='INNER JOIN (SELECT User_Id,Stock_ID,Product_Id,Shop_code,SUM(ISNULL(Product_Qty,0)) AS Product_Qty,SUM(ISNULL(Product_Price,0)) AS ORDVALUE_OS FROM FTS_StockdetailsProduct '
+	--SET @Strsql+='GROUP BY User_Id,Stock_ID,Product_Id,Shop_code '
+	SET @Strsql+='INNER JOIN (SELECT STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,SUM(ISNULL(STKDOP.Product_Qty,0)) AS Product_Qty,SUM(ISNULL(STKDOP.Product_Price,0)) AS ORDVALUE_OS '
+	SET @Strsql+='FROM FTS_StockdetailsProduct STKDOP '
+	SET @Strsql+='INNER JOIN tbl_FTs_OrderdetailsProduct STKD ON STKDOP.User_Id=STKD.User_Id AND STKDOP.Product_Id=STKD.Product_Id '
+	SET @Strsql+='AND EXISTS(SELECT OrderId FROM tbl_trans_fts_Orderupdate WHERE USERID=STKD.User_Id AND STKD.Order_ID=OrderId '
+	SET @Strsql+='AND CONVERT(NVARCHAR(10),Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120)) '
+	SET @Strsql+='GROUP BY STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code '
+	--End of Rev 4.0
 	SET @Strsql+=') ORDD ON ORDH.Shop_Code=ORDD.Shop_code AND ORDH.StockId=ORDD.Stock_ID AND ORDH.userID=ORDD.User_Id '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN tbl_master_employee EMP ON USR.user_contactId=EMP.emp_contactId '
