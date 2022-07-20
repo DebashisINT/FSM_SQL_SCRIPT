@@ -140,6 +140,7 @@ BEGIN
 	122.0		Debashis	29-06-2022	ADD SETTINGS @Action='UserCheck' IsAllowBreakageTracking,IsAllowBreakageTrackingunderTeam & IsRateEnabledforNewOrderScreenwithSize.Row 706
 	123.0		Debashis	11-07-2022	ADD SETTINGS @Action='UserCheck' IgnoreNumberCheckwhileShopCreation.Row 711
 	124.0		Debashis	13-07-2022	ADD SETTINGS @Action='UserCheck' Showdistributorwisepartyorderreport.Row 714
+	125.0		Debashis	13-07-2022	ADD SETTINGS @Action='GlobalCheck' IsSurveyRequiredforNewParty & IsSurveyRequiredforDealer.Row 720
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -261,6 +262,10 @@ BEGIN
 	--Rev 120.0
 	,@ShopScreenAftVisitRevisit BIT
 	--End of Rev 120.0
+	--Rev 125.0
+	,@IsSurveyRequiredforNewParty BIT
+	,@IsSurveyRequiredforDealer BIT
+	--End of Rev 125.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -434,6 +439,10 @@ BEGIN
 		--Rev 120.0
 		SET @ShopScreenAftVisitRevisit =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShopScreenAftVisitRevisit' AND IsActive=1)
 		--End of Rev 120.0
+		--Rev 125.0
+		SET @IsSurveyRequiredforNewParty =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSurveyRequiredforNewParty' AND IsActive=1)
+		SET @IsSurveyRequiredforDealer =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSurveyRequiredforDealer' AND IsActive=1)
+		--End of Rev 125.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -586,6 +595,10 @@ BEGIN
 			--Rev 120.0
 			,@ShopScreenAftVisitRevisit AS ShopScreenAftVisitRevisit
 			--End of Rev 120.0
+			--Rev 125.0
+			,@IsSurveyRequiredforNewParty AS IsSurveyRequiredforNewParty
+			,@IsSurveyRequiredforDealer AS IsSurveyRequiredforDealer
+			--End of Rev 125.0
 	END
 
 	else if(@Action='UserCheck')
