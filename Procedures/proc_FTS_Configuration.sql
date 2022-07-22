@@ -141,6 +141,7 @@ BEGIN
 	123.0		Debashis	11-07-2022	ADD SETTINGS @Action='UserCheck' IgnoreNumberCheckwhileShopCreation.Row 711
 	124.0		Debashis	13-07-2022	ADD SETTINGS @Action='UserCheck' Showdistributorwisepartyorderreport.Row 714
 	125.0		Debashis	13-07-2022	ADD SETTINGS @Action='GlobalCheck' IsSurveyRequiredforNewParty & IsSurveyRequiredforDealer.Row 720
+	126.0		Debashis	22-07-2022	ADD SETTINGS @Action=GlobalCheck' & 'UserCheck' IsShowHomeLocationMap.Row 721 & 722
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -266,6 +267,9 @@ BEGIN
 	,@IsSurveyRequiredforNewParty BIT
 	,@IsSurveyRequiredforDealer BIT
 	--End of Rev 125.0
+	--Rev 126.0
+	,@IsShowHomeLocationMap BIT
+	--End of Rev 126.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -443,6 +447,9 @@ BEGIN
 		SET @IsSurveyRequiredforNewParty =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSurveyRequiredforNewParty' AND IsActive=1)
 		SET @IsSurveyRequiredforDealer =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSurveyRequiredforDealer' AND IsActive=1)
 		--End of Rev 125.0
+		--Rev 126.0
+		SET @IsShowHomeLocationMap =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowHomeLocationMap' AND IsActive=1)
+		--End of Rev 126.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -599,6 +606,9 @@ BEGIN
 			,@IsSurveyRequiredforNewParty AS IsSurveyRequiredforNewParty
 			,@IsSurveyRequiredforDealer AS IsSurveyRequiredforDealer
 			--End of Rev 125.0
+			--Rev 126.0
+			,@IsShowHomeLocationMap AS IsShowHomeLocationMap
+			--End of Rev 126.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1469,5 +1479,10 @@ BEGIN
 		SELECT 'Showdistributorwisepartyorderreport' AS [Key],CONVERT(NVARCHAR(15),USR.Showdistributorwisepartyorderreport) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 124.0
+		--Rev 126.0
+		UNION ALL
+		SELECT 'IsShowHomeLocationMap' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowHomeLocationMap) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 126.0
 	END
 END
