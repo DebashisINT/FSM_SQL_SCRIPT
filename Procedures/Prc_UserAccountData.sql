@@ -1,0 +1,218 @@
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Prc_UserAccountData]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Prc_UserAccountData] AS' 
+END
+GO
+ALTER PROCEDURE [dbo].[Prc_UserAccountData]
+	@FromJoinDate Varchar(25)=null,
+	@ToJoinDate Varchar(25)=null,
+	@User_id int=null
+AS
+/*==================================================================================================================================================
+1.0		v2.0.31		Swatilekha	27-07-2022		New Sp Creation for New Module User Account Listing page.Refer: 25046
+==================================================================================================================================================*/
+Begin
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)	
+	BEGIN
+		DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@User_id)		
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@empcode  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+	END
+
+	CREATE TABLE #CHANNEL
+	(
+		EMPCODE VARCHAR(50),
+		CHANNELNAME VARCHAR(100)
+	) 
+
+	INSERT INTO #CHANNEL
+	SELECT X.*
+	FROM
+	(
+		SELECT CM.EP_EMP_CONTACTID,CH.CH_CHANNEL AS CHANNELNAME  
+		FROM EMPLOYEE_CHANNELMAP CM,EMPLOYEE_CHANNEL CH
+		WHERE CM.EP_CH_ID=CH.CH_ID
+	)X
+
+	CREATE TABLE #CIRCLE
+	(
+		EMPCODE VARCHAR(50),
+		CIRCLENAME VARCHAR(100)
+	) 
+	INSERT INTO #CIRCLE
+	SELECT CRM.EP_EMP_CONTACTID,CRL_CIRCLE AS CIRCLENAME
+	FROM EMPLOYEE_CIRCLEMAP CRM,EMPLOYEE_CIRCLE ECR
+	WHERE CRM.EP_CRL_ID=ECR.CRL_ID
+
+	CREATE TABLE #SECTION
+	(
+		EMPCODE VARCHAR(50),
+		SECTIONNAME VARCHAR(100)
+	)
+	INSERT INTO #SECTION
+	SELECT ESM.EP_EMP_CONTACTID,ES.SEC_SECTION AS SECTIONNAME
+	FROM EMPLOYEE_SECTIONMAP ESM,EMPLOYEE_SECTION ES
+	WHERE ESM.EP_SEC_ID=ES.SEC_ID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
+	  BEGIN
+			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
+			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
+			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME
+			FROM TBL_MASTER_USER U
+			LEFT OUTER JOIN FTS_STAGE F 
+			ON U.FACEREGTYPEID=F.STAGEID
+			INNER JOIN TBL_MASTER_EMPLOYEE E 
+			ON E.EMP_CONTACTID=U.USER_CONTACTID
+			INNER JOIN TBL_MASTER_CONTACT C ON C.CNT_INTERNALID=U.USER_CONTACTID
+			INNER JOIN #EMPHR_EDIT EH ON EH.EMPCODE=C.CNT_INTERNALID
+			LEFT OUTER JOIN
+			(
+				SELECT EMPCTC.emp_cntId,
+				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO         
+				FROM tbl_master_employee EMP     
+				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
+				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
+				WHERE EMPCTC.emp_effectiveuntil IS NULL
+			)CTC ON CTC.emp_cntId=C.cnt_internalId
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF(( 
+						SELECT ', ' + CHANNELNAME
+						FROM #CHANNEL 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS CHANNELNAME
+				FROM #CHANNEL T	
+				GROUP BY T.EMPCODE
+			)CH
+			ON CH.EMPCODE=C.CNT_INTERNALID
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF(( 
+						SELECT ', ' + CIRCLENAME
+						FROM #CIRCLE 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS CIRCLENAME
+				FROM #CIRCLE T	
+				GROUP BY T.EMPCODE
+			)CR ON CR.EMPCODE=C.CNT_INTERNALID	
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF
+				(( 
+						SELECT ', ' + SECTIONNAME
+						FROM #SECTION 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS SECTIONNAME
+				FROM #SECTION T
+				GROUP BY T.EMPCODE
+			)SE ON SE.EMPCODE=C.CNT_INTERNALID					
+			WHERE C.cnt_contactType='EM'
+			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31') 
+
+			DROP TABLE #EMPHR
+			DROP TABLE #EMPHR_EDIT	
+			DROP TABLE #CHANNEL
+			DROP TABLE #CIRCLE
+			DROP TABLE #SECTION		
+	  END
+	ELSE
+	  BEGIN
+			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
+			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
+			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME
+			FROM TBL_MASTER_USER U
+			LEFT OUTER JOIN FTS_STAGE F 
+			ON U.FACEREGTYPEID=F.STAGEID
+			INNER JOIN TBL_MASTER_EMPLOYEE E 
+			ON E.EMP_CONTACTID=U.USER_CONTACTID
+			INNER JOIN TBL_MASTER_CONTACT C ON C.CNT_INTERNALID=U.USER_CONTACTID			
+			LEFT OUTER JOIN
+			(
+				SELECT EMPCTC.emp_cntId,
+				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO         
+				FROM tbl_master_employee EMP     
+				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
+				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
+				WHERE EMPCTC.emp_effectiveuntil IS NULL
+			)CTC ON CTC.emp_cntId=C.cnt_internalId
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF(( 
+						SELECT ', ' + CHANNELNAME
+						FROM #CHANNEL 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS CHANNELNAME
+				FROM #CHANNEL T	
+				GROUP BY T.EMPCODE
+			)CH
+			ON CH.EMPCODE=C.CNT_INTERNALID
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF(( 
+						SELECT ', ' + CIRCLENAME
+						FROM #CIRCLE 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS CIRCLENAME
+				FROM #CIRCLE T	
+				GROUP BY T.EMPCODE
+			)CR ON CR.EMPCODE=C.CNT_INTERNALID	
+			LEFT OUTER JOIN
+			(
+				SELECT T.EMPCODE
+				, STUFF
+				(( 
+						SELECT ', ' + SECTIONNAME
+						FROM #SECTION 
+						WHERE EMPCODE = T.EMPCODE			
+						FOR XML PATH(''),TYPE
+					).value('.','NVARCHAR(MAX)'),1,2,'') AS SECTIONNAME
+				FROM #SECTION T
+				GROUP BY T.EMPCODE
+			)SE ON SE.EMPCODE=C.CNT_INTERNALID	
+			WHERE C.cnt_contactType='EM'
+			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31') 
+
+			DROP TABLE #CHANNEL
+			DROP TABLE #CIRCLE
+			DROP TABLE #SECTION
+	  END
+End
+GO
