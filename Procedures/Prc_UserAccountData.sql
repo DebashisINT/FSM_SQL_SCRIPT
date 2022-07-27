@@ -85,7 +85,7 @@ Begin
 	  BEGIN
 			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
 			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
-			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME
+			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME,u.CreateDate
 			FROM TBL_MASTER_USER U
 			LEFT OUTER JOIN FTS_STAGE F 
 			ON U.FACEREGTYPEID=F.STAGEID
@@ -96,7 +96,8 @@ Begin
 			LEFT OUTER JOIN
 			(
 				SELECT EMPCTC.emp_cntId,
-				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO         
+				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO
+				,EMPCTC.emp_Designation AS DESGID          
 				FROM tbl_master_employee EMP     
 				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
 				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
@@ -141,7 +142,9 @@ Begin
 				GROUP BY T.EMPCODE
 			)SE ON SE.EMPCODE=C.CNT_INTERNALID					
 			WHERE C.cnt_contactType='EM'
-			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31') 
+			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31')
+			AND CTC.DESGID IN(291,310)  
+			ORDER BY U.CREATEDATE DESC
 
 			DROP TABLE #EMPHR
 			DROP TABLE #EMPHR_EDIT	
@@ -153,7 +156,7 @@ Begin
 	  BEGIN
 			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
 			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
-			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME
+			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME,U.CREATEDATE
 			FROM TBL_MASTER_USER U
 			LEFT OUTER JOIN FTS_STAGE F 
 			ON U.FACEREGTYPEID=F.STAGEID
@@ -163,7 +166,8 @@ Begin
 			LEFT OUTER JOIN
 			(
 				SELECT EMPCTC.emp_cntId,
-				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO         
+				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO  
+				,EMPCTC.emp_Designation AS DESGID        
 				FROM tbl_master_employee EMP     
 				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
 				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
@@ -208,7 +212,9 @@ Begin
 				GROUP BY T.EMPCODE
 			)SE ON SE.EMPCODE=C.CNT_INTERNALID	
 			WHERE C.cnt_contactType='EM'
-			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31') 
+			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31')
+			AND CTC.DESGID IN(291,310)  
+			ORDER BY U.CREATEDATE DESC
 
 			DROP TABLE #CHANNEL
 			DROP TABLE #CIRCLE
