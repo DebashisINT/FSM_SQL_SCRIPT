@@ -193,6 +193,12 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 --Rev Work 15.0 start
 @isHorizontalPerformReportShow INT=0
 --Rev Work 15.0 close
+--Rev 16.0
+,@FaceRegTypeID INT=0
+--End of Rev 16.0
+--Rev 17.0
+,@DistributerwisePartyOrderReport INT=0
+--End of rev 17.0
 ) 
 AS
 /***************************************************************************************************************************************
@@ -210,7 +216,9 @@ AS
 13.0	20-10-2021		Pratik		Insert update extra column
 14.0	07-01-2022		Sanchita	Add two checkboxes "Face Registration - Open Front camera" and "MRP in Order". Refer: 24596,24597
 15.0	11-05-2022		Swati	    Add one checkboxes "Show Horizontal Performance Report"  Refer: 0024880
-
+16.0	14-07-2022		Pratik	    Fetch settings "IsShowUserType","IsUserTypeMandatory" from ShowSettings Action. Refer: 25015,25016
+17.0	15-07-2022		Pratik	    Add one checkboxe "DistributerwisePartyOrderReport" . Refer: 25035
+18.0	01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -285,6 +293,12 @@ BEGIN
 			--Rev work 15.0 start
 			,IsHierarchyforHorizontalPerformanceReport
 			--Rev work 15.0 close
+			--Rev 16.0
+			,FaceRegTypeID
+			--End of Rev 16.0
+			--Rev 17.0
+			,Showdistributorwisepartyorderreport
+			--End of Rev 17.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -345,6 +359,12 @@ BEGIN
 			--Rev work 15.0 start
 			,@isHorizontalPerformReportShow
 			--Rev work 15.0 close
+			--Rev 16.0
+			,@FaceRegTypeID
+			--End of Rev 16.0
+			--Rev 17.0
+			,@DistributerwisePartyOrderReport
+			--End of Rev 17.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -438,6 +458,12 @@ BEGIN
 			--Rev work 15.0 start
 			,IsHierarchyforHorizontalPerformanceReport=@isHorizontalPerformReportShow
 			--Rev work 15.0 close
+			--Rev 16.0
+			,FaceRegTypeID=@FaceRegTypeID
+			--End of Rev 16.0
+			--Rev 17.0
+			,Showdistributorwisepartyorderreport=@DistributerwisePartyOrderReport
+			--End of Rev 17.0
 			 Where  user_id =@user_id
 
 			 --Rev 1.0 Start
@@ -526,6 +552,12 @@ BEGIN
 			--Rev work 15.0 start
 			,ISNULL(u.ISHIERARCHYFORHORIZONTALPERFORMANCEREPORT,0) AS IsHorizontalPerformReportShow
 			--rev work 15.0 close
+			--Rev 16.0
+			,ISNULL(u.FaceRegTypeID,0) AS FaceRegTypeID
+			--End of Rev 16.0
+			--Rev 17.0
+			,Showdistributorwisepartyorderreport
+			--End of Rev 17.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -584,6 +616,19 @@ BEGIN
 			--Rev work 15.0 start
 			,'IsHierarchyforHorizontalPerformanceReport'
 			--Rev work 15.0 close
+			--Rev 16.0
+			,'IsShowUserType'
+			,'IsUserTypeMandatory'
+			--End of Rev 16.0
+			--Rev 17.0
+			,'DistributerwisePartyOrderReport'
+			--End of Rev 17.0
 			)
 		END
+	-- Rev 18.0
+	ELSE IF @ACTION='ShowSettingsActivateEmployeeBranchHierarchy'
+		BEGIN
+			select [key],[Value] from FTS_APP_CONFIG_SETTINGS where [Key] ='isActivateEmployeeBranchHierarchy'
+		END
+		-- End of Rev 18.0
 END
