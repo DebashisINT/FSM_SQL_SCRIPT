@@ -15,6 +15,7 @@ AS
 /***************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 31/05/2022
 Purpose : For Clear Attendance.Row: 689
+1.0		v2.0.32		Debashis	09/08/2022		New table has been added.Row: 730
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -35,6 +36,11 @@ BEGIN
 
 			DELETE FROM FTS_Attendance_Target_Statewise WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE Attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
+
+			--Rev 1.0
+			DELETE FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS (SELECT ATTEN.User_Id FROM tbl_fts_UserAttendanceLoginlogout ATTEN WHERE ATTEN.User_Id=FTS_USER_LEAVEAPPLICATION.USER_ID 
+			AND ATTEN.User_Id=@USER_ID AND CAST(ATTEN.Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE)) AND FTS_USER_LEAVEAPPLICATION.CREATED_DATE=@LEAVE_APPLY_DATE
+			--End of Rev 1.0
 
 			DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE User_Id=@user_id AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE
 
