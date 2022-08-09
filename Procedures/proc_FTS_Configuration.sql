@@ -142,6 +142,9 @@ BEGIN
 	124.0		Debashis	13-07-2022	ADD SETTINGS @Action='UserCheck' Showdistributorwisepartyorderreport.Row 714
 	125.0		Debashis	13-07-2022	ADD SETTINGS @Action='GlobalCheck' IsSurveyRequiredforNewParty & IsSurveyRequiredforDealer.Row 720
 	126.0		Debashis	22-07-2022	ADD SETTINGS @Action=GlobalCheck' & 'UserCheck' IsShowHomeLocationMap.Row 721 & 722
+	127.0		Debashis	08-08-2022	ADD SETTINGS @Action=GlobalCheck' IsBeatRouteAvailableinAttendance & IsAllBeatAvailableforParty.Row 726
+	128.0		Debashis	08-08-2022	ADD SETTINGS @Action='UserCheck' IsBeatRouteReportAvailableinTeamr.Row 727
+	129.0		Debashis	09-08-2022	ADD SETTINGS @Action='UserCheck' ShowAttednaceClearmenu.Row 729
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -270,6 +273,10 @@ BEGIN
 	--Rev 126.0
 	,@IsShowHomeLocationMap BIT
 	--End of Rev 126.0
+	--Rev 127.0
+	,@IsBeatRouteAvailableinAttendance BIT
+	,@IsAllBeatAvailableforParty BIT
+	--End of Rev 127.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -450,6 +457,10 @@ BEGIN
 		--Rev 126.0
 		SET @IsShowHomeLocationMap =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowHomeLocationMap' AND IsActive=1)
 		--End of Rev 126.0
+		--Rev 127.0
+		SET @IsBeatRouteAvailableinAttendance =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatRouteAvailableinAttendance' AND IsActive=1)
+		SET @IsAllBeatAvailableforParty =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllBeatAvailableforParty' AND IsActive=1)
+		--End of Rev 127.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -609,6 +620,10 @@ BEGIN
 			--Rev 126.0
 			,@IsShowHomeLocationMap AS IsShowHomeLocationMap
 			--End of Rev 126.0
+			--Rev 127.0
+			,@IsBeatRouteAvailableinAttendance AS IsBeatRouteAvailableinAttendance
+			,@IsAllBeatAvailableforParty AS IsAllBeatAvailableforParty
+			--End of Rev 127.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1484,5 +1499,15 @@ BEGIN
 		SELECT 'IsShowHomeLocationMap' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowHomeLocationMap) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 126.0
+		--Rev 128.0
+		UNION ALL
+		SELECT 'IsBeatRouteReportAvailableinTeam' AS [Key],CONVERT(NVARCHAR(15),USR.IsBeatRouteReportAvailableinTeam) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 128.0
+		--Rev 129.0
+		UNION ALL
+		SELECT 'ShowAttednaceClearmenu' AS [Key],CONVERT(NVARCHAR(15),USR.ShowAttednaceClearmenu) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 129.0
 	END
 END

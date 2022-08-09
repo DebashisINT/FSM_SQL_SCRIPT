@@ -24,6 +24,7 @@ Module	   : Employee Visit Summary & Details for API
 3.0		v18.0.0		26/02/2019		Debashis		Details sort on EMONAME and VISITED_TIME.Instructed by Pijush da.
 4.0		v2.0.7		25/02/2020		Debashis		View visit report enhancement in FSM App.Refer: 0021839
 5.0		v2.0.30		01/06/2022		Debashis		Visit Date & Time order have been changed.Row: 690
+6.0		v2.0.32		09/08/2022		Debashis		Some new fields have been added.Row: 728
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -158,14 +159,20 @@ BEGIN
 		--End of Rev 3.0
 		--Rev 5.0
 		--SET @Strsql+='SHOP_NAME,VISITED_DATE,VISITED_TIME,DISTANCE_TRAVELLED,KM_TRAVELLED,SPENT_DURATION FROM('
-		SET @Strsql+='SHOP_NAME,VISITED_DATE,VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,DISTANCE_TRAVELLED,KM_TRAVELLED,SPENT_DURATION FROM('
+		--Rev 6.0
+		--SET @Strsql+='SHOP_NAME,VISITED_DATE,VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,DISTANCE_TRAVELLED,KM_TRAVELLED,SPENT_DURATION FROM('
+		SET @Strsql+='SHOP_NAME,VISITED_DATE,VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,DISTANCE_TRAVELLED,KM_TRAVELLED,SPENT_DURATION,beat_id,beat_name,visit_status FROM('
+		--End of Rev 6.0
 		--End of Rev 5.0
 		SET @Strsql+='SELECT USR.USER_ID AS EMPUSRID,CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ST.ID AS STATEID,'
 		SET @Strsql+='ST.state AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,USR.user_loginId AS CONTACTNO,RPTTO.RPTTOUSRID,RPTTO.RPTTOEMPCODE,RPTTO.REPORTTO,RPTTO.RPTTODESGID,RPTTO.RPTTODESG,EMP.emp_uniqueCode AS EMPID,'
 		--Rev 5.0
 		--SET @Strsql+='SHOP.SHOP_NAME,SHOPACT.VISITED_DATE,REPLACE(REPLACE(SHOPACT.VISITED_TIME,''AM'','' AM''),''PM'','' PM'') AS VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,SHOPACT.DISTANCE_TRAVELLED,SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION '
 		SET @Strsql+='SHOP.SHOP_NAME,SHOPACT.VISITED_DATE,REPLACE(REPLACE(SHOPACT.VISITED_TIME,''AM'','' AM''),''PM'','' PM'') AS VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,SHOPACT.DISTANCE_TRAVELLED,'
-		SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION '
+		--Rev 6.0
+		--SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION '
+		SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION,ATTEN.beat_id,ATTEN.beat_name,SHOPACT.visit_status '
+		--End of Rev 6.0
 		--End of Rev 5.0
 		SET @Strsql+='FROM #TMPMASTEMPLOYEE EMP '
 		SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -176,27 +183,43 @@ BEGIN
 		SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 		SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE CNT.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
 		SET @Strsql+='INNER JOIN ( '
-		SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+		--Rev 6.0
+		--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+		SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,ISNULL(BH.ID,0) AS beat_id,ISNULL(BH.NAME,'''') AS beat_name '
+		SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+		--End of Rev 6.0
 		SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 		SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+		--Rev 6.0
+		SET @Strsql+='LEFT OUTER JOIN FSM_GROUPBEAT BH ON BH.ID=ATTEN.BEAT_ID '
+		--End of Rev 6.0
 		--Rev 1.0
 		--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) = CONVERT(NVARCHAR(10),GETDATE(),120) '
 		SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 		--End of Rev 1.0
 		SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''false'' '
-		SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+		--Rev 6.0
+		--SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+		SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),BH.ID,BH.NAME '
+		--End of Rev 6.0
 		SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '
 		SET @Strsql+='LEFT OUTER JOIN ('
 		--Rev 5.0
 		--SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_DATE,VISITED_TIME,SPENT_DURATION FROM( '
 		SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,SUM(DISTANCE_TRAVELLED) AS DISTANCE_TRAVELLED,VISITED_DATE,VISITED_TIME,'
-		SET @Strsql+='VISITED_DATEORDBY,VISITED_TIMEORDBY,SPENT_DURATION FROM('
+		--Rev 6.0
+		--SET @Strsql+='VISITED_DATEORDBY,VISITED_TIMEORDBY,SPENT_DURATION FROM('
+		SET @Strsql+='VISITED_DATEORDBY,VISITED_TIMEORDBY,SPENT_DURATION,visit_status FROM('
+		--End of Rev 6.0
 		--End of Rev 5.0
 		SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
 		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_DATE,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),100) AS VISITED_TIME,SHOPACT.SPENT_DURATION,'
 		--Rev 5.0
-		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITED_DATEORDBY,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),108) AS VISITED_TIMEORDBY '
+		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITED_DATEORDBY,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),108) AS VISITED_TIMEORDBY,'
 		--End of Rev 5.0
+		--Rev 6.0
+		SET @Strsql+='''New Visit'' AS visit_status '
+		--End of Rev 6.0
 		SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
 		SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
 		SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -210,8 +233,11 @@ BEGIN
 		SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,'
 		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_DATE,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),100) AS VISITED_TIME,SPENT_DURATION,'
 		--Rev 5.0
-		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITED_DATEORDBY,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),108) AS VISITED_TIMEORDBY '
+		SET @Strsql+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) AS VISITED_DATEORDBY,CONVERT(VARCHAR(15),CAST(SHOPACT.visited_time AS TIME),108) AS VISITED_TIMEORDBY,'
 		--End of Rev 5.0
+		--Rev 6.0
+		SET @Strsql+='''Revisit'' AS visit_status '
+		--End of Rev 6.0
 		SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT '
 		SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
 		SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -223,7 +249,11 @@ BEGIN
 		SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
 		--Rev 5.0
 		--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_DATE,VISITED_TIME,SPENT_DURATION) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_DATE '
-		SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_DATE,VISITED_TIME,SPENT_DURATION,VISITED_DATEORDBY,VISITED_TIMEORDBY) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
+		--Rev 6.0
+		--SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_DATE,VISITED_TIME,SPENT_DURATION,VISITED_DATEORDBY,VISITED_TIMEORDBY) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
+		SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_DATE,VISITED_TIME,SPENT_DURATION,VISITED_DATEORDBY,VISITED_TIMEORDBY,visit_status '
+		SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
+		--End of Rev 6.0
 		SET @Strsql+='AND ATTEN.Login_datetime=SHOPACT.VISITED_DATE '
 		--End of Rev 5.0
 		SET @Strsql+='INNER JOIN ('
