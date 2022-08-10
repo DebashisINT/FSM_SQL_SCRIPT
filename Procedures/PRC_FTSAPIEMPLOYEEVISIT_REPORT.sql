@@ -1,4 +1,4 @@
---EXEC PRC_FTSAPIEMPLOYEEVISIT_REPORT '2022-05-30','2022-05-31',54679
+--EXEC PRC_FTSAPIEMPLOYEEVISIT_REPORT '2022-08-01','2022-08-31',11984
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSAPIEMPLOYEEVISIT_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -171,7 +171,7 @@ BEGIN
 		SET @Strsql+='SHOP.SHOP_NAME,SHOPACT.VISITED_DATE,REPLACE(REPLACE(SHOPACT.VISITED_TIME,''AM'','' AM''),''PM'','' PM'') AS VISITED_TIME,VISITED_DATEORDBY,VISITED_TIMEORDBY,SHOPACT.DISTANCE_TRAVELLED,'
 		--Rev 6.0
 		--SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION '
-		SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION,ATTEN.beat_id,ATTEN.beat_name,SHOPACT.visit_status '
+		SET @Strsql+='SHOPUSR.KM_TRAVELLED,SHOPACT.SPENT_DURATION,SHOP.beat_id,SHOP.beat_name,SHOPACT.visit_status '
 		--End of Rev 6.0
 		--End of Rev 5.0
 		SET @Strsql+='FROM #TMPMASTEMPLOYEE EMP '
@@ -183,25 +183,15 @@ BEGIN
 		SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 		SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE CNT.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
 		SET @Strsql+='INNER JOIN ( '
-		--Rev 6.0
-		--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-		SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,ISNULL(BH.ID,0) AS beat_id,ISNULL(BH.NAME,'''') AS beat_name '
-		SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-		--End of Rev 6.0
+		SET @Strsql+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
 		SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 		SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-		--Rev 6.0
-		SET @Strsql+='LEFT OUTER JOIN FSM_GROUPBEAT BH ON BH.ID=ATTEN.BEAT_ID '
-		--End of Rev 6.0
 		--Rev 1.0
 		--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) = CONVERT(NVARCHAR(10),GETDATE(),120) '
 		SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 		--End of Rev 1.0
 		SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''false'' '
-		--Rev 6.0
-		--SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-		SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),BH.ID,BH.NAME '
-		--End of Rev 6.0
+		SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 		SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '
 		SET @Strsql+='LEFT OUTER JOIN ('
 		--Rev 5.0
@@ -258,8 +248,14 @@ BEGIN
 		--End of Rev 5.0
 		SET @Strsql+='INNER JOIN ('
 		SET @Strsql+='SELECT DISTINCT Shop_Code,Shop_CreateUser,Shop_Name,Address,Shop_Owner_Contact, '
-		SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' END AS SHOP_TYPE '
+		SET @Strsql+='CASE WHEN TYPE=1 THEN ''Shop'' WHEN TYPE=2 THEN ''PP'' WHEN TYPE=3 THEN ''New Party'' WHEN TYPE=4 THEN ''DD'' END AS SHOP_TYPE,'
+		--Rev 6.0
+		SET @Strsql+='ISNULL(BH.ID,0) AS beat_id,ISNULL(BH.NAME,'''') AS beat_name '
+		--End of Rev 6.0
 		SET @Strsql+='FROM tbl_Master_shop '
+		--Rev 6.0
+		SET @Strsql+='LEFT OUTER JOIN FSM_GROUPBEAT BH ON tbl_Master_shop.BEAT_ID=BH.ID '
+		--End of Rev 6.0
 		--Rev 4.0
 		--SET @Strsql+=') SHOP ON SHOP.Shop_CreateUser=USR.user_id AND SHOP.Shop_Code=SHOPACT.Shop_Id '
 		SET @Strsql+=') SHOP ON SHOP.Shop_Code=SHOPACT.Shop_Id '
