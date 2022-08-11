@@ -219,9 +219,13 @@ AS
 16.0	14-07-2022		Pratik	    Fetch settings "IsShowUserType","IsUserTypeMandatory" from ShowSettings Action. Refer: 25015,25016
 17.0	15-07-2022		Pratik	    Add one checkboxe "DistributerwisePartyOrderReport" . Refer: 25035
 18.0	01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
+19.0	11-08-2022		Pratik		Channel DS Type Map should be updated as per DS Type Selection. Refer: 25018
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
+	--Rev 19.0
+	Declare @user_contactId nvarchar(20)='',@ChannelId int=0
+	--End of Rev 19.0
 	IF OBJECT_ID('tempdb..#Shoptype_List') IS NOT NULL
 	DROP TABLE #Shoptype_List
 	CREATE TABLE #Shoptype_List (TypeId BIGINT)	
@@ -376,7 +380,24 @@ BEGIN
 				INSERT INTO FTS_UserPartyCreateAccess
 				SELECT @user_id,TypeId FROM #Shoptype_List
 			END
+			--Rev 19.0
+			set @user_contactId=(select tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
+			set @ChannelId=(select CDTM.ChannelId from FTS_ChannelDSTypeMap as CDTM where CDTM.StageID=@FaceRegTypeID)
 
+			IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
+			BEGIN
+				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+			END
+			ELSE
+			BEGIN
+
+				DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
+
+				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+			END
+			--End of Rev 19.0
 		END
 
 	ELSE IF @ACTION='UPDATE'
@@ -481,7 +502,24 @@ BEGIN
 				INSERT INTO FTS_UserPartyCreateAccess
 				SELECT @user_id,TypeId FROM #Shoptype_List
 			END
+			--Rev 19.0
+			set @user_contactId=(select tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
+			set @ChannelId=(select CDTM.ChannelId from FTS_ChannelDSTypeMap as CDTM where CDTM.StageID=@FaceRegTypeID)
 
+			IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
+			BEGIN
+				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+			END
+			ELSE
+			BEGIN
+
+				DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
+
+				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+			END
+			--End of Rev 19.0
 		END
 
 	ELSE IF @ACTION='EDIT'
@@ -632,3 +670,4 @@ BEGIN
 		END
 		-- End of Rev 18.0
 END
+GO
