@@ -1,4 +1,4 @@
---EXEC PRC_API_EMPLOYEEACTIVITY_REPORT '','2022-01-08','2022-01-14',378,'',''
+--EXEC PRC_API_EMPLOYEEACTIVITY_REPORT '','2022-08-01','2022-08-07',378,'','','0','1'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_API_EMPLOYEEACTIVITY_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -13,21 +13,26 @@ ALTER PROCEDURE [dbo].[PRC_API_EMPLOYEEACTIVITY_REPORT]
 @TODATE NVARCHAR(50)=NULL,
 @LOGIN_ID BIGINT,
 @stateID NVARCHAR(MAX)=NULL,
-@DESIGNID NVARCHAR(MAX)=NULL
+@DESIGNID NVARCHAR(MAX)=NULL,
+--Rev 9.0
+@ISONLYLOGINDATA NCHAR(1)=NULL,
+@ISONLYLOGOUTDATA NCHAR(1)=NULL
+--End of Rev 9.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : TANMOY GHOSH  on 28/03/2019 CHANGE 07/05/19 ADD EMPLOYEE ID
 Module	   : Employee Activity Report for Track
-1.0			v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
-2.0			v2.0.11		Debashis	26/05/2020		Employee Activity report is not generating.Now solved.Refer: 0022370
-3.0			v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
-4.0			v2.0.24		Debashis	30/07/2021		Employee Activity Employee Activity Details This report shall not be showing distance subtotal of Visit /Revisit.
-													Refer: 0024198
-5.0			v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
-6.0			v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
-7.0			v2.0.26		Debashis	24/01/2022		Reports > Employee Tracking > Employee Activity, Unable to generate report, system is getting logout.Refer: 0024636
-8.0			v2.0.30		Debashis	01/06/2022		While generating the Employee Activity Report for 7 days, system getting logged out.Now solved.Refer: 0024921
+1.0		v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
+2.0		v2.0.11		Debashis	26/05/2020		Employee Activity report is not generating.Now solved.Refer: 0022370
+3.0		v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
+4.0		v2.0.24		Debashis	30/07/2021		Employee Activity Employee Activity Details This report shall not be showing distance subtotal of Visit /Revisit.
+												Refer: 0024198
+5.0		v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
+6.0		v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
+7.0		v2.0.26		Debashis	24/01/2022		Reports > Employee Tracking > Employee Activity, Unable to generate report, system is getting logout.Refer: 0024636
+8.0		v2.0.30		Debashis	01/06/2022		While generating the Employee Activity Report for 7 days, system getting logged out.Now solved.Refer: 0024921
+9.0		V2.0.32		Debashis	11/08/2022		Only Login Data & Only Logout Data required under Employee Activity report.Refer: 0025104
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -218,6 +223,14 @@ BEGIN
 	SET @Strsql+='tbl_trans_employeeCTC as cnt left outer  join  tbl_master_designation as desg on desg.deg_id=cnt.emp_Designation '
 	SET @Strsql+='group by emp_cntId,desg.deg_designation,desg.deg_id,emp_effectiveuntil having emp_effectiveuntil is null )N '
 	SET @Strsql+='on  N.emp_cntId=MU.user_contactId '
+	--Rev 9.0
+	IF @ISONLYLOGINDATA='1' AND @ISONLYLOGOUTDATA='0'
+		SET @Strsql+='WHERE TSA.LoginLogout=1 '
+	ELSE IF @ISONLYLOGINDATA='0' AND @ISONLYLOGOUTDATA='1'
+		SET @Strsql+='WHERE TSA.LoginLogout=0 '
+	ELSE IF @ISONLYLOGINDATA='1' AND @ISONLYLOGOUTDATA='1'
+		SET @Strsql+='WHERE TSA.LoginLogout IN(1,0) '
+	--End of Rev 9.0
 	SET @Strsql+=') AS T WHERE ISNULL(T.User_id,'''')<>'''' AND CONVERT(NVARCHAR(10),T.Visit_Time,23) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',23) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',23) '
 	IF(ISNULL(@Employee,'')<>'')
 		SET @Strsql+=' AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=cast(T.User_id as nvarchar(100)))  '
