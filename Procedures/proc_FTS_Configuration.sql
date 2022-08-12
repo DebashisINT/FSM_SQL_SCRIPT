@@ -145,6 +145,7 @@ BEGIN
 	127.0		Debashis	08-08-2022	ADD SETTINGS @Action=GlobalCheck' IsBeatRouteAvailableinAttendance & IsAllBeatAvailableforParty.Row 726
 	128.0		Debashis	08-08-2022	ADD SETTINGS @Action='UserCheck' IsBeatRouteReportAvailableinTeamr.Row 727
 	129.0		Debashis	09-08-2022	ADD SETTINGS @Action='UserCheck' ShowAttednaceClearmenu.Row 729
+	130.0		Debashis	12-08-2022	ADD SETTINGS @Action='GlobalCheck' BeatText & TodaysTaskText.Row 731
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -275,8 +276,12 @@ BEGIN
 	--End of Rev 126.0
 	--Rev 127.0
 	,@IsBeatRouteAvailableinAttendance BIT
-	,@IsAllBeatAvailableforParty BIT
+	,@IsAllBeatAvailable BIT
 	--End of Rev 127.0
+	--Rev 130.0
+	,@BeatText NVARCHAR(200)
+	,@TodaysTaskText NVARCHAR(200)
+	--End of Rev 130.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -459,8 +464,12 @@ BEGIN
 		--End of Rev 126.0
 		--Rev 127.0
 		SET @IsBeatRouteAvailableinAttendance =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatRouteAvailableinAttendance' AND IsActive=1)
-		SET @IsAllBeatAvailableforParty =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllBeatAvailableforParty' AND IsActive=1)
+		SET @IsAllBeatAvailable =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllBeatAvailable' AND IsActive=1)
 		--End of Rev 127.0
+		--Rev 130.0
+		SET @BeatText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='BeatText' AND IsActive=1)
+		SET @TodaysTaskText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='TodaysTaskText' AND IsActive=1)
+		--End of Rev 130.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -622,8 +631,12 @@ BEGIN
 			--End of Rev 126.0
 			--Rev 127.0
 			,@IsBeatRouteAvailableinAttendance AS IsBeatRouteAvailableinAttendance
-			,@IsAllBeatAvailableforParty AS IsAllBeatAvailableforParty
+			,@IsAllBeatAvailable AS IsAllBeatAvailable
 			--End of Rev 127.0
+			--Rev 130.0
+			,@BeatText AS BeatText
+			,@TodaysTaskText AS TodaysTaskText
+			--End of Rev 130.0
 	END
 
 	else if(@Action='UserCheck')
