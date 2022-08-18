@@ -199,6 +199,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 --Rev 17.0
 ,@DistributerwisePartyOrderReport INT=0
 --End of rev 17.0
+--Rev 20.0
+,@ShowAttednaceClearmenu INT=0
+--End of Rev 20.0
 ) 
 AS
 /***************************************************************************************************************************************
@@ -220,6 +223,7 @@ AS
 17.0	15-07-2022		Pratik	    Add one checkboxe "DistributerwisePartyOrderReport" . Refer: 25035
 18.0	01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
 19.0	11-08-2022		Pratik		Channel DS Type Map should be updated as per DS Type Selection. Refer: 25018
+20.0	16-08-2022		Pratik		Attendance Clear Option is needed in FSM. Refer: 25116
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -303,6 +307,9 @@ BEGIN
 			--Rev 17.0
 			,Showdistributorwisepartyorderreport
 			--End of Rev 17.0
+			--Rev 20.0
+			,ShowAttednaceClearmenu
+			--End of Rev 20.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -369,6 +376,9 @@ BEGIN
 			--Rev 17.0
 			,@DistributerwisePartyOrderReport
 			--End of Rev 17.0
+			--Rev 20.0
+			,@ShowAttednaceClearmenu
+			--End of Rev 20.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -485,6 +495,9 @@ BEGIN
 			--Rev 17.0
 			,Showdistributorwisepartyorderreport=@DistributerwisePartyOrderReport
 			--End of Rev 17.0
+			--Rev 20.0
+			,ShowAttednaceClearmenu=@ShowAttednaceClearmenu
+			--End of Rev 20.0
 			 Where  user_id =@user_id
 
 			 --Rev 1.0 Start
@@ -596,6 +609,9 @@ BEGIN
 			--Rev 17.0
 			,Showdistributorwisepartyorderreport
 			--End of Rev 17.0
+			--Rev 20.0
+			,ShowAttednaceClearmenu
+			--End of Rev 20.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -661,6 +677,9 @@ BEGIN
 			--Rev 17.0
 			,'DistributerwisePartyOrderReport'
 			--End of Rev 17.0
+			--Rev 20.0
+			,'ShowAttednaceClearmenu'
+			--End of Rev 20.0
 			)
 		END
 	-- Rev 18.0
