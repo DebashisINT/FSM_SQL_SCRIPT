@@ -25,12 +25,18 @@ ALTER PROCEDURE [dbo].[PRC_APISALESQUOTATIONADDUPDATEDELFETCH]
 @QUOTATION_CREATED_LAT NVARCHAR(MAX)=NULL,
 @QUOTATION_CREATED_LONG NVARCHAR(MAX)=NULL,
 @QUOTATION_CREATED_ADDRESS NVARCHAR(MAX)=NULL,
+--Rev 1.0
+@REMARKS NVARCHAR(500)=NULL,
+@DOCUMENT_NUMBER NVARCHAR(200)=NULL,
+@QUOTATION_STATUS NVARCHAR(100)=NULL,
+--End of Rev 1.0
 @JsonXML XML=NULL
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************
 Written By : Debashis Talukder On 21/02/2022
 Purpose : For New Sales Quptation.Row 647 to 652
+1.0		v2.0.32		Debashis	01/09/2022		Some new Parameters,columns added as RATE.Row: 732 to 735
 ****************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -64,12 +70,13 @@ BEGIN
 						BEGIN TRY
 							IF NOT EXISTS(SELECT QUOTATION_NUMBER FROM FSMAPIQUOTATIONHEAD WHERE QUOTATION_NUMBER=@QUOTATION_NUMBER)
 								BEGIN
+									--Rev 1.0 && Some new fields added as REMARKS,DOCUMENT_NUMBER & QUOTATION_STATUS
 									INSERT INTO FSMAPIQUOTATIONHEAD(USER_ID,QUOTATION_NUMBER,QUOTATIONSAVE_DATE,QUOTATION_DATE_SELECTION,PROJECT_NAME,TAXES,FREIGHT,DELIVERY_TIME,PAYMENT,VALIDITY,BILLING,
 									PRODUCT_TOLERANCE_OF_THICKNESS,TOLERANCE_OF_COATING_THICKNESS,SALESMAN_USER_ID,SHOP_ID,QUOTATION_CREATED_LAT,QUOTATION_CREATED_LONG,QUOTATION_CREATED_ADDRESS,CREATED_BY,
-									CREATED_DATE)
+									CREATED_DATE,REMARKS,DOCUMENT_NUMBER,QUOTATION_STATUS)
 									SELECT @USER_ID,@QUOTATION_NUMBER,@QUOTATIONSAVE_DATE,@QUOTATION_DATE_SELECTION,@PROJECT_NAME,@TAXES,@FREIGHT,@DELIVERY_TIME,@PAYMENT,@VALIDITY,@BILLING,
 									@PRODUCT_TOLERANCE_OF_THICKNESS,@TOLERANCE_OF_COATING_THICKNESS,@SALESMAN_USER_ID,@SHOP_ID,@QUOTATION_CREATED_LAT,@QUOTATION_CREATED_LONG,@QUOTATION_CREATED_ADDRESS,
-									@USER_ID,GETDATE()
+									@USER_ID,GETDATE(),@REMARKS,@DOCUMENT_NUMBER,@QUOTATION_STATUS
 
 									SET @HEADERID=SCOPE_IDENTITY();
 								END			
@@ -99,20 +106,24 @@ BEGIN
 		END
 	ELSE IF @ACTION='SHOPWISEQUOTATIONLIST'
 		BEGIN
-			SELECT MS.Shop_Code AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_NUMBER AS quotation_number,QH.QUOTATIONSAVE_DATE AS save_date_time 
+			--Rev 1.0 && Some new fields added as DOCUMENT_NUMBER & QUOTATION_STATUS
+			SELECT MS.Shop_Code AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_NUMBER AS quotation_number,QH.QUOTATIONSAVE_DATE AS save_date_time,
+			QH.QUOTATION_STATUS AS quotation_status,QH.DOCUMENT_NUMBER AS document_number
 			FROM tbl_Master_shop MS
 			INNER JOIN FSMAPIQUOTATIONHEAD QH ON MS.Shop_Code=QH.SHOP_ID
 			WHERE MS.Shop_Code=@SHOP_ID
 		END
 	ELSE IF @ACTION='SHOWQUOTATIONDETAILS'
 		BEGIN
+			--Rev 1.0 && Some new fields added as REMARKS & DOCUMENT_NUMBER
 			SELECT QH.QUOTATION_NUMBER AS quotation_number,CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,105)+' '+CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,108) AS save_date_time,
 			CONVERT(NVARCHAR(10),QH.QUOTATION_DATE_SELECTION,105) AS quotation_date_selection,QH.PROJECT_NAME AS project_name,QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,
 			QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,
 			QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_CREATED_LAT AS quotation_created_lat,
 			QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,MS.Shop_Owner_Email AS shop_email,
-			MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,
-			QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
+			MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,QH.REMARKS AS Remarks,QH.DOCUMENT_NUMBER AS document_number,
+			QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,
+			CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
 			FROM FSMAPIQUOTATIONHEAD QH
 			INNER JOIN FSMAPIQUOTATIONDETAILS QHD ON QH.ID=QHD.HEADID AND QH.QUOTATION_NUMBER=QHD.QUOTATION_NUMBER AND QH.SHOP_ID=QHD.SHOP_ID
 			INNER JOIN tbl_Master_shop MS ON QH.SHOP_ID=MS.Shop_Code
@@ -162,6 +173,37 @@ BEGIN
 					SELECT 'Deleted' AS STRMESSAGE FROM FSMAPIQUOTATIONHEAD
 				END
 		END
+	--Rev 1.0
+	ELSE IF @ACTION='QUOTATIONDOCUMENTNOLIST'
+		BEGIN
+			SELECT QH.QUOTATION_NUMBER AS quotation_number,CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,105)+' '+CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,108) AS save_date_time,
+			CONVERT(NVARCHAR(10),QH.QUOTATION_DATE_SELECTION,105) AS quotation_date_selection,QH.PROJECT_NAME AS project_name,QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,
+			QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,
+			QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_CREATED_LAT AS quotation_created_lat,
+			QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,MS.Shop_Owner_Email AS shop_email,
+			MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,QH.REMARKS AS Remarks,QH.DOCUMENT_NUMBER AS document_number,
+			QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,
+			CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
+			FROM FSMAPIQUOTATIONHEAD QH
+			INNER JOIN FSMAPIQUOTATIONDETAILS QHD ON QH.ID=QHD.HEADID AND QH.QUOTATION_NUMBER=QHD.QUOTATION_NUMBER AND QH.SHOP_ID=QHD.SHOP_ID
+			INNER JOIN tbl_Master_shop MS ON QH.SHOP_ID=MS.Shop_Code
+			INNER JOIN Master_sProducts MP ON QHD.PROD_ID=MP.sProducts_ID
+			LEFT OUTER JOIN Master_Color MC ON QHD.COLOR_ID=MC.Color_ID
+			LEFT OUTER JOIN (
+			SELECT USR.user_id,ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'')<>'' THEN ' ' ELSE '' END)+ISNULL(CNT.CNT_LASTNAME,'') AS salesman_name,
+			DESG.deg_designation AS salesman_designation,USR.user_loginId AS salesman_login_id,ME.eml_email AS salesman_email,MP.phf_phoneNumber AS salesman_phone_no
+			FROM #TEMPCONTACT CNT
+			INNER JOIN TBL_MASTER_USER USR ON CNT.cnt_internalId=USR.user_contactId
+			INNER JOIN (
+			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+			LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL 
+			GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=CNT.cnt_internalId
+			LEFT OUTER JOIN TBL_MASTER_EMAIL ME ON CNT.cnt_internalId=ME.eml_cntId AND ME.eml_type='Official'
+			LEFT OUTER JOIN TBL_MASTER_PHONEFAX MP ON CNT.cnt_internalId=MP.phf_cntId AND MP.phf_type='Office'
+			) SM ON QH.SALESMAN_USER_ID=SM.user_id
+			WHERE QH.DOCUMENT_NUMBER=@DOCUMENT_NUMBER
+		END
+	--End of Rev 1.0
 
 	DROP TABLE #TEMPCONTACT
 
