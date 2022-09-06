@@ -17,14 +17,14 @@ Begin
 		DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@User_id)		
 		CREATE TABLE #EMPHR
 		(
-		EMPCODE VARCHAR(50),
-		RPTTOEMPCODE VARCHAR(50)
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
 		)
 
 		CREATE TABLE #EMPHR_EDIT
 		(
-		EMPCODE VARCHAR(50),
-		RPTTOEMPCODE VARCHAR(50)
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
 		)
 		
 		INSERT INTO #EMPHR
@@ -83,9 +83,10 @@ Begin
 
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 	  BEGIN
-			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
+			SELECT DISTINCT U.user_loginId as USER_ID,U.USER_NAME,F.STAGE,
 			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
 			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME,u.CreateDate
+			,CTC.deg_designation
 			FROM TBL_MASTER_USER U
 			LEFT OUTER JOIN FTS_STAGE F 
 			ON U.FACEREGTYPEID=F.STAGEID
@@ -97,10 +98,11 @@ Begin
 			(
 				SELECT EMPCTC.emp_cntId,
 				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO
-				,EMPCTC.emp_Designation AS DESGID          
+				,EMPCTC.emp_Designation AS DESGID ,DG.deg_designation           
 				FROM tbl_master_employee EMP     
 				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
-				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
+				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM' 
+				LEFT OUTER JOIN  TBL_MASTER_DESIGNATION DG ON EMPCTC.emp_Designation=DG.deg_id   
 				WHERE EMPCTC.emp_effectiveuntil IS NULL
 			)CTC ON CTC.emp_cntId=C.cnt_internalId
 			LEFT OUTER JOIN
@@ -143,7 +145,8 @@ Begin
 			)SE ON SE.EMPCODE=C.CNT_INTERNALID					
 			WHERE C.cnt_contactType='EM'
 			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31')
-			AND CTC.DESGID IN(291,310)  
+			--AND CTC.DESGID IN(291,310)  
+			AND CTC.deg_designation IN('DS','TL')  and U.user_inactive='N'
 			ORDER BY U.CREATEDATE DESC
 
 			DROP TABLE #EMPHR
@@ -154,9 +157,10 @@ Begin
 	  END
 	ELSE
 	  BEGIN
-			SELECT DISTINCT U.USER_ID,U.USER_NAME,F.STAGE,
+			SELECT DISTINCT U.user_loginId as USER_ID,U.USER_NAME,F.STAGE,
 			(SELECT BRANCH_DESCRIPTION FROM TBL_MASTER_BRANCH WHERE BRANCH_ID=C.CNT_BRANCHID) AS BRANCHNAME,CTC.REPORTTO
 			,CH.CHANNELNAME,CR.CIRCLENAME,SE.SECTIONNAME,U.CREATEDATE
+			,CTC.deg_designation
 			FROM TBL_MASTER_USER U
 			LEFT OUTER JOIN FTS_STAGE F 
 			ON U.FACEREGTYPEID=F.STAGEID
@@ -167,10 +171,11 @@ Begin
 			(
 				SELECT EMPCTC.emp_cntId,
 				ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'')+'['+EMP.emp_uniqueCode +']' AS REPORTTO  
-				,EMPCTC.emp_Designation AS DESGID        
+				,EMPCTC.emp_Designation AS DESGID ,DG.deg_designation         
 				FROM tbl_master_employee EMP     
 				INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo       
-				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM'    
+				INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType='EM' 
+				LEFT OUTER JOIN  TBL_MASTER_DESIGNATION DG ON EMPCTC.emp_Designation=DG.deg_id   
 				WHERE EMPCTC.emp_effectiveuntil IS NULL
 			)CTC ON CTC.emp_cntId=C.cnt_internalId
 			LEFT OUTER JOIN
@@ -213,7 +218,8 @@ Begin
 			)SE ON SE.EMPCODE=C.CNT_INTERNALID	
 			WHERE C.cnt_contactType='EM'
 			and isnull(e.emp_dateofLeaving,'1900-01-01 00:00:00.000')='1900-01-01 00:00:00.000' and (e.emp_dateofJoining Between '1900-01-01' and '9999-12-31')
-			AND CTC.DESGID IN(291,310)  
+			--AND CTC.DESGID IN(291,310)  
+			AND CTC.deg_designation IN('DS','TL')  and U.user_inactive='N'
 			ORDER BY U.CREATEDATE DESC
 
 			DROP TABLE #CHANNEL

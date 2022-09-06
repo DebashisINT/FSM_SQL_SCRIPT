@@ -202,6 +202,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 --Rev 20.0
 ,@ShowAttednaceClearmenu INT=0
 --End of Rev 20.0
+-- Rev Sanchita
+,@CalledFromUserAccount int = 0, @ChType_CFP int = 0
+-- End of Rev sanchita
 ) 
 AS
 /***************************************************************************************************************************************
@@ -224,11 +227,13 @@ AS
 18.0	01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
 19.0	11-08-2022		Pratik		Channel DS Type Map should be updated as per DS Type Selection. Refer: 25018
 20.0	16-08-2022		Pratik		Attendance Clear Option is needed in FSM. Refer: 25116
+21.0	05-09-2022		Sanchita	New module in FSM - User - Account. Refer: 
+22.0	09-06-2022		Sanchita	At the time of creation of User, the Branch will get updated in table FTS_EmployeeBranchMap. Refer: 25189
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
 	--Rev 19.0
-	Declare @user_contactId nvarchar(20)='',@ChannelId int=0
+	Declare @user_contactId nvarchar(100)='', @ChannelId bigint=0
 	--End of Rev 19.0
 	IF OBJECT_ID('tempdb..#Shoptype_List') IS NOT NULL
 	DROP TABLE #Shoptype_List
@@ -383,6 +388,147 @@ BEGIN
 
 			set @user_id=SCOPE_IDENTITY();
 
+			-- Rev 21.0
+			if (@CalledFromUserAccount=1 )
+			begin
+				if (@ChType_CFP = 1)
+				begin
+					Update tbl_master_user set autoRevisitTimeInMinutes='1',
+						IsAutoRevisitEnable='1',
+						isVisitShow='1',
+						isShopAddEditAvailable='1',
+						isShopEditEnable='1',
+						isAppInfoEnable='1',
+						isShowTimeline='0',
+						currentLocationNotificationMins='90',
+						isMultipleVisitEnable='0',
+						isLogShareinLogin='1',
+						IsUserwiseDistributer='1',
+						IsShowMenuAddAttendance='0',
+						IsShowPartyOnAppDashboard='1',
+						IsShowDayStart='1',
+						IsShowDayEnd='1',
+						IsShowMarkDistVisitOnDshbrd='1',
+						IsFaceDetection='1',
+						IsAllDataInPortalwithHeirarchy='1',
+						GPSAlert='1',
+						Gps_Accuracy='500',
+						homeLocDistance='100.00',
+						shopLocAccuracy='500.00',
+						appInfoMins='99',
+						isHomeRestrictAttendance='1',
+						autoRevisitDistanceInMeter='150.00',
+						isShowNearbyCustomer='1',
+						IsShowMyDetails='0',
+						DistributorGPSAccuracy='500',
+						FaceDetectionAccuracyLower='0.25',
+						FaceDetectionAccuracyUpper='0.99',
+						UpdateUserID='0',
+						UpdateOtherID='0',
+						IsAllowClickForVisitForSpecificUser='1',
+						IsAllowClickForVisit='0',
+						IsAllowClickForPhotoRegister='0',
+						UpdateUserName='0',
+						MarkAttendNotification='1',
+						IsTeamAttenWithoutPhoto='0',
+						Show_App_Logout_Notification='1',
+						ShowFaceRegInMenu='0',
+						IsPhotoDeleteShow='0',
+						IsShowTeamDetails='0',
+						IsAttendVisitShowInDashboard='0',
+						IsShowTypeInRegistration='0',
+						IsTeamAttendance='0',
+						IsIMEICheck='0',
+						IsShowRevisitRemarksPopup='0',
+						ShowAutoRevisitInAppMenu='1',
+						ShowAutoRevisitInDashboard='1',
+						LogoutWithLogFile='0',
+						GeofencingRelaxationinMeter='150',
+						IsRestrictNearbyGeofence='1',
+						AllowProfileUpdate='0',
+						PartyUpdateAddrMandatory='0',
+						AutoRevisitTimeInSeconds='30',
+						OfflineShopAccuracy='150',
+						ShowTotalVisitAppMenu='1',
+						IsAllowShopStatusUpdate='1',
+						IsShowHomeLocationMap='0'
+					where user_id=@user_id
+				end
+				else
+				begin
+					update tbl_master_user
+						set autoRevisitTimeInMinutes='0',
+						IsAutoRevisitEnable='0',
+						isVisitShow='0',
+						isShopAddEditAvailable='0',
+						isShopEditEnable='0',
+						isAppInfoEnable='1',
+						isShowTimeline='0',
+						currentLocationNotificationMins='90',
+						isMultipleVisitEnable='0',
+						isLogShareinLogin='1',
+						IsUserwiseDistributer='1',
+						IsShowMenuAddAttendance='0',
+						IsShowPartyOnAppDashboard='1',
+						IsShowDayStart='0',
+						IsShowDayEnd='0',
+						IsShowMarkDistVisitOnDshbrd='0',
+						IsFaceDetection='1',
+						IsAllDataInPortalwithHeirarchy='1',
+						GPSAlert='1',
+						Gps_Accuracy='500',
+						homeLocDistance='100.00',
+						shopLocAccuracy='500.00',
+						appInfoMins='99',
+						isHomeRestrictAttendance='1',
+						autoRevisitDistanceInMeter='150.00',
+						isShowNearbyCustomer='0',
+						IsShowMyDetails='0',
+						DistributorGPSAccuracy='500',
+						FaceDetectionAccuracyLower='0.25',
+						FaceDetectionAccuracyUpper='0.99',
+						UpdateUserID='0',
+						UpdateOtherID='0',
+						IsAllowClickForVisitForSpecificUser='1',
+						IsAllowClickForVisit='0',
+						IsAllowClickForPhotoRegister='0',
+						UpdateUserName='0',
+						MarkAttendNotification='0',
+						IsTeamAttenWithoutPhoto='0',
+						Show_App_Logout_Notification='0',
+						ShowFaceRegInMenu='0',
+						IsPhotoDeleteShow='0',
+						IsShowTeamDetails='0',
+						IsAttendVisitShowInDashboard='0',
+						IsShowTypeInRegistration='0',
+						IsTeamAttendance='0',
+						IsIMEICheck='0',
+						IsShowRevisitRemarksPopup='0',
+						ShowAutoRevisitInAppMenu='0',
+						ShowAutoRevisitInDashboard='0',
+						LogoutWithLogFile='0',
+						GeofencingRelaxationinMeter='150',
+						AllowProfileUpdate='0',
+						IsRestrictNearbyGeofence='0',
+						PartyUpdateAddrMandatory='0',
+						AutoRevisitTimeInSeconds='0',
+						OfflineShopAccuracy='150',
+						ShowTotalVisitAppMenu='0',
+						IsAllowShopStatusUpdate='0',
+						IsShowHomeLocationMap='0'
+					where user_id=@user_id
+				end
+
+				-- Rev 22.0
+				insert into FTS_EmployeeBranchMap
+				select C.cnt_id,U.user_branchId,378,getdate(), U.user_contactId from tbl_master_user U 
+				inner join tbl_master_contact C on U.user_contactId=C.cnt_internalid
+				inner join tbl_master_employee E on E.emp_contactId=U.user_contactId
+				where U.user_id=@user_id and not exists(select employeeid from FTS_EmployeeBranchMap where Employeeid= C.cnt_id )
+				-- End of Rev 22.0
+			end
+			-- End of Rev 21.0
+
 			if exists (Select * from #Shoptype_List)
 			BEGIN
 				DELETE FROM FTS_UserPartyCreateAccess WHERE User_Id=@user_id
@@ -391,22 +537,25 @@ BEGIN
 				SELECT @user_id,TypeId FROM #Shoptype_List
 			END
 			--Rev 19.0
-			set @user_contactId=(select tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
-			set @ChannelId=(select CDTM.ChannelId from FTS_ChannelDSTypeMap as CDTM where CDTM.StageID=@FaceRegTypeID)
+			set @user_contactId=(select top 1 tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
+			set @ChannelId=(select top 1 CDTM.ChannelId from FTS_ChannelDSTypeMap as CDTM where CDTM.StageID=@FaceRegTypeID)
 
-			IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
-			BEGIN
-				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
-				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
-			END
-			ELSE
-			BEGIN
+			if(@ChannelId is not null and @ChannelId>0)
+			begin
+				IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
+				BEGIN
+					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+				END
+				ELSE
+				BEGIN
 
-				DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
+					DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
 
-				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
-				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
-			END
+					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+				END
+			end
 			--End of Rev 19.0
 		END
 
@@ -519,19 +668,22 @@ BEGIN
 			set @user_contactId=(select tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
 			set @ChannelId=(select CDTM.ChannelId from FTS_ChannelDSTypeMap as CDTM where CDTM.StageID=@FaceRegTypeID)
 
-			IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
-			BEGIN
-				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
-				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
-			END
-			ELSE
-			BEGIN
+			if(@ChannelId is not null and @ChannelId>0)
+			begin
+				IF NOT EXISTS(SELECT * FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId)
+				BEGIN
+					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+				END
+				ELSE
+				BEGIN
 
-				DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
+					DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
 
-				INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
-				values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
-			END
+					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
+					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+				END
+			end
 			--End of Rev 19.0
 		END
 
