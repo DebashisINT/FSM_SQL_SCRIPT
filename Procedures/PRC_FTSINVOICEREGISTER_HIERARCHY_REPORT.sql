@@ -1,12 +1,12 @@
 --EXEC PRC_FTSINVOICEREGISTER_REPORT '2022-07-01','2022-07-31','378','','',''
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSINVOICEREGISTER_REPORT]') AND type in (N'P', N'PC'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSINVOICEREGISTER_HIERARCHY_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
-EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSINVOICEREGISTER_REPORT] AS' 
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSINVOICEREGISTER_HIERARCHY_REPORT] AS' 
 END
 GO
 
-ALTER PROCEDURE [dbo].[PRC_FTSINVOICEREGISTER_REPORT]
+ALTER PROCEDURE [dbo].[PRC_FTSINVOICEREGISTER_HIERARCHY_REPORT]
 (
 @FROM_DATE NVARCHAR(50)=NULL,
 @TO_DATE NVARCHAR(50)=NULL,
@@ -14,40 +14,25 @@ ALTER PROCEDURE [dbo].[PRC_FTSINVOICEREGISTER_REPORT]
 @Employee NVARCHAR(max)=NULL,
 @stateID NVARCHAR(MAX)=NULL,
 @SHOPID NVARCHAR(MAX)=NULL,
---Rev 7.0
+--Rev 5.0
 @BRANCHID NVARCHAR(MAX)=NULL
---End of Rev 7.0
+--End of Rev 5.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : TANMOY GHOSH  on 08/04/2019 UPDATE TANMOY 08-05-19 ADD EMPLOYEE ID 
 Module	   : Order status 
-1.0						TANMOY		05-12-2019		Invoice_Amount AMOUNT GET FROM	Product_TotalAmount
-2.0						TANMOY		13-02-2020		ADD TWO COLUMN Invoice_Create_Date,Order_Create_Date
-3.0			v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
-4.0			v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
-5.0			v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
-6.0			v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
-7.0			v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
+1.0					TANMOY		05-12-2019		Invoice_Amount AMOUNT GET FROM	Product_TotalAmount
+2.0					TANMOY		13-02-2020		ADD TWO COLUMN Invoice_Create_Date,Order_Create_Date
+3.0		v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
+4.0		v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
+5.0		v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @sqlStrTable NVARCHAR(MAX),@Strsql NVARCHAR(MAX),@sqlStateStrTable NVARCHAR(MAX)
-
-	--Rev 3.0
-	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPLOYEE_LIST') AND TYPE IN (N'U'))
-	IF OBJECT_ID('tempdb..#EMPLOYEE_LIST') IS NOT NULL
-	--End of Rev 3.0
-		DROP TABLE #EMPLOYEE_LIST
-	CREATE TABLE #EMPLOYEE_LIST (emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
-	IF @Employee <> ''
-		BEGIN
-			SET @Employee = REPLACE(''''+@Employee+'''',',',''',''')
-			SET @sqlStrTable=''
-			SET @sqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT USER_ID from TBL_MASTER_USER where USER_CONTACTID in('+@Employee+')'
-			EXEC SP_EXECUTESQL @sqlStrTable
-		END
+	
 -------------------------------STATE----------------------------------------------------
 	--Rev 3.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATE_LIST') AND TYPE IN (N'U'))
@@ -76,6 +61,47 @@ BEGIN
 			SET @sqlStrTable=''
 			SET @sqlStrTable=' INSERT INTO #SHOPID_LIST SELECT Shop_ID from tbl_Master_shop where Shop_ID in('+@SHOPID+')'
 			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+
+
+	DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@LOGIN_ID)
+	SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE INTO #EMPHR   FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO
+
+	;with cte as(select	
+	EMPCODE
+	from #EMPHR 
+	where EMPCODE IS NULL OR EMPCODE=@empcode  
+	union all
+	select	
+	a.EMPCODE
+	from #EMPHR a
+	join cte b
+	on a.RPTTOEMPCODE = b.EMPCODE
+	) 
+
+	select 
+	* INTO #EMPLOYEELIST
+	from cte 
+
+	--Rev 3.0
+	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPLOYEE_LIST') AND TYPE IN (N'U'))
+	IF OBJECT_ID('tempdb..#EMPLOYEE_LIST') IS NOT NULL
+	--End of Rev 3.0
+		DROP TABLE #EMPLOYEE_LIST
+	CREATE TABLE #EMPLOYEE_LIST (emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
+	IF @Employee <> ''
+		BEGIN
+			SET @Employee = REPLACE(''''+@Employee+'''',',',''',''')
+			SET @sqlStrTable=''
+			SET @sqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT USER_ID from TBL_MASTER_USER where USER_CONTACTID in('+@Employee+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+		ELSE
+		BEGIN
+		SET @Employee='Not Blank'
+		INSERT INTO #EMPLOYEE_LIST
+		SELECT * FROM #EMPLOYEELIST
+
 		END
 
 	--Rev 3.0
@@ -111,7 +137,7 @@ BEGIN
 	left outer  join  tbl_master_designation as desg on desg.deg_id=cnt.emp_Designation group by emp_cntId,desg.deg_designation,desg.deg_id,emp_effectiveuntil
 	having emp_effectiveuntil is null 
 
-	--Rev 7.0
+	--Rev 5.0
 	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
 		DROP TABLE #BRANCH_LIST
 	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
@@ -124,13 +150,13 @@ BEGIN
 			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
 			EXEC SP_EXECUTESQL @SqlStrTable
 		END
-	--End of Rev 7.0
+	--End of Rev 5.0
 
 	--Rev 4.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
 		BEGIN
-			DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@LOGIN_ID)		
-			CREATE TABLE #EMPHR
+			DECLARE @empcodes VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@LOGIN_ID)		
+			CREATE TABLE #EMPHRS
 			(
 			EMPCODE VARCHAR(50),
 			RPTTOEMPCODE VARCHAR(50)
@@ -142,18 +168,18 @@ BEGIN
 			RPTTOEMPCODE VARCHAR(50)
 			)
 		
-			INSERT INTO #EMPHR
+			INSERT INTO #EMPHRS
 			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
 			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
 		
 			;with cte as(select	
 			EMPCODE,RPTTOEMPCODE
-			from #EMPHR 
-			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			from #EMPHRS 
+			where EMPCODE IS NULL OR EMPCODE=@empcodes  
 			union all
 			select	
 			a.EMPCODE,a.RPTTOEMPCODE
-			from #EMPHR a
+			from #EMPHRS a
 			join cte b
 			on a.RPTTOEMPCODE = b.EMPCODE
 			) 
@@ -165,7 +191,7 @@ BEGIN
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'FTSINVOICEREGISTER_REPORT') AND TYPE IN (N'U'))
 		BEGIN
-			--Rev 7.0 &&Two new fields have been added as BRANCH_ID & BRANCHDESC
+			--Rev 5.0 &&Two new fields have been added as BRANCH_ID & BRANCHDESC
 			CREATE TABLE FTSINVOICEREGISTER_REPORT
 			(
 			SEQ INT,
@@ -180,10 +206,6 @@ BEGIN
 			BRANCHDESC NVARCHAR(300),
 			Address NVARCHAR(MAX),
 			Contact NVARCHAR(20),
-			--Rev 6.0
-			ALT_MOBILENO1 NVARCHAR(40) NULL,
-			SHOP_OWNER_EMAIL2 NVARCHAR(300) NULL,
-			--End of Rev 6.0
 			Shop_Type NVARCHAR(50),
 			Order_Number NVARCHAR(50),
 			Order_Date NVARCHAR(10),
@@ -195,82 +217,60 @@ BEGIN
 			Product_TotalAmount DECIMAL(18,2),
 			Invoice_Amount DECIMAL(18,2),
 			State_name NVARCHAR(100) NULL,
-			--Rev 5.0
-			SHOP_DISTRICT NVARCHAR(50) NULL,
-			SHOP_PINCODE NVARCHAR(120) NULL,
-			SHOP_CLUSTER NVARCHAR(500) NULL,
-			--End of Rev 5.0
 			Shop_ID BIGINT,
 			PPName NVARCHAR(100) NULL,
 			DDName NVARCHAR(100) NULL,
 			Employee_ID NVARCHAR(100) NULL,
 			Invoice_Create_Date DATETIME NULL,
-			Order_Create_Date DATETIME NULL,
-			Invoice_Id NVARCHAR(100) NULL
+			Order_Create_Date DATETIME NULL
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSINVOICEREGISTER_REPORT (SEQ)
 		END
 	DELETE FROM FTSINVOICEREGISTER_REPORT WHERE LOGIN_ID=@LOGIN_ID	
-
-	--Rev 5.0 && Added three new fields as SHOP_DISTRICT,SHOP_PINCODE & SHOP_CLUSTER
-	--Rev 6.0 && Added two new fields as ALT_MOBILENO1 & SHOP_OWNER_EMAIL2
 	SET @Strsql=''
 	--Rev 3.0
 	--SET @Strsql='INSERT INTO FTSINVOICEREGISTER_REPORT(SEQ,LOGIN_ID,USER_ID,Employee_Name,Shop_ID,Shop_Name,Address,Contact,Shop_Type,Order_Number,Order_Date,Invoice_Number,Invoice_Date,'
-	--Rev 7.0
-	--SET @Strsql='INSERT INTO FTSINVOICEREGISTER_REPORT(SEQ,LOGIN_ID,USER_ID,Employee_Name,Shop_ID,Shop_Name,ENTITYCODE,Address,Contact,ALT_MOBILENO1,SHOP_OWNER_EMAIL2,Shop_Type,Order_Number,Order_Date,'
-	SET @Strsql='INSERT INTO FTSINVOICEREGISTER_REPORT(SEQ,LOGIN_ID,USER_ID,Employee_Name,Shop_ID,Shop_Name,ENTITYCODE,BRANCH_ID,BRANCHDESC,Address,Contact,ALT_MOBILENO1,SHOP_OWNER_EMAIL2,Shop_Type,'
-	SET @Strsql+='Order_Number,Order_Date,'
-	--End of Rev 7.0
+	--Rev 5.0
+	--SET @Strsql='INSERT INTO FTSINVOICEREGISTER_REPORT(SEQ,LOGIN_ID,USER_ID,Employee_Name,Shop_ID,Shop_Name,ENTITYCODE,Address,Contact,Shop_Type,Order_Number,Order_Date,Invoice_Number,Invoice_Date,'
+	SET @Strsql='INSERT INTO FTSINVOICEREGISTER_REPORT(SEQ,LOGIN_ID,USER_ID,Employee_Name,Shop_ID,Shop_Name,ENTITYCODE,BRANCH_ID,BRANCHDESC,Address,Contact,Shop_Type,Order_Number,Order_Date,'
+	SET @Strsql+='Invoice_Number,Invoice_Date,'
+	--End of Rev 5.0
 	--End of Rev 3.0
-	SET @Strsql+='Invoice_Number,Invoice_Date,PRODNAME,Product_Qty,Product_Rate,Product_TotalAmount,Invoice_Amount,State_name,SHOP_DISTRICT,SHOP_PINCODE,SHOP_CLUSTER,PPName,DDName,Employee_ID, '
+	SET @Strsql+='PRODNAME,Product_Qty,Product_Rate,Product_TotalAmount,Invoice_Amount,State_name,PPName,DDName,Employee_ID, '
 	--REV 2.0 START
-	SET @Strsql+= ' Invoice_Create_Date,Order_Create_Date,Invoice_Id) '	
+	SET @Strsql+= ' Invoice_Create_Date,Order_Create_Date) '	
 	--REV 2.0 END
 	SET @Strsql+='SELECT ROW_NUMBER() OVER(ORDER BY T.invoice_date DESC) SEQ,'
 	--Rev 3.0
 	--SET @Strsql+=''+LTRIM(RTRIM(STR(@LOGIN_ID)))+' AS LOGIN_ID,T.User_Id,T.user_name as ''Employee_Name'',T.Shop_ID,T.Shop_Name AS ''Shop_Name'',T.Address,'
-	--Rev 7.0
+	--Rev 5.0
 	--SET @Strsql+=''+LTRIM(RTRIM(STR(@LOGIN_ID)))+' AS LOGIN_ID,T.User_Id,T.user_name as ''Employee_Name'',T.Shop_ID,T.Shop_Name AS ''Shop_Name'',T.ENTITYCODE,T.Address,'
 	SET @Strsql+=''+LTRIM(RTRIM(STR(@LOGIN_ID)))+' AS LOGIN_ID,T.User_Id,T.user_name as ''Employee_Name'',T.Shop_ID,T.Shop_Name AS ''Shop_Name'',T.ENTITYCODE,T.BRANCH_ID,T.BRANCHDESC,T.Address,'
-	--End of Rev 7.0
+	--End of Rev 5.0
 	--End of Rev 3.0
-	--Rev 6.0
-	--SET @Strsql+='T.Shop_Owner_Contact AS ''Contact'',T.Name AS ''Shop_Type'','
-	SET @Strsql+='T.Shop_Owner_Contact AS ''Contact'',T.ALT_MOBILENO1,T.SHOP_OWNER_EMAIL2,T.Name AS ''Shop_Type'','
-	--End of Rev 6.0
-	SET @Strsql+='T.OrderCode AS ''Order_Number'',CONVERT(NVARCHAR(10),T.Orderdate,105) as Orderdate,T.invoice_no AS ''Invoice_Number'',CONVERT(NVARCHAR(10),T.invoice_date,105) AS ''Invoice_Date'','
-	SET @Strsql+='T.PRODNAME,T.Product_Qty,T.Product_Rate,T.Product_TotalAmount,'
+	SET @Strsql+='T.Shop_Owner_Contact AS ''Contact'',T.Name AS ''Shop_Type'','
+	SET @Strsql+='T.OrderCode AS ''Order_Number'',CONVERT(NVARCHAR(10),T.Orderdate,105) as Orderdate,T.invoice_no AS ''Invoice_Number'',CONVERT(NVARCHAR(10),T.invoice_date,105) AS ''Invoice_Date'',T.PRODNAME,T.Product_Qty,T.Product_Rate,T.Product_TotalAmount,'
 	--REV 1.0 START
 	--SET @Strsql+='CASE WHEN ROWID=1 THEN T.invoice_amount ELSE 0.00 END AS ''Invoice_Amount'', '
 	SET @Strsql+='T.Product_TotalAmount AS ''Invoice_Amount'',  '
 	--REV 1.0 END
-	--Rev 5.0
-	--SET @Strsql+=' T.STATE_NAME,T.PPName,T.DDName,T.Employee_ID  '
-	SET @Strsql+=' T.STATE_NAME,T.SHOP_DISTRICT,T.SHOP_PINCODE,T.SHOP_CLUSTER,T.PPName,T.DDName,T.Employee_ID  '
-	--End of Rev 5.0
+	SET @Strsql+=' T.STATE_NAME,T.PPName,T.DDName,T.Employee_ID  '
 	--REV 2.0 START
-	SET @Strsql+=' ,T.Invoice_Create_Date,T.Orderdate,T.bill_id FROM ( '
+	SET @Strsql+=' ,T.Invoice_Create_Date,T.Orderdate FROM ( '
 	--REV 2.0 END
 	SET @Strsql+='SELECT ROW_NUMBER() OVER(PARTITION BY ftsbd.BillingId ORDER BY ftsbd.BillingId) AS ROWID,ftsbd.User_Id AS User_Id,BDP.PRODNAME,ms.Shop_ID,'
 	--Rev 3.0
 	--SET @Strsql+='MC.cnt_firstName+'' ''+MC.cnt_middleName+'' ''+cnt_lastName AS user_name,ms.Shop_Name,ms.Address,ftsbd.BillingId,'
-	--Rev 7.0
+	--Rev 5.0
 	--SET @Strsql+='MC.cnt_firstName+'' ''+MC.cnt_middleName+'' ''+cnt_lastName AS user_name,ms.Shop_Name,MS.ENTITYCODE,ms.Address,ftsbd.BillingId,'
 	SET @Strsql+='MC.cnt_firstName+'' ''+MC.cnt_middleName+'' ''+cnt_lastName AS user_name,ms.Shop_Name,MS.ENTITYCODE,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC,ms.Address,ftsbd.BillingId,'
-	--End of Rev 7.0
+	--End of Rev 5.0
 	--End of Rev 3.0
 	SET @Strsql+='ms.shop_owner_contact,shptyp.Name,ordupdt.OrderCode,ftsbd.invoice_no,ftsbd.invoice_date,ordupdt.Orderdate,ftsbd.invoice_amount,BDP.Product_Qty,CAST(BDP.Product_Rate AS DECIMAL(18,2)) AS Product_Rate,'
 	SET @Strsql+='CAST(BDP.Product_TotalAmount AS DECIMAL(18,2)) AS Product_TotalAmount,N.DES_NAME,N.DES_ID,STAT.STATE_ID,STAT.STATE_NAME,SHOPPP.Shop_Name AS ''PPName'',SHOPDD.Shop_Name AS ''DDName'',MC.cnt_UCC AS Employee_ID '
 	--REV 2.0 START
-	SET @Strsql+=' ,ftsbd.CreateDate AS  Invoice_Create_Date,ftsbd.bill_id,'
+	SET @Strsql+=' ,ftsbd.CreateDate AS  Invoice_Create_Date  '
 	--REV 2.0 END
-	--Rev 5.0
-	SET @Strsql+='CITY.CITY_NAME AS SHOP_DISTRICT,MS.Pincode AS SHOP_PINCODE,MS.CLUSTER AS SHOP_CLUSTER,'
-	--End of Rev 5.0
-	--Rev 6.0
-	SET @Strsql+='MS.Alt_MobileNo1,MS.Shop_Owner_Email2 '
-	--End of Rev 6.0
 	SET @Strsql+='FROM tbl_FTS_BillingDetails ftsbd '
 	SET @Strsql+='INNER JOIN ('
 	SET @Strsql+='SELECT BDP.Billing_ID,BDP.User_Id,MP.sProducts_Name AS PRODNAME,BDP.Product_Qty,BDP.Product_Rate,BDP.Product_TotalAmount FROM FTS_BillingdetailsProduct BDP '
@@ -280,9 +280,9 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN tbl_trans_fts_Orderupdate ordupdt ON ordupdt.OrderCode=ftsbd.OrderCode '	
 	SET @Strsql+='INNER JOIN tbl_Master_shop ms ON ms.Shop_Code=ordupdt.Shop_Code '
 	SET @Strsql+='INNER JOIN tbl_master_contact MC ON MC.cnt_internalId=mu.user_contactId '
-	--Rev 7.0
+	--Rev 5.0
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON MC.cnt_branchid=BR.branch_id '
-	--End of Rev 7.0
+	--End of Rev 5.0
 	--Rev 4.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
 		BEGIN
@@ -291,9 +291,6 @@ BEGIN
 	--End of Rev 4.0
 	SET @Strsql+='INNER JOIN tbl_shoptype shptyp ON shptyp.shop_typeId=ms.type '
 	SET @Strsql+='INNER JOIN #TEMPDESI N ON N.cnt_internalId=mu.user_contactId '
-	--Rev 5.0
-	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON MS.Shop_City=CITY.city_id '
-	--End of Rev 5.0
 	SET @Strsql+='LEFT OUTER JOIN('
 	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_pp_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A '
 	SET @Strsql+=') SHOPPP ON ms.assigned_to_pp_id=SHOPPP.Shop_Code '
@@ -301,6 +298,7 @@ BEGIN
 	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A '
 	SET @Strsql+=') SHOPDD ON ms.assigned_to_dd_id=SHOPDD.Shop_Code '
 	SET @Strsql+='LEFT OUTER JOIN #TEMPSTATE STAT ON STAT.cnt_internalId=mu.user_contactId) T '
+
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),T.invoice_date,23) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',23) AND CONVERT(NVARCHAR(10),'''+@TO_DATE+''',23) '
 	IF(ISNULL(@Employee,'')<>'')
 		SET @Strsql+=' AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=cast(T.User_Id as nvarchar(100))) '
@@ -308,10 +306,10 @@ BEGIN
 		SET @Strsql+=' AND EXISTS (SELECT STATE_ID from #STATE_LIST AS ST WHERE ST.STATE_ID=cast(T.STATE_ID as nvarchar(100))) '
 	IF @SHOPID <> ''
 		SET @Strsql+='AND EXISTS (SELECT Shop_ID FROM #SHOPID_LIST AS SP WHERE SP.Shop_ID=T.Shop_ID) '
-	--Rev 7.0
+	--Rev 5.0
 	IF @BRANCHID<>''
 		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=T.BRANCH_ID) '
-	--End of Rev 7.0
+	--End of Rev 5.0
 
 	--SELECT @Strsql
 	EXEC sp_executesql @Strsql
@@ -321,16 +319,17 @@ BEGIN
 	DROP TABLE #SHOPID_LIST
 	DROP TABLE #TEMPDESI
 	DROP TABLE #TEMPSTATE
+
 	--Rev 4.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
 	BEGIN
 		DROP TABLE #EMPHR_EDIT
-		DROP TABLE #EMPHR
+		DROP TABLE #EMPHRS
 	END
 	--End of Rev 4.0
-	--Rev 7.0
+	--Rev 5.0
 	DROP TABLE #BRANCH_LIST
-	--End of Rev 7.0
+	--End of Rev 5.0
 
 	SET NOCOUNT OFF
 END
