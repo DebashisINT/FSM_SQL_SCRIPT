@@ -1,32 +1,41 @@
---EXEC PRC_LATEVBISITSUMMARY @fromdate='2019-10-01',@todate='2019-10-31',@firstshopvisittime='11:00:00',@lastshopvisittime='18:00:00',@stateid='15,28',@designation='114',@employee='',@inactive=0,@notlogged=0,@duration=60
+--EXEC PRC_LATEVBISITSUMMARY '','2022-08-01','2022-08-31','','','','','',378,0,0,'5','1'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_LATEVBISITSUMMARY]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_LATEVBISITSUMMARY] AS' 
 END
-GO   
-ALTER PROCEDURE [PRC_LATEVBISITSUMMARY]  
+GO
+
+ALTER PROCEDURE [dbo].[PRC_LATEVBISITSUMMARY]  
 (
-@ACTION VARCHAR(500)  = null,
-@fromdate datetime =null,
-@todate datetime =null,
-@stateid  VARCHAR(max) =null,
-@designation VARCHAR(max) =null,
-@employee VARCHAR(max) =null,
-@firstshopvisittime time =null,
-@lastshopvisittime time=null,
+@ACTION NVARCHAR(500)=NULL,
+@fromdate DATETIME=NULL,
+@todate DATETIME=NULL,
+@stateid NVARCHAR(MAX)=null,
+@designation NVARCHAR(MAX)=null,
+@employee NVARCHAR(MAX)=NULL,
+@firstshopvisittime TIME=NULL,
+@lastshopvisittime TIME=NULL,
 @USER_ID BIGINT=0,
-@inactive bit =0,
-@notlogged bit =0,
-@duration varchaR(50) =0
+@inactive BIT=0,
+@notlogged BIT=0,
+@duration NVARCHAR(50)=0,
+--Rev 3.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--End of Rev 3.0
 ) --WITH ENCRYPTION
 AS
 /*******************************************************************************************************************************************************************************************
 1.0		v2.0.12		Debashis	15/07/2020		Employee Code column required in the Employee Visit analysis Report.Refer: 0022700
+2.0		v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
+3.0		v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 ********************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
+	--Rev 3.0
+	DECLARE @SqlStrTable NVARCHAR(MAX)
+	--End of Rev 3.0
 	CREATE TABLE #TEMP_STATE(STATEID VARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
 	CREATE TABLE #TEMP_DESIGNATION(DESGID VARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
 	CREATE TABLE #TEMP_EMPLOYEE(EMPID VARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
@@ -40,6 +49,7 @@ BEGIN
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'EMPLOYEE_LATE_VISIT_REPORT') AND TYPE IN (N'U'))
 		BEGIN
+			--Rev 3.0 &&Two new fields have been added as BRANCH_ID & BRANCHDESC
 			CREATE TABLE EMPLOYEE_LATE_VISIT_REPORT
 			(
 			SL BIGINT,
@@ -47,6 +57,8 @@ BEGIN
 			EMPID NVARCHAR(100),
 			--End of Rev 1.0
 			EMP_NAME VARCHAR(500),
+			BRANCH_ID BIGINT,
+			BRANCHDESC NVARCHAR(300),
 			STATE_NAME VARCHAR(500),
 			DESIGNATION VARCHAR(500),
 			SUPERVISOR_NAME VARCHAR(500),
@@ -172,6 +184,58 @@ BEGIN
 			SELECT emp_contactId FROM tbl_master_employee WHERE emp_contactId IN (SELECT user_contactId FROM tbl_master_user WHERE user_inactive='N')
 		END
 
+	--Rev 3.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @SqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+	--End of Rev 3.0
+
+	--Rev 2.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			DECLARE @empcodes VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USER_ID)		
+			CREATE TABLE #EMPHRS
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHRS
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHRS 
+			where EMPCODE IS NULL OR EMPCODE=@empcodes  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHRS a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+	--End of Rev 2.0
+
 	DECLARE @STR NVARCHAR(MAX)=''
 
 	--SELECT * FROM (
@@ -180,7 +244,10 @@ BEGIN
 	--SET @STR=@STR+ 'ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''')  EMP_NAME, '
 	SET @STR=@STR+ 'EMP.emp_uniqueCode AS EMPID,'
 	SET @STR=@STR+ 'ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMP_NAME,'
-	--End of Rev 1.0 
+	--End of Rev 1.0
+	--Rev 3.0
+	SET @STR=@STR+ 'BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC,'
+	--End of Rev 3.0
 	SET @STR=@STR+ 'TBL_ADD.STATE_NAME STATE_NAME, '
 	SET @STR=@STR+ 'DESG.deg_designation DESIGNATION, '
 	SET @STR=@STR+ 'ISNULL(CNT_REP.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT_REP.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT_REP.CNT_LASTNAME,'''')  SUPERVISOR_NAME, '
@@ -193,7 +260,7 @@ BEGIN
 	SET @STR=@STR+ 'FIRST.PP_NAME PP_NAME_FIRST, '
 	SET @STR=@STR+ 'FIRST.DD_NAME DD_NAME_FIRST, '
 	SET @STR=@STR+ 'TBL_VISITTIME.FIRST_VISIT FIRST_VISIT, '
-	SET @STR=@STR+ 'CASE WHEN CONVERT(VARCHAR(10),TBL_VISITTIME.FIRST_VISIT,108)>'''+ cONVERT(VARCHAR(10),@firstshopvisittime,108)+''' THEN ''Late'' ELSE '''' END FIRST_REMARKS, '
+	SET @STR=@STR+ 'CASE WHEN CONVERT(VARCHAR(10),TBL_VISITTIME.FIRST_VISIT,108)>'''+ CONVERT(VARCHAR(10),@firstshopvisittime,108)+''' THEN ''Late'' ELSE '''' END FIRST_REMARKS, '
 	SET @STR=@STR+ 'ACT_FIRST.spent_duration FIRST_DURATION, '
 	SET @STR=@STR+ 'CASE WHEN ISDATE(ACT_FIRST.spent_duration)=1 THEN '
 
@@ -366,6 +433,15 @@ BEGIN
 	SET @STR=@STR+ 'FROM tbl_master_employee EMP '
 	SET @STR=@STR+ 'INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId AND EXISTS (SELECT 1 FROM #TEMP_EMPLOYEE EMP WHERE EMP.EMPID=CNT.cnt_internalId) '
 	SET @STR=@STR+ 'INNER JOIN tbl_master_user USR ON CNT.cnt_internalId=USR.user_contactId '
+	--Rev 3.0
+	SET @STR=@STR+ 'INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
+	--End of Rev 3.0
+	--Rev 2.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+		SET @STR=@STR+' INNER JOIN #EMPHR_EDIT TMPEDT ON TMPEDT.EMPCODE=CNT.cnt_internalId '
+		END
+	--End of Rev 2.0
 	SET @STR=@STR+ 'INNER JOIN #TEMP_ADDRESS TBL_ADD ON TBL_ADD.EMP_INTERNALID=CNT.cnt_internalId   AND EXISTS (SELECT 1 FROM #TEMP_STATE ST WHERE ST.STATEID=TBL_ADD.STATE_ID)  '
 	SET @STR=@STR+ 'INNER JOIN '
 	SET @STR=@STR+ '( '
@@ -394,11 +470,16 @@ BEGIN
 	SET @STR=@STR+ 'LEFT JOIN #TEMP_ORDER ORDERS ON ORDERS.USER_ID=USR.user_id AND CAST(ORDERS.ORDER_DATE AS DATE)=TBL_VISITTIME.VISIT_DATE '
 	--) TBL_FINAL
 	--WHERE STATE_ID IN (SELECT TMP.STATEID FROM @TEMP_STATE TMP)
+	--Rev 3.0
+	IF @BRANCHID<>''
+		SET @STR=@STR+ 'WHERE EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
+	--End of Rev 3.0
 
 	--Rev 1.0 && EMPID has been implement
-	INSERT INTO EMPLOYEE_LATE_VISIT_REPORT(SL,EMPID,EMP_NAME,STATE_NAME,DESIGNATION,SUPERVISOR_NAME,VISIT_DATE,ATT_STATUS,LOGIN_TIME,total_Count,PARTY_NAME_FIRST,SHOP_ADDRESS_FIRST,PP_NAME_FIRST,
-	DD_NAME_FIRST,FIRST_VISIT,FIRST_REMARKS,FIRST_DURATION,ONE_HOUR_FIRST_REMARKS,PARTY_NAME_LAST,SHOP_ADDRESS_LAST,PP_NAME_LAST,DD_NAME_LAST,LAST_VISIT,LAST_REMARKS,LAST_DURATION,ONE_HOUR_LAST_REMARKS,
-	LOGOUT_TIME,ORDER_VALUE,USER_ID,MOBILE_FIRST,MOBILE_LAST)
+	--Rev 3.0 &&Two new fields have been added as BRANCH_ID & BRANCHDESC
+	INSERT INTO EMPLOYEE_LATE_VISIT_REPORT(SL,EMPID,EMP_NAME,BRANCH_ID,BRANCHDESC,STATE_NAME,DESIGNATION,SUPERVISOR_NAME,VISIT_DATE,ATT_STATUS,LOGIN_TIME,total_Count,PARTY_NAME_FIRST,SHOP_ADDRESS_FIRST,
+	PP_NAME_FIRST,DD_NAME_FIRST,FIRST_VISIT,FIRST_REMARKS,FIRST_DURATION,ONE_HOUR_FIRST_REMARKS,PARTY_NAME_LAST,SHOP_ADDRESS_LAST,PP_NAME_LAST,DD_NAME_LAST,LAST_VISIT,LAST_REMARKS,LAST_DURATION,
+	ONE_HOUR_LAST_REMARKS,LOGOUT_TIME,ORDER_VALUE,USER_ID,MOBILE_FIRST,MOBILE_LAST)
 	EXEC (@STR)
 
 	DROP TABLE #TEMP_STATE
@@ -412,6 +493,17 @@ BEGIN
 	DROP TABLE #TEMP_LOGOUT
 	DROP TABLE #TEMP_ORDER
 	DROP TABLE #SHOPSUBMIT
+
+	--Rev 2.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+	BEGIN
+		DROP TABLE #EMPHR_EDIT
+		DROP TABLE #EMPHRS
+	END
+	--End of Rev 2.0
+	--Rev 3.0
+	DROP TABLE #BRANCH_LIST
+	--End of Rev 3.0
 
 	SET NOCOUNT OFF
 END

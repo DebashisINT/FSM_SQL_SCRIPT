@@ -29,7 +29,10 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 @StateId varchar(MAX)=NULL,
 @Shoptype varchar(MAX)=NULL,
 @AssignTo varchar(100)=NULL,
-@Create_UserId int=null
+@Create_UserId int=NULL,
+--Rev 10.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--End of Rev 10.0
 ) --WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
@@ -43,6 +46,7 @@ AS
 8.0					Swatilekha	30/06/2022		GSTIN & Trade License number field required in Listing of Master - Shops Report in fsm Refer: 0024573
 9.0		v2.0.31		Debashis	08/07/2022		While trying to generate the "Shops" report by selecting the type as "Dealer" in the National Plastic, 
 												the system is getting logged out.Now it has been taken care of.Refer: 0025031
+10.0	v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -50,7 +54,9 @@ BEGIN
 	DECLARE @sql nvarchar(MAX)=''
 	DECLARE @topcount nvarchar(100)=@Uniquecont
 	DECLARE @ReportTABLE Table(userid int,userreport int)
-
+	--Rev 10.0
+	DECLARE @SqlTable NVARCHAR(MAX)
+	--End of Rev 10.0
 
 	--if(isnull(@user_id,'')<>'')
 	--BEGIN
@@ -66,6 +72,20 @@ BEGIN
 	--order by user_id
 
 	--END
+	--Rev 10.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @SqlTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @SqlTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlTable
+		END
+	--End of Rev 10.0
 	--Rev 3.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Create_UserId)=1)
 		BEGIN
@@ -242,8 +262,11 @@ BEGIN
 					SET @sql+='CITY.CITY_NAME AS District,shop.CLUSTER AS Cluster,'
 					--End of Rev 4.0
 					--Rev 6.0
-					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
+					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2,'
 					--End of Rev 6.0
+					--Rev 10.0
+					SET @sql+='BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC '
+					--End of Rev 10.0
 					--, countactivity=(select isnull(count(Act.ActivityId),0)  from tbl_trans_shopActivitysubmit as Act where Act.Shop_Id=shop.Shop_Code )
 					--,Lastactivitydate=(select top 1 convert(varchar(50),visited_time,103) + '' '' + FORMAT(visited_time,''hh:mm tt'') as SDate1 from tbl_trans_shopActivitysubmit as shpusr  where  shpusr.user_id=usr.user_id and shpusr.Shop_Id=shop.Shop_Code order by visited_time desc)
 					set @sql +='from tbl_Master_shop as shop
@@ -260,6 +283,9 @@ BEGIN
 					set @sql+='INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId = usr.user_contactId
 					INNER JOIN tbl_master_employee as EMP on CNT.cnt_internalId=EMP.emp_contactId 
 					LEFT OUTER JOIN tbl_salesman_address as saladdr on shop.Shop_CreateUser=saladdr.UserId  '
+					--Rev 10.0
+					SET @sql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
+					--End of Rev 10.0
 					--Rev 4.0
 					SET @sql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 					--End of Rev 4.0
@@ -287,6 +313,10 @@ BEGIN
 						BEGIN
 							set @sql +=' and saladdr.stateid='+@StateId+''
 						END
+					--Rev 10.0
+					IF @BRANCHID<>''
+						SET @sql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+					--End of Rev 10.0
 					SET @sql+='GROUP BY shop.Shop_ID,shop.Shop_Code,shop.Shop_Name,shop.Address,shop.Pincode,shop.Shop_Lat,shop.Shop_Long,shop.Shop_City,shop.Shop_Owner,shop.Shop_CreateUser,
 					shop.Shop_CreateTime,shop.Shop_ModifyUser,shop.Shop_ModifyTime,shop.Shop_Image,usr.user_id,shop.dob,shop.date_aniversary,typs.Name,shop.type,CNT.cnt_firstName ,CNT.cnt_middleName,'
 					--Rev 2.0
@@ -299,8 +329,11 @@ BEGIN
 					SET @sql+='CITY.CITY_NAME,shop.CLUSTER,'
 					--End of Rev 4.0
 					--Rev 6.0
-					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
+					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2,'
 					--End of Rev 6.0
+					--Rev 10.0
+					SET @sql+='BR.BRANCH_ID,BR.BRANCH_DESCRIPTION '
+					--End of Rev 10.0
 					SET @sql+='ORDER BY Shop_ID DESC '
 					--select @sql
 					EXEC SP_EXECUTESQL @sql
@@ -590,6 +623,10 @@ BEGIN
 				DROP TABLE #EMPHR_EDIT
 			END
 		END
+	
+	--Rev 10.0
+	DROP TABLE #BRANCH_LIST
+	--End of Rev 10.0
 	--Rev 2.0
 	SET NOCOUNT OFF
 	--End of Rev 2.0

@@ -14,7 +14,10 @@ ALTER PROCEDURE [dbo].[FTS_API_OREDER_STATUS_REPORT]
 @Employee NVARCHAR(max)=NULL,
 @stateID NVARCHAR(MAX)=NULL,
 @DESIGNID NVARCHAR(MAX)=NULL,
-@REPORT_BY NVARCHAR(10)
+@REPORT_BY NVARCHAR(10),
+--Rev 8.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--End of Rev 8.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -29,6 +32,7 @@ update Tanmoy Search change by order date or invoice date wise dynanic
 5.0		v2.0.26		Debashis	12/01/2022		District/Cluster/Pincode fields are required in some of the reports.Refer: 0024575
 6.0		v2.0.26		Debashis	13/01/2022		Sub Type field required in some of the reports.Refer: 0024576
 7.0		v2.0.26		Debashis	13/01/2022		Alternate phone no. 1 & alternate email fields are required in some of the reports.Refer: 0024577
+8.0		v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -114,6 +118,21 @@ BEGIN
 	left outer  join  tbl_master_designation as desg on desg.deg_id=cnt.emp_Designation group by emp_cntId,desg.deg_designation,desg.deg_id,emp_effectiveuntil
 	having emp_effectiveuntil is null 
 
+	--Rev 8.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @SqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+	--End of Rev 8.0
+
 	--Rev 4.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
 		BEGIN
@@ -154,6 +173,7 @@ BEGIN
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'FTS_ORDER_STATUS_REPORT') AND TYPE IN (N'U'))
 		BEGIN
+			--Rev 8.0 &&Two new fields have been added as BRANCH_ID
 			CREATE TABLE FTS_ORDER_STATUS_REPORT
 			(
 			SEQ INT,
@@ -190,6 +210,7 @@ BEGIN
 			SHOP_PINCODE NVARCHAR(120) NULL,
 			SHOP_CLUSTER NVARCHAR(500) NULL,
 			--End of Rev 5.0
+			BRANCH_ID BIGINT,
 			--Rev 3.0
 			BRANCHDESC NVARCHAR(300),
 			--End of Rev 3.0
@@ -232,7 +253,10 @@ BEGIN
 	--SET @Strsql+='T.invoice_date AS ''Invoice_Date'',T.invoice_amount AS ''Delivered_Value'' , T.OrderId,T.STATE_NAME,T.PPName,T.DDName,T.Employee_ID,T.BillingId  '
 	--Rev 5.0
 	--SET @Strsql+='T.invoice_date AS ''Invoice_Date'',T.invoice_amount AS ''Delivered_Value'' , T.OrderId,T.STATE_NAME,T.BRANCHDESC,T.PPName,T.DDName,T.Employee_ID,T.BillingId  '
-	SET @Strsql+='T.invoice_date AS ''Invoice_Date'',T.invoice_amount AS ''Delivered_Value'' , T.OrderId,T.STATE_NAME,T.SHOP_DISTRICT,T.SHOP_PINCODE,T.SHOP_CLUSTER,T.BRANCHDESC,T.PPName,T.DDName,'
+	--Rev 8.0
+	--SET @Strsql+='T.invoice_date AS ''Invoice_Date'',T.invoice_amount AS ''Delivered_Value'' , T.OrderId,T.STATE_NAME,T.SHOP_DISTRICT,T.SHOP_PINCODE,T.SHOP_CLUSTER,T.BRANCHDESC,T.PPName,T.DDName,'
+	SET @Strsql+='T.invoice_date AS ''Invoice_Date'',T.invoice_amount AS ''Delivered_Value'' , T.OrderId,T.STATE_NAME,T.SHOP_DISTRICT,T.SHOP_PINCODE,T.SHOP_CLUSTER,T.BRANCH_ID,T.BRANCHDESC,T.PPName,T.DDName,'
+	--End of Rev 8.0
 	SET @Strsql+='T.Employee_ID,T.BillingId  '
 	--End of Rev 5.0
 	--End of Rev 3.0
@@ -251,7 +275,11 @@ BEGIN
 	SET @Strsql+='ms.shop_owner_contact,shptyp.Name,ordupdt.Orderdate,ordupdt.OrderCode,ordupdt.Ordervalue,ftsbd.invoice_no,ftsbd.invoice_date,ftsbd.invoice_amount, '
 	--Rev 3.0
 	--SET @Strsql+='N.DES_NAME,N.DES_ID,STAT.STATE_ID,STAT.STATE_NAME,SHOPPP.Shop_Name AS ''PPName'',SHOPDD.Shop_Name AS ''DDName'',MC.cnt_UCC AS Employee_ID,ftsbd.BillingId  '
-	SET @Strsql+='N.DES_NAME,N.DES_ID,STAT.STATE_ID,STAT.STATE_NAME,BR.branch_description AS BRANCHDESC,SHOPPP.Shop_Name AS ''PPName'',SHOPDD.Shop_Name AS ''DDName'',MC.cnt_UCC AS Employee_ID,ftsbd.BillingId '
+	--Rev 8.0
+	--SET @Strsql+='N.DES_NAME,N.DES_ID,STAT.STATE_ID,STAT.STATE_NAME,BR.branch_description AS BRANCHDESC,SHOPPP.Shop_Name AS ''PPName'',SHOPDD.Shop_Name AS ''DDName'',MC.cnt_UCC AS Employee_ID,ftsbd.BillingId '
+	SET @Strsql+='N.DES_NAME,N.DES_ID,STAT.STATE_ID,STAT.STATE_NAME,BR.BRANCH_ID,BR.branch_description AS BRANCHDESC,SHOPPP.Shop_Name AS ''PPName'',SHOPDD.Shop_Name AS ''DDName'','
+	SET @Strsql+='MC.cnt_UCC AS Employee_ID,ftsbd.BillingId '
+	--End of Rev 8.0
 	--End of Rev 3.0
 	--REV 1.0 START
 	SET @Strsql+=' ,ftsbd.CreateDate AS Invoice_CreateDate,'
@@ -309,6 +337,10 @@ BEGIN
 		SET @Strsql+=' AND EXISTS (SELECT STATE_ID from #STATE_LIST AS ST WHERE ST.STATE_ID=cast(T.STATE_ID as nvarchar(100)))   '
 	IF(ISNULL(@DESIGNID,'')<>'')
 		SET @Strsql+=' AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DES WHERE DES.deg_id=cast(T.DES_ID as nvarchar(100)))   '
+	--Rev 8.0
+	IF @BRANCHID<>''
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=T.BRANCH_ID) '
+	--End of Rev 8.0
 	--	IF(@REPORT_BY='0')
 	--	BEGIN
 	--		SET @Strsql+=' ORDER BY T.Orderdate DESC' 
@@ -319,8 +351,9 @@ BEGIN
 	--	END
 	
 	 --ISNULL(CONVERT(NVARCHAR(50),T.User_Id),'' '')<>'' ''  AND
-	exec sp_executesql @Strsql
-	--select @Strsql
+	--SELECT @Strsql
+	EXEC sp_executesql @Strsql
+	
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATE_LIST
 	DROP TABLE #DESIGNATION_LIST
@@ -334,6 +367,9 @@ BEGIN
 		DROP TABLE #EMPHR
 	END
 	--End of Rev 4.0
+	--Rev 8.0
+	DROP TABLE #BRANCH_LIST
+	--End of Rev 8.0
 
 	SET NOCOUNT OFF
 END
