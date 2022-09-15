@@ -147,6 +147,7 @@ BEGIN
 	129.0		Debashis	09-08-2022	ADD SETTINGS @Action='UserCheck' ShowAttednaceClearmenu.Row 729
 	130.0		Debashis	12-08-2022	ADD SETTINGS @Action='GlobalCheck' BeatText & TodaysTaskText.Row 731
 	131.0		Debashis	14-09-2022	ADD SETTINGS @Action='UserCheck' CommonAINotification & IsFaceRecognitionOnEyeblink.Row 738
+	132.0		Debashis	15-09-2022	ADD SETTINGS @Action=GlobalCheck' IsDistributorSelectionRequiredinAttendance.Row 740
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -283,6 +284,9 @@ BEGIN
 	,@BeatText NVARCHAR(200)
 	,@TodaysTaskText NVARCHAR(200)
 	--End of Rev 130.0
+	--Rev 132.0
+	,@IsDistributorSelectionRequiredinAttendance BIT
+	--End of Rev 132.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -471,6 +475,9 @@ BEGIN
 		SET @BeatText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='BeatText' AND IsActive=1)
 		SET @TodaysTaskText =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='TodaysTaskText' AND IsActive=1)
 		--End of Rev 130.0
+		--Rev 132.0
+		SET @IsDistributorSelectionRequiredinAttendance =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDistributorSelectionRequiredinAttendance' AND IsActive=1)
+		--End of Rev 132.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -638,6 +645,9 @@ BEGIN
 			,@BeatText AS BeatText
 			,@TodaysTaskText AS TodaysTaskText
 			--End of Rev 130.0
+			--Rev 132.0
+			,@IsDistributorSelectionRequiredinAttendance AS IsDistributorSelectionRequiredinAttendance
+			--End of Rev 132.0
 	END
 
 	else if(@Action='UserCheck')
