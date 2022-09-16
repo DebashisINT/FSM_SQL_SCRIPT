@@ -43,6 +43,8 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 												4. NOT LOGGEDIN.Refer: 0025019
 6.0		v2.0.31		Debashis	07-07-2022		FSM Dashboard : Team Visit Employee details is not showing.Ignore NULL value.Refer: 0025027
 7.0		v2.0.31		Debashis	07-07-2022		FSM Dashboard : Supervisor ID and Supervisor Name is not showing.Refer: 0025024
+8.0		V2.0.32		Sanchita	02-08-2022		Dashboard Data shall be showing based on Assign [Single/Multiple] Branch in Employee [Master Mapping]
+												based on APP settings "IsActivateEmployeeBranchHierarchy" Refer: 25102
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -51,6 +53,10 @@ BEGIN
 	--Rev 3.0
 	DECLARE @EMPCODE NVARCHAR(50)=NULL,@CHCIRSECTYPE NVARCHAR(MAX)
 	--End of Rev 3.0
+
+	-- Rev 8.0
+	declare @ActivateEmployeeBranchHierarchy varchar(100) = (select top 1 [value] from fts_app_config_settings where [key]='IsActivateEmployeeBranchHierarchy')
+	-- End of Rev 8.0
 
 	IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
 		DROP TABLE #STATEID_LIST
@@ -245,7 +251,16 @@ BEGIN
 			SET @SqlStrTable+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 			--End of Rev 4.0
 			SET @SqlStrTable+='WHERE CNT.cnt_contactType IN(''EM'') '
-			SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			-- Rev 8.0  [ existind bug fixed ]
+			--SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			
+			IF @EmpDefaultType='Channel'
+					SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_ChannelMap WHERE EP_CH_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+				ELSE IF @EmpDefaultType='Circle'
+					SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_CircleMap WHERE EP_CRL_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+				ELSE IF @EmpDefaultType='Section'
+					SET @SqlStrTable+='AND EXISTS(SELECT DISTINCT EP_EMP_CONTACTID FROM Employee_SectionMap WHERE EP_SEC_ID IN('+@CHCIRSECTYPE+') AND EP_EMP_CONTACTID=CNT.cnt_internalId) '
+			-- End of Rev 8.0
 
 			--SELECT @SqlStrTable
 			EXEC SP_EXECUTESQL @SqlStrTable
@@ -324,15 +339,37 @@ BEGIN
 			--Rev 1.0
 			--IF @STATEID<>''
 			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-			IF @STATEID<>'' AND @BRANCHID=''
-				SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-			IF @STATEID='' AND @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
-			IF @STATEID<>'' AND @BRANCHID<>''
-				BEGIN
+			-- Rev 8.0
+			--IF @STATEID<>'' AND @BRANCHID=''
+			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--IF @STATEID='' AND @BRANCHID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--IF @STATEID<>'' AND @BRANCHID<>''
+			--	BEGIN
+			--		SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--	END
+
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>'' 
+					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				IF @STATEID=''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @STATEID<>'' AND @BRANCHID=''
 					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
-				END
+				IF @STATEID='' AND @BRANCHID<>''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+				IF @STATEID<>'' AND @BRANCHID<>''
+					BEGIN
+						SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+						SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+					END
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
@@ -353,8 +390,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC (@Strsql)
@@ -377,8 +426,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			--SELECT @Strsql
 			EXEC (@Strsql)
@@ -394,15 +455,37 @@ BEGIN
 			--Rev 1.0
 			--IF @STATEID<>''
 			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-			IF @STATEID<>'' AND @BRANCHID=''
-				SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-			IF @STATEID='' AND @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
-			IF @STATEID<>'' AND @BRANCHID<>''
-				BEGIN
+			-- Rev 8.0
+			--IF @STATEID<>'' AND @BRANCHID=''
+			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--IF @STATEID='' AND @BRANCHID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--IF @STATEID<>'' AND @BRANCHID<>''
+			--	BEGIN
+			--		SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			--	END
+
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>''
+					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				IF @STATEID=''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @STATEID<>'' AND @BRANCHID=''
 					SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
-				END
+				IF @STATEID='' AND @BRANCHID<>''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+				IF @STATEID<>'' AND @BRANCHID<>''
+					BEGIN
+						SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+						SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+					END
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK,0 AS ON_LEAVE '
@@ -419,8 +502,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(ATTENLILO.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTENLILO.ON_LEAVE) END AS ON_LEAVE '
@@ -438,8 +533,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS NOTLOGIN '
 			--SELECT @Strsql
@@ -474,8 +581,20 @@ BEGIN
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			end
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>''
@@ -533,8 +652,10 @@ BEGIN
 			SET @Strsql+='WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			--End of Rev 7.0
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -564,6 +685,20 @@ BEGIN
 					SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
 					SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
 				END
+			-- Rev 8.0
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>''
+				begin
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+				end
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
+			end
+			-- End of Rev 8.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
@@ -648,8 +783,10 @@ BEGIN
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY COLLEC.user_id,CNT.cnt_internalId) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -679,6 +816,19 @@ BEGIN
 					SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
 					SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
 				END
+
+			-- Rev 8.0
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>''
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+			end
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
+			end
+			-- End of Rev 8.0	
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
@@ -719,8 +869,10 @@ BEGIN
 			SET @Strsql+='GROUP BY User_Id) SHOPUSR ON SHOPUSR.user_id=USR.user_id '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -750,6 +902,17 @@ BEGIN
 					SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
 					SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
 				END
+			-- Rev 8.0
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+			END
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
+			end
+			-- End 8.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
@@ -797,8 +960,10 @@ BEGIN
 			SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''true'' '
 			SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,ATTEN.Work_datetime) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
@@ -828,6 +993,18 @@ BEGIN
 					SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
 					SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
 				END
+			-- Rev 8.0
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>''
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+			END
+			else
+			begin
+				IF @BRANCHID<>''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
+			end
+			-- End of Rev 8.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
@@ -850,8 +1027,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			END
+			ELSE
+			BEGIN
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			END
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP '
@@ -869,8 +1058,20 @@ BEGIN
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			END
+			ELSE
+			BEGIN
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			END
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS NOTLOGIN '
 			--SELECT @Strsql
@@ -938,6 +1139,19 @@ BEGIN
 					SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
 				END
 			--SELECT @Strsql
+			-- Rev 8.0
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				IF @STATEID<>''
+					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+			END
+			ELSE
+			BEGIN
+				IF @BRANCHID<>''
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
+			END
+			-- End of Rev 8.0
+
 			EXEC SP_EXECUTESQL @Strsql
 		END
 	ELSE IF @ACTION='GRAPH' AND @RPTTYPE='Detail'
@@ -969,8 +1183,20 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACTREPORTTO CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			--End of Rev 7.0
 			--Rev 1.0
-			IF @BRANCHID<>''
-				SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			-- Rev 8.0
+			--IF @BRANCHID<>''
+			--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			
+			if(@ActivateEmployeeBranchHierarchy = 0)
+			begin
+				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+			END
+			ELSE
+			BEGIN
+				IF @BRANCHID<>''
+					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=USR.user_branchId) '
+			END
+			-- End of Rev 8.0
 			--End of Rev 1.0
 			SET @Strsql+=') AS DB '
 			IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
