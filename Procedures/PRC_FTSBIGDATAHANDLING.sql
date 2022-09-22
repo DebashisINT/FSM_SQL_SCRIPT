@@ -1,17 +1,18 @@
+--EXEC PRC_FTSBIGDATAHANDLING
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSBIGDATAHANDLING]') AND TYPE in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSBIGDATAHANDLING] AS' 
 END
 GO
---exec PRC_FTSBIGDATAHANDLING
 
 ALTER PROCEDURE [dbo].[PRC_FTSBIGDATAHANDLING]
---WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 26/12/2018
 Module	   : Big data handle
-1.0			Tanmoy		22-01-2020			add new column for tbl_trans_shopActivitysubmit_Archive
+1.0					Tanmoy		22-01-2020		add new column for tbl_trans_shopActivitysubmit_Archive
+2.0		v2.0.32		Debashis	22-09-2022		Added a new table.Row: 743
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -55,13 +56,25 @@ BEGIN
 	INSERT INTO tbl_trans_shopActivitysubmit_Archive
 	(User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,
 	total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,
-	MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING)
+	MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,device_model,battery,net_status,net_type,android_version)
 
 	SELECT User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,
 	total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,
-	LATITUDE,LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING
+	LATITUDE,LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,
+	CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,device_model,battery,net_status,net_type,android_version
 	FROM tbl_trans_shopActivitysubmit where CAST(visited_time as DATE)<CAST(@DateTime as DATE)
 
 	DELETE FROm  tbl_trans_shopActivitysubmit where CAST(visited_time as DATE)<CAST(@DateTime as DATE)
+
+	--Rev 2.0
+	SET IDENTITY_INSERT FSMUSERWISEGPSNETSTATUS_ARCH ON
+	INSERT INTO FSMUSERWISEGPSNETSTATUS_ARCH(ID,USER_ID,DATE_TIME,GPS_SERVICE_STATUS,NETWORK_STATUS,CREATE_DATE,SCHEDULEDATE)
+	SELECT ID,USER_ID,DATE_TIME,GPS_SERVICE_STATUS,NETWORK_STATUS,CREATE_DATE,GETDATE() FROM FSMUSERWISEGPSNETSTATUS 
+	WHERE CONVERT(NVARCHAR(10),DATE_TIME,120)<=CONVERT(NVARCHAR(10),GETDATE()-7,120)
+	SET IDENTITY_INSERT FSMUSERWISEGPSNETSTATUS_ARCH OFF
+
+	DELETE FROM FSMUSERWISEGPSNETSTATUS WHERE CONVERT(NVARCHAR(10),DATE_TIME,120)<=CONVERT(NVARCHAR(10),GETDATE()-7,120)
+	--End of Rev 2.0
 
 END
