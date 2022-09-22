@@ -148,6 +148,7 @@ BEGIN
 	130.0		Debashis	12-08-2022	ADD SETTINGS @Action='GlobalCheck' BeatText & TodaysTaskText.Row 731
 	131.0		Debashis	14-09-2022	ADD SETTINGS @Action='UserCheck' CommonAINotification & IsFaceRecognitionOnEyeblink.Row 738
 	132.0		Debashis	15-09-2022	ADD SETTINGS @Action=GlobalCheck' IsDistributorSelectionRequiredinAttendance.Row 740
+	133.0		Debashis	22-09-2022	ADD SETTINGS @Action='UserCheck' GPSNetworkIntervalMins.Row 741
 	*****************************************************************************************************************************************************************************/ 
 	
 	DECLARE @max_accuracy varchar(50)
@@ -1541,5 +1542,10 @@ BEGIN
 		SELECT 'IsFaceRecognitionOnEyeblink' AS [Key],CONVERT(NVARCHAR(15),USR.IsFaceRecognitionOnEyeblink) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 131.0
+		--Rev 133.0
+		UNION ALL
+		SELECT 'GPSNetworkIntervalMins' AS [Key],CONVERT(NVARCHAR(15),USR.GPSNetworkIntervalMins) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 133.0
 	END
 END
