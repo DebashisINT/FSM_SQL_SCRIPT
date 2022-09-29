@@ -1,4 +1,4 @@
---EXEC PRC_FTSAPIEMPLOYEEPERFORMANCE_REPORT '2019-02-01','2019-02-20',2100
+--EXEC PRC_FTSAPIEMPLOYEEPERFORMANCE_REPORT '2022-04-01','2022-09-29',11984
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSAPIEMPLOYEEPERFORMANCE_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -20,7 +20,8 @@ Written by : Debashis Talukder on 19/02/2019
 Module	   : Employee Performance Details for API
 1.0		v17.0.0		20/02/2019		Debashis		Two extra optional input: "from_date" & "to_date". Refer mail: FTS | Changes in api
 2.0		v17.0.0		22/02/2019		Debashis		Implemented Heirarchy in any reports. Refer: Heirarchy in any reports.
-3.0		V19.0.0		28/02/2019		Debashis		Total Travel (KM) : Should the the Total distance traveled by user on the current date.Refer mail: Performance Report
+3.0		v19.0.0		28/02/2019		Debashis		Total Travel (KM) : Should the the Total distance traveled by user on the current date.Refer mail: Performance Report
+4.0		v2.0.33		29/09/2022		Debashis		New Sales Order type data is not showing in the Performance Summary report in FSM mobile App.Refer: 0025250
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -29,6 +30,10 @@ BEGIN
 	--Rev 3.0
 	DECLARE @TABLENAME NVARCHAR(30)
 	--End of Rev 3.0
+	--Rev 4.0
+	DECLARE @IsActivateNewOrderScreenwithSize BIT
+	SELECT @IsActivateNewOrderScreenwithSize=IsActivateNewOrderScreenwithSize FROM tbl_master_user WHERE USER_ID=@USERID
+	--End of Rev 4.0
 
 	SET @LOGINEMPCODE=(SELECT USER_CONTACTID FROM TBL_MASTER_USER WHERE USER_ID=@USERID)
 
@@ -49,20 +54,40 @@ BEGIN
 	ELSE
 		SET @TABLENAME='TBL_TRANS_SHOPUSER_ARCH'
 	--End of Rev 3.0
+	--Rev 4.0
+	IF @IsActivateNewOrderScreenwithSize=1
+		BEGIN
+			IF OBJECT_ID('tempdb..#TMPORDATTRIBUTE') IS NOT NULL
+				DROP TABLE #TMPORDATTRIBUTE
+			CREATE TABLE #TMPORDATTRIBUTE(ID BIGINT,USER_ID BIGINT,ORDER_ID NVARCHAR(200),ORDER_DATE DATETIME,Ordervalue DECIMAL(18,2))
+			CREATE NONCLUSTERED INDEX IX1 ON #TMPORDATTRIBUTE (USER_ID ASC)
+			INSERT INTO #TMPORDATTRIBUTE(ID,USER_ID,ORDER_ID,ORDER_DATE,Ordervalue)
+			SELECT ORDH.ID,ORDH.USER_ID,ORDH.ORDER_ID,ORDER_DATE,SUM(ISNULL(ORDD.Ordervalue,0)) AS Ordervalue FROM ORDERPRODUCTATTRIBUTE ORDH 
+			INNER JOIN(SELECT ORDD.ID,ORDD.USER_ID,ORDD.ORDER_ID,(ORDD.QTY*ORDD.RATE) AS Ordervalue FROM ORDERPRODUCTATTRIBUTEDET ORDD 
+			) ORDD ON ORDH.ID=ORDD.ID AND ORDH.USER_ID=ORDD.USER_ID AND ORDH.ORDER_ID=ORDD.ORDER_ID 
+			GROUP BY ORDH.ID,ORDH.USER_ID,ORDH.ORDER_ID,ORDH.ORDER_DATE
+		END
+	--End of Rev 4.0
 
 	--Rev 2.0
 	--INSERT INTO #EMPLOYEEHRLIST SELECT emp_contactId FROM tbl_master_employee EMP INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo 
 	--WHERE EMPCTC.emp_cntId=@LOGINEMPCODE
 	--End of Rev 2.0
 
-	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TMPMASTEMPLOYEE') AND TYPE IN (N'U'))
+	--Rev 4.0
+	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TMPMASTEMPLOYEE') AND TYPE IN (N'U'))
+	IF OBJECT_ID('tempdb..#TMPMASTEMPLOYEE') IS NOT NULL
+	--End of Rev 4.0
 		DROP TABLE #TMPMASTEMPLOYEE
 	CREATE TABLE #TMPMASTEMPLOYEE(EMP_ID NUMERIC(18, 0) NOT NULL,EMP_UNIQUECODE VARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,EMP_CONTACTID NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL)
 	CREATE NONCLUSTERED INDEX IX1 ON #TMPMASTEMPLOYEE (EMP_CONTACTID ASC)
 
 	INSERT INTO #TMPMASTEMPLOYEE SELECT EMP_ID,EMP_UNIQUECODE,EMP_CONTACTID FROM tbl_master_employee WHERE EXISTS(SELECT emp_contactId FROM #EMPLOYEEHRLIST WHERE EMPCODE=emp_contactId)
 
-	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+	--Rev 4.0
+	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+	--End of Rev 4.0
 		DROP TABLE #TEMPCONTACT
 	CREATE TABLE #TEMPCONTACT
 		(
@@ -134,14 +159,30 @@ BEGIN
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='GROUP BY User_Id) SHOPUSR ON SHOPUSR.user_id=USR.user_id '
 	--End of Rev 3.0
-	SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH '
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	--Rev 1.0
-	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) = CONVERT(NVARCHAR(10),GETDATE(),120) '
-	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--End of Rev 1.0
-	SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
+	--Rev 4.0
+	IF @IsActivateNewOrderScreenwithSize=0
+		BEGIN
+	--End of Rev 4.0
+			SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH '
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--Rev 1.0
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) = CONVERT(NVARCHAR(10),GETDATE(),120) '
+			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--End of Rev 1.0
+			SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
+	--Rev 4.0
+		END
+	ELSE IF @IsActivateNewOrderScreenwithSize=1
+		BEGIN
+			SET @Strsql+='LEFT OUTER JOIN ('
+			SET @Strsql+='SELECT ORDH.USER_ID,CNT.cnt_internalId,SUM(ISNULL(ORDH.Ordervalue,0)) AS Ordervalue FROM #TMPORDATTRIBUTE ORDH '
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.USER_ID '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			SET @Strsql+='GROUP BY ORDH.USER_ID,CNT.cnt_internalId) ORDHEAD ON CNT.cnt_internalId=ORDHEAD.cnt_internalId '
+		END
+	--End of Rev 4.0
 	SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC '
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -171,4 +212,10 @@ BEGIN
 	DROP TABLE #EMPHR
 	DROP TABLE #EMPLOYEEHRLIST
 	DROP TABLE #TMPMASTEMPLOYEE
+	--Rev 4.0
+	IF @IsActivateNewOrderScreenwithSize=1
+		DROP TABLE #TMPORDATTRIBUTE
+	--End of Rev 4.0
+
+	SET NOCOUNT OFF
 END
