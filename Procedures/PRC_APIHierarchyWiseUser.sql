@@ -29,6 +29,7 @@ AS
 11.0	23-06-2020		Tanmoy		@ACTION='SHOPLIST' add extra column
 12.0	28-01-2022		Debashis	@ACTION='MEMBER' Team details tag.Row 626
 13.0	28-01-2022		Debashis	@ACTION='MEMBER' API to get report to of user.Row 629
+14.0	30-09-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 744
 ****************************************************************************************************************************************************************************/
 BEGIN
 	 DECLARE @SQL NVARCHAR(MAX)
@@ -329,32 +330,35 @@ BEGIN
 	IF @ACTION='SHOPLIST'
 		BEGIN
 			SET @SQL=''
-			SET @SQL+=' SELECT SHOP.Shop_Code AS shop_id,SHOP.Shop_Name AS shop_name,SHOP.Shop_Lat AS shop_lat,SHOP.Shop_Long AS shop_long,   '
-			SET @SQL+=' SHOP.Address AS shop_address,SHOP.Pincode AS shop_pincode,SHOP.Shop_Owner_Contact AS shop_contact,   '
-			SET @SQL+=' CONVERT(NVARCHAR(10),SHOP.total_visitcount) AS total_visited,   '
-			SET @SQL+=' CONVERT(NVARCHAR(10),SHOP.Lastvisit_date,121) AS last_visit_date,  '
-			SET @SQL+=' CONVERT(NVARCHAR(5),SHOP.type) AS shop_type,   '
+			SET @SQL+=' SELECT SHOP.Shop_Code AS shop_id,SHOP.Shop_Name AS shop_name,SHOP.Shop_Lat AS shop_lat,SHOP.Shop_Long AS shop_long,'
+			SET @SQL+=' SHOP.Address AS shop_address,SHOP.Pincode AS shop_pincode,SHOP.Shop_Owner_Contact AS shop_contact,'
+			SET @SQL+=' CONVERT(NVARCHAR(10),SHOP.total_visitcount) AS total_visited,'
+			SET @SQL+=' CONVERT(NVARCHAR(10),SHOP.Lastvisit_date,121) AS last_visit_date,'
+			SET @SQL+=' CONVERT(NVARCHAR(5),SHOP.type) AS shop_type,'
 			--Rev 4.0 Start
-			SET @SQL+=' ISNULL(DD.Shop_Name,'''') as dd_name  '
+			SET @SQL+=' ISNULL(DD.Shop_Name,'''') as dd_name'
 			--Rev 4.0 End
 			--Rev 7.0 Start
-			SET @SQL+=' ,ISNULL(SHOP.EntityCode,'''') as entity_code   '
+			SET @SQL+=' ,ISNULL(SHOP.EntityCode,'''') as entity_code'
 			--Rev 7.0 End 
 			--Rev 10.0 Start
-			set @sql+=' ,convert(nvarchar(10),SHOP.Model_id) as model_id,convert(nvarchar(10),SHOP.Primary_id) as primary_app_id,convert(nvarchar(10),SHOP.Secondary_id) as secondary_app_id   '
-			set @sql+=' ,convert(nvarchar(10),SHOP.Lead_id) as lead_id,convert(nvarchar(10),SHOP.FunnelStage_id) as funnel_stage_id,convert(nvarchar(10),SHOP.Stage_id) as stage_id,SHOP.Booking_amount  '
+			set @sql+=' ,convert(nvarchar(10),SHOP.Model_id) as model_id,convert(nvarchar(10),SHOP.Primary_id) as primary_app_id,convert(nvarchar(10),SHOP.Secondary_id) as secondary_app_id'
+			set @sql+=' ,convert(nvarchar(10),SHOP.Lead_id) as lead_id,convert(nvarchar(10),SHOP.FunnelStage_id) as funnel_stage_id,convert(nvarchar(10),SHOP.Stage_id) as stage_id,SHOP.Booking_amount'
 			--Rev 10.0 End 
 			--Rev 11.0 Start
-			set @sql+=' ,convert(nvarchar(10),SHOP.PartyType_id) as type_id,convert(nvarchar(10),SHOP.Area_id) as area_id   '
-			--Rev 11.0 End 
-			SET @SQL+='  FROM tbl_Master_shop SHOP   '
-			SET @SQL+='  LEFT OUTER JOIN tbl_Master_shop DD ON DD.Shop_Code=SHOP.assigned_to_dd_id   '
+			set @sql+=' ,convert(nvarchar(10),SHOP.PartyType_id) as type_id,convert(nvarchar(10),SHOP.Area_id) as area_id,'
+			--Rev 11.0 End
+			--Rev 14.0
+			SET @sql+='SHOP.Shop_Owner AS owner_name '
+			--End of Rev 14.0
+			SET @SQL+='  FROM tbl_Master_shop SHOP '
+			SET @SQL+='  LEFT OUTER JOIN tbl_Master_shop DD ON DD.Shop_Code=SHOP.assigned_to_dd_id '
 			SET @SQL+='  WHERE SHOP.Shop_CreateUser='''+STR(@user_id)+'''  '
 			--REV 9.0 START
-			SET @SQL+=' AND SHOP.Entity_Status=1	  '
+			SET @SQL+=' AND SHOP.Entity_Status=1 '
 			--REV 9.0 END
 			IF ISNULL(@area_id,'')<>''
-			SET @SQL+='  AND SHOP.Area_id='''+STR(@area_id)+'''  '
+				SET @SQL+='  AND SHOP.Area_id='''+STR(@area_id)+'''  '
 
 			EXEC SP_EXECUTESQL @SQL
 		END
