@@ -24,6 +24,7 @@ AS
 8.0		v2.0.27		Debashis	10-03-2022		New types are not coming in the All team view party section.Architect, fabricator,Consultant,Dealer,Builder,Corporate,Govt. Bodies,End User.
 												Refer: 0024743
 9.0		v2.0.30		Debashis	31-05-2022		Shop visited count will consider "tbl_trans_shopActivitysubmit" table to show the actual count while checking from team details.Refer: 0024918
+10.0	v2.0.33		Debashis	06-10-2022		Shop Duplicate in Case of Team Visit by Supervisor.Refer: 0025285
 ************************************************************************************************************************************************************************************************/ 
 BEGIN
 	 DECLARE @SHOP_TYPE NVARCHAR(10)
@@ -159,7 +160,15 @@ BEGIN
 		SET @SQL+='LEFT OUTER JOIN (SELECT User_Id,Shop_Id,COUNT(Is_Newshopadd) AS total_visited FROM tbl_trans_shopActivitysubmit GROUP BY User_Id,Shop_Id) SHOPACT '
 		SET @SQL+='ON SHOP.Shop_Code=SHOPACT.Shop_Id '
 		--End of Rev 9.0
-		SET @SQL+=' WHERE SHOP.Entity_Status=1  '
+		--Rev 10.0
+		IF @SHOP_CODE=''
+			SET @SQL+='AND SHOP.Shop_CreateUser=SHOPACT.User_Id '
+		--End of Rev 10.0
+		SET @SQL+=' WHERE SHOP.Entity_Status=1 '
+		--Rev 10.0
+		IF @SHOP_CODE<>''
+			SET @SQL+='AND SHOP.Shop_Code='''+@SHOP_CODE+''' '
+		--End of Rev 10.0
 		
 		IF ISNULL(@SHOP_TYPE,'')='' AND ISNULL(@SHOP_CODE,'')='' --AND ISNULL(@area_id,'')=''
 		BEGIN
@@ -201,7 +210,7 @@ BEGIN
 
 		EXEC SP_EXECUTESQL @SQL
 
-	--SELECT @SQL
+		--SELECT @SQL
 
 	DROP TABLE #tMPFirst_Id
 END
