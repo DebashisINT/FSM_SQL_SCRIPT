@@ -30,6 +30,7 @@ AS
 12.0	28-01-2022		Debashis	@ACTION='MEMBER' Team details tag.Row 626
 13.0	28-01-2022		Debashis	@ACTION='MEMBER' API to get report to of user.Row 629
 14.0	30-09-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 744
+15.0	07-10-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 746
 ****************************************************************************************************************************************************************************/
 BEGIN
 	 DECLARE @SQL NVARCHAR(MAX)
@@ -349,10 +350,21 @@ BEGIN
 			set @sql+=' ,convert(nvarchar(10),SHOP.PartyType_id) as type_id,convert(nvarchar(10),SHOP.Area_id) as area_id,'
 			--Rev 11.0 End
 			--Rev 14.0
-			SET @sql+='SHOP.Shop_Owner AS owner_name '
+			SET @sql+='SHOP.Shop_Owner AS owner_name,'
 			--End of Rev 14.0
+			--Rev 15.0
+			SET @sql+='SHOPACT.total_visit_count '
+			--End of Rev 15.0
 			SET @SQL+='  FROM tbl_Master_shop SHOP '
 			SET @SQL+='  LEFT OUTER JOIN tbl_Master_shop DD ON DD.Shop_Code=SHOP.assigned_to_dd_id '
+			--Rev 15.0
+			SET @SQL+='LEFT OUTER JOIN('
+			SET @SQL+='SELECT Shop_Id,SUM(total_visit_count) AS total_visit_count FROM('
+			SET @SQL+='SELECT Shop_Id,COUNT(0) AS total_visit_count FROM tbl_trans_shopActivitysubmit WHERE User_Id='''+STR(@user_id)+''' GROUP BY Shop_Id '
+			SET @SQL+='UNION ALL '
+			SET @SQL+='SELECT Shop_Id,COUNT(0) AS total_visit_count FROM tbl_trans_shopActivitysubmit_Archive WHERE User_Id='''+STR(@user_id)+''' GROUP BY Shop_Id '
+			SET @SQL+=') AA GROUP BY Shop_Id) SHOPACT ON SHOP.Shop_Code=SHOPACT.Shop_Id '
+			--End of Rev 15.0
 			SET @SQL+='  WHERE SHOP.Shop_CreateUser='''+STR(@user_id)+'''  '
 			--REV 9.0 START
 			SET @SQL+=' AND SHOP.Entity_Status=1 '
