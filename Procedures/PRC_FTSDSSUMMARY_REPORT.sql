@@ -25,6 +25,7 @@ Module	   : Employee DS Summary.Refer: 0024492
 												b) New Column field required "Outlets Mapped" [Place this field after 'From-To' column].
 												It will be showing total Outlet count of this user, as like DS Visit Details report.
 												c) 'Outlets Revisited' >> This will be showing the Unique count of revisit shop.Refer: 0024905
+4.0		v2.0.33		Debashis	09/10/2022		Code optimized.Refer: 0025331
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -72,10 +73,13 @@ BEGIN
 			EMPCODE VARCHAR(50),
 			RPTTOEMPCODE VARCHAR(50)
 			)
-		
+			
+			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #EMPHRS
 			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
-			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			FROM tbl_trans_employeeCTC CTC WITH (NOLOCK)
+			LEFT JOIN tbl_master_employee TME WITH (NOLOCK) ON TME.emp_id= CTC.emp_reportTO 
+			WHERE emp_effectiveuntil IS NULL
 		
 			;with cte as(SELECT	EMPCODE,RPTTOEMPCODE FROM #EMPHRS WHERE EMPCODE IS NULL OR EMPCODE=@empcodes  
 			UNION ALL
@@ -102,14 +106,17 @@ BEGIN
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
+			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
 		END
 	ELSE
 		BEGIN
+			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			WHERE cnt_contactType IN('EM')
 		END
 
 	--Rev 2.0
@@ -119,18 +126,19 @@ BEGIN
 	(USERID BIGINT,LOGGEDIN NVARCHAR(10),LOGEDOUT NVARCHAR(10),cnt_internalId NVARCHAR(10),Login_datetime NVARCHAR(10))
 	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINOUT(USERID,cnt_internalId,Login_datetime)
 
+	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 	SET @SqlStr=''
 	SET @SqlStr='INSERT INTO #TMPATTENLOGINOUT(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime) '
 	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,'
-	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL '
 	SET @SqlStr+='AND Logout_datetime IS NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @SqlStr+='UNION ALL '
 	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,'
-	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NULL '
 	SET @SqlStr+='AND Logout_datetime IS NOT NULL AND Isonleave=''false'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
@@ -140,6 +148,7 @@ BEGIN
 	--End of Rev 2.0
 
 	--Rev 3.0
+	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 	IF OBJECT_ID('tempdb..#TMPUNIQUESHOPREVISIT') IS NOT NULL
 		DROP TABLE #TMPUNIQUESHOPREVISIT
 	CREATE TABLE #TMPUNIQUESHOPREVISIT
@@ -149,8 +158,8 @@ BEGIN
 	SET @SqlStr=''
 	SET @SqlStr='INSERT INTO #TMPUNIQUESHOPREVISIT(USERID,cnt_internalId,RE_VISITED) '
 	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(DISTINCT SHOPACT.Shop_Id) AS RE_VISITED '
-	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=SHOPACT.User_Id '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @SqlStr+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
@@ -161,6 +170,61 @@ BEGIN
 	--SELECT @SqlStr
 	EXEC SP_EXECUTESQL @SqlStr
 	--End of Rev 3.0
+
+	--Rev 4.0
+	IF OBJECT_ID('tempdb..#TMPSHOPACTIVITYSUBMITDSS') IS NOT NULL
+		DROP TABLE #TMPSHOPACTIVITYSUBMITDSS
+	CREATE TABLE #TMPSHOPACTIVITYSUBMITDSS
+	(User_Id BIGINT,cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,NEWSHOP_VISITED INT,RE_VISITED INT,DISTANCE_TRAVELLED DECIMAL(18,2),SPENT_DURATION NVARCHAR(100),visited_time NVARCHAR(10))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPSHOPACTIVITYSUBMITDSS(User_Id,cnt_internalId,visited_time)
+
+	SET @SqlStr=''
+	SET @SqlStr='INSERT INTO #TMPSHOPACTIVITYSUBMITDSS(User_Id,cnt_internalId,NEWSHOP_VISITED,RE_VISITED,DISTANCE_TRAVELLED,SPENT_DURATION,visited_time) '
+	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
+	SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=SHOPACT.User_Id '
+	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @SqlStr+='AND SHOPACT.Is_Newshopadd=1 '
+	SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(REVST.RE_VISITED) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
+	SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=SHOPACT.User_Id '
+	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN #TMPUNIQUESHOPREVISIT REVST ON CNT.cnt_internalId=REVST.cnt_internalId AND USR.user_id=REVST.USERID '
+	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @SqlStr+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
+
+	--SELECT @SqlStr
+	EXEC SP_EXECUTESQL @SqlStr
+
+	IF OBJECT_ID('tempdb..#TMPDAYSTARTENDDSS') IS NOT NULL
+		DROP TABLE #TMPDAYSTARTENDDSS
+	CREATE TABLE #TMPDAYSTARTENDDSS
+	(USERID BIGINT,DAYSTTIME NVARCHAR(10),DAYENDTIME NVARCHAR(10),STARTENDDATE NVARCHAR(10))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPDAYSTARTENDDSS(USERID,STARTENDDATE)
+
+	SET @SqlStr=''
+	SET @SqlStr='INSERT INTO #TMPDAYSTARTENDDSS(USERID,DAYSTTIME,DAYENDTIME,STARTENDDATE) '
+	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYSTTIME,NULL AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
+	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
+	SET @SqlStr+='WHERE ISSTART=1 '
+	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,NULL AS DAYSTTIME,MAX(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
+	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
+	SET @SqlStr+='WHERE ISEND=1 '
+	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
+
+	--SELECT @SqlStr
+	EXEC SP_EXECUTESQL @SqlStr
+	--End of Rev 4.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSDSSUMMARY_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -204,6 +268,7 @@ BEGIN
 
 	--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
 	--Rev 3.0 && One new field added as OUTLETSMAPPED
+	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
 	SET @SqlStr=''
 	SET @SqlStr='INSERT INTO FTSDSSUMMARY_REPORT(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTOUID,REPORTTO,RPTTODESG,'
 	SET @SqlStr+='HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,DATERANGE,OUTLETSMAPPED,NEWSHOP_VISITED,RE_VISITED,TOTAL_VISIT,DISTANCE_TRAVELLED,AVGTIMESPENTINMARKET,AVGSPENTDURATION)'
@@ -227,38 +292,38 @@ BEGIN
 	SET @SqlStr+='CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 	SET @SqlStr+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS DAYSTARTENDDURATION,'
 	SET @SqlStr+='SPENT_DURATION '
-	SET @SqlStr+='FROM tbl_master_employee EMP '
+	SET @SqlStr+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-	SET @SqlStr+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
-	SET @SqlStr+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-	SET @SqlStr+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+	SET @SqlStr+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+	SET @SqlStr+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+	SET @SqlStr+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 	SET @SqlStr+='INNER JOIN ( '
-	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
-	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
+	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @SqlStr+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS REPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
 	--Rev 1.0
 	--SET @SqlStr+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
-	SET @SqlStr+='DESG.deg_designation AS RPTTODESG,CNT.cnt_UCC AS REPORTTOUID FROM tbl_master_employee EMP '
+	SET @SqlStr+='DESG.deg_designation AS RPTTODESG,CNT.cnt_UCC AS REPORTTOUID FROM tbl_master_employee EMP WITH (NOLOCK) '
 	--End of Rev 1.0
-	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN ('
-	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
-	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
+	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL '
 	SET @SqlStr+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 	SET @SqlStr+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId AS HREPORTTOID,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS HREPORTTO,'
 	--Rev 1.0
 	--SET @SqlStr+='DESG.deg_designation AS HRPTTODESG FROM tbl_master_employee EMP '
-	SET @SqlStr+='DESG.deg_designation AS HRPTTODESG,CNT.cnt_UCC AS HREPORTTOUID FROM tbl_master_employee EMP '
+	SET @SqlStr+='DESG.deg_designation AS HRPTTODESG,CNT.cnt_UCC AS HREPORTTOUID FROM tbl_master_employee EMP WITH (NOLOCK) '
 	--End of Rev 1.0
-	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN ('
-	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt '
-	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id'
+	SET @SqlStr+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
 	SET @SqlStr+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @SqlStr+='WHERE EMPCTC.emp_effectiveuntil IS NULL) HRPTTO ON HRPTTO.emp_cntId=RPTTO.REPORTTOID '
 	SET @SqlStr+='INNER JOIN ('
@@ -288,46 +353,52 @@ BEGIN
 	SET @SqlStr+='SUM(CAST(SUBSTRING(SPENT_DURATION,1,2) AS INT)*60+CAST(SUBSTRING(SPENT_DURATION,4,2) AS INT)) AS SPENT_DURATION '
 	--End of Rev 2.0
 	SET @SqlStr+='FROM('
-	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
-	SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='AND SHOPACT.Is_Newshopadd=1 '
-	SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
-	SET @SqlStr+='UNION ALL '
-	--Rev 3.0
-	--SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
-	SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(REVST.RE_VISITED) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
-	--End of Rev 3.0
-	SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
-	SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT '
-	SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
-	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	--Rev 3.0
-	SET @SqlStr+='INNER JOIN #TMPUNIQUESHOPREVISIT REVST ON CNT.cnt_internalId=REVST.cnt_internalId AND USR.user_id=REVST.USERID '
-	--End of Rev 3.0
-	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
-	SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
+	--Rev 4.0
+	--SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	--SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND SHOPACT.Is_Newshopadd=1 '
+	--SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
+	--SET @SqlStr+='UNION ALL '
+	----Rev 3.0
+	----SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
+	--SET @SqlStr+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(REVST.RE_VISITED) AS RE_VISITED,SUM(ISNULL(distance_travelled,0)) AS DISTANCE_TRAVELLED,SHOPACT.SPENT_DURATION,'
+	----End of Rev 3.0
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS visited_time '
+	--SET @SqlStr+='FROM tbl_trans_shopActivitysubmit SHOPACT '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	----Rev 3.0
+	--SET @SqlStr+='INNER JOIN #TMPUNIQUESHOPREVISIT REVST ON CNT.cnt_internalId=REVST.cnt_internalId AND USR.user_id=REVST.USERID '
+	----End of Rev 3.0
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	--SET @SqlStr+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.visited_time,SHOPACT.SPENT_DURATION '
+	SET @SqlStr+='SELECT User_Id,cnt_internalId,NEWSHOP_VISITED,RE_VISITED,DISTANCE_TRAVELLED,SPENT_DURATION,visited_time FROM #TMPSHOPACTIVITYSUBMITDSS '
+	--End of Rev 4.0
 	SET @SqlStr+=') AA GROUP BY User_Id,cnt_internalId,VISITED_TIME) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
 	--Rev 3.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
-	SET @SqlStr+='SELECT Shop_CreateUser,COUNT(Shop_Code) AS OUTLETSMAPPED FROM tbl_Master_shop '
+	SET @SqlStr+='SELECT Shop_CreateUser,COUNT(Shop_Code) AS OUTLETSMAPPED FROM tbl_Master_shop WITH (NOLOCK) '
 	SET @SqlStr+='GROUP BY Shop_CreateUser) SHOP ON SHOP.Shop_CreateUser=USR.user_id '
 	--End of Rev 3.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT USERID,MIN(DAYSTTIME) AS DAYSTTIME,MAX(DAYENDTIME) AS DAYENDTIME,STARTENDDATE FROM('
-	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYSTTIME,NULL AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
-	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WHERE ISSTART=1 '
-	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
-	SET @SqlStr+='UNION ALL '
-	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,NULL AS DAYSTTIME,MAX(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
-	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WHERE ISEND=1 '
-	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
+	--Rev 4.0
+	--SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYSTTIME,NULL AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
+	--SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WHERE ISSTART=1 '
+	--SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
+	--SET @SqlStr+='UNION ALL '
+	--SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,NULL AS DAYSTTIME,MAX(CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108)) AS DAYENDTIME,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE '
+	--SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WHERE ISEND=1 '
+	--SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE '
+	SET @SqlStr+='SELECT USERID,DAYSTTIME,DAYENDTIME,STARTENDDATE FROM #TMPDAYSTARTENDDSS '
+	--End of Rev 4.0
 	SET @SqlStr+=') DAYSTEND GROUP BY USERID,STARTENDDATE) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id AND ATTEN.Login_datetime=DAYSTARTEND.STARTENDDATE '
 	--Rev 1.0
 	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
@@ -363,6 +434,10 @@ BEGIN
 	--Rev 3.0
 	DROP TABLE #TMPUNIQUESHOPREVISIT
 	--End of Rev 3.0
+	--Rev 4.0
+	DROP TABLE #TMPDAYSTARTENDDSS
+	DROP TABLE #TMPSHOPACTIVITYSUBMITDSS
+	--End of Rev 4.0
 	
 	SET NOCOUNT OFF
 END

@@ -57,6 +57,9 @@ Module	   : Dashboard Summary & Detail
 11.0	v2.0.31		Debashis	07-07-2022		FSM Dashboard : Supervisor ID and Supervisor Name is not showing.Refer: 0025024
 12.0	V2.0.32		Sanchita	02-08-2022		Dashboard Data shall be showing based on Assign [Single/Multiple] Branch in Employee [Master Mapping]
 												based on APP settings "IsActivateEmployeeBranchHierarchy". Refer: 25102
+13.0	V2.0.33		Sanchita	29-09-2022		Dashboard figures showing wrong when setting "IsActivateEmployeeBranchHierarchy" is set to 0 [ in Nordask data ]. 
+												Refer: 25252
+14.0	v2.0.33		Debashis	09-10-2022		Code optimized.Refer: 0025331
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -153,7 +156,7 @@ BEGIN
 	CREATE NONCLUSTERED INDEX IX_shopuser ON #TEMPSHOPUSER(User_Id ASC)
 	CREATE NONCLUSTERED INDEX IX1_shopuser ON #TEMPSHOPUSER(distance_covered ASC,SDate ASC)
 	INSERT INTO #TEMPSHOPUSER 
-	SELECT User_Id,distance_covered,SDate FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120)=CONVERT(NVARCHAR(10),@TODAYDATE,120) AND distance_covered IS NOT NULL
+	SELECT User_Id,distance_covered,SDate FROM tbl_trans_shopuser WITH (NOLOCK) WHERE CONVERT(NVARCHAR(10),SDate,120)=CONVERT(NVARCHAR(10),@TODAYDATE,120) AND distance_covered IS NOT NULL
 
 	--Rev 6.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
@@ -175,9 +178,12 @@ BEGIN
 			RPTTOEMPCODE VARCHAR(50)
 			)
 		
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #EMPHR
 			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
-			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			FROM tbl_trans_employeeCTC CTC WITH (NOLOCK) 
+			LEFT JOIN tbl_master_employee TME WITH (NOLOCK) ON TME.emp_id= CTC.emp_reportTO 
+			WHERE emp_effectiveuntil IS NULL
 		
 			;with cte as(select	
 			EMPCODE,RPTTOEMPCODE
@@ -241,33 +247,35 @@ BEGIN
 			--WHERE cnt_contactType IN('EM')
 			IF @IsShowOnlyDSTLInDashboard='0'
 				BEGIN
+					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK) 
 					INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE
 					WHERE cnt_contactType IN('EM')
 				END
 			ELSE
 				BEGIN
 					--Rev 11.0
+					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) 
 					INNER JOIN #EMPHR_EDIT ON CNT.cnt_internalId=EMPCODE
-					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
 					INNER JOIN (
-					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
-					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) 
+					LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
 					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation NOT IN('DS','TL') 
 					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
 					) DESG ON DESG.emp_cntId=EMP.emp_contactId
 					WHERE CNT.cnt_contactType IN('EM')
 					--End of Rev 11.0
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) 
 					INNER JOIN #EMPHR_EDIT ON CNT.cnt_internalId=EMPCODE
-					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
 					INNER JOIN (
-					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
-					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) 
+					LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
 					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
 					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
 					) DESG ON DESG.emp_cntId=EMP.emp_contactId
@@ -282,29 +290,32 @@ BEGIN
 			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 			IF @IsShowOnlyDSTLInDashboard='0'
 				BEGIN
+					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK) 
+					WHERE cnt_contactType IN('EM')
 				END
 			ELSE
 				BEGIN
 					--Rev 11.0
+					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
-					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
+					INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
 					INNER JOIN (
-					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
-					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
+					LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
 					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation NOT IN('DS','TL') 
 					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
 					) DESG ON DESG.emp_cntId=EMP.emp_contactId
 					WHERE CNT.cnt_contactType IN('EM')
 					--End of Rev 11.0
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT
-					INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId=EMP.emp_contactId
+					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
+					INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
 					INNER JOIN (
-					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
-					LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
+					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
+					LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
 					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
 					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
 					) DESG ON DESG.emp_cntId=EMP.emp_contactId
@@ -364,13 +375,18 @@ BEGIN
 	SET @Strsql=''
 	IF @ACTION='ALL' AND @RPTTYPE='Summary'
 		BEGIN
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,EMPCNT) '
-			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''EMP'' AS ACTION,''Summary'' AS RPTTYPE,COUNT(CNT.cnt_internalId) AS EMPCNT FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND user_inactive=''N'' '
+			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''EMP'' AS ACTION,''Summary'' AS RPTTYPE,COUNT(CNT.cnt_internalId) AS EMPCNT FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			IF @STATEID<>''
 				SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			-- Rev 6.0
@@ -391,7 +407,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId ) '
+					-- End of Rev 13.0
 				END
 			end
 			else
@@ -408,15 +427,21 @@ BEGIN
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,AT_WORK) '
-			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK FROM tbl_master_employee EMP '
+			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			--Rev 5.0
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -427,11 +452,11 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId '
 			--SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			--SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK '
-			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
+			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY User_Id,CAST(Work_datetime AS DATE),Isonleave) ATTENLILO ON ATTENLILO.USERID=USR.user_id '
 			SET @Strsql+='WHERE USR.user_inactive=''N'' '
@@ -448,7 +473,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				begin
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
+					-- End of Rev 13.0
 				end	
 
 			end
@@ -465,12 +493,17 @@ BEGIN
 			--SELECT @Strsql
 			EXEC (@Strsql)
 
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,ON_LEAVE) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ATTEN.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTEN.ON_LEAVE) END AS ON_LEAVE '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' ' 
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' ' 
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -481,11 +514,11 @@ BEGIN
 			--SET @Strsql+='FROM tbl_master_employee EMP '
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			--Rev 1.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -509,7 +542,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				begin
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
+					-- End of Rev 13.0
 				end
 
 			end
@@ -526,14 +562,19 @@ BEGIN
 			--SELECT @Strsql
 			EXEC (@Strsql)
 
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,NOT_LOGIN) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''NOT_LOGIN'' AS ACTION,''Summary'' AS RPTTYPE,SUM(ISNULL(EMPCNT,0))-(SUM(ISNULL(AT_WORK,0))+SUM(ISNULL(ON_LEAVE,0))) AS NOT_LOGIN FROM('
-			SET @Strsql+='SELECT COUNT(CNT.cnt_internalId) AS EMPCNT,0 AS AT_WORK,0 AS ON_LEAVE FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND user_inactive=''N'' '
+			SET @Strsql+='SELECT COUNT(CNT.cnt_internalId) AS EMPCNT,0 AS AT_WORK,0 AS ON_LEAVE FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND user_inactive=''N'' '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			IF @STATEID<>''
 				SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			-- Rev 6.0
@@ -555,7 +596,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			else
@@ -570,13 +614,17 @@ BEGIN
 			-- End of Rev 6.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK,0 AS ON_LEAVE '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			--Rev 5.0
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -587,11 +635,11 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId '
 			--SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			--SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK '
-			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
+			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY User_Id,CAST(Work_datetime AS DATE),Isonleave) ATTENLILO ON ATTENLILO.USERID=USR.user_id '
 			SET @Strsql+='WHERE USR.user_inactive=''N'' '
@@ -608,7 +656,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
+					-- End of Rev 13.0
 				end
 			end
 			else
@@ -623,13 +674,17 @@ BEGIN
 			-- End of Rev 6.0
 			SET @Strsql+='UNION ALL '
 			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(ATTENLILO.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTENLILO.ON_LEAVE) END AS ON_LEAVE '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			--Rev 5.0
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			-- Rev 13.0
+			if @ActivateEmployeeBranchHierarchy=0
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 13.0
 			--eND OF Rev 5.0
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -640,14 +695,14 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId '
 			--SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			--SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
 			--Rev 1.0
 			--SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE '
 			--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(DISTINCT Isonleave) ELSE 0 END AS ON_LEAVE '
-			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout '
+			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			--Rev 3.0
 			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) BETWEEN CONVERT(NVARCHAR(10),Leave_FromDate,120) AND CONVERT(NVARCHAR(10),Leave_ToDate,120) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
@@ -669,7 +724,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					-- Rev 13.0
+					--SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId)) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
+					-- End of Rev 13.0
 				end
 			end
 			else
@@ -692,6 +750,7 @@ BEGIN
 		END
 	ELSE IF @ACTION='AT_WORK' AND @RPTTYPE='Summary'
 		BEGIN
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,STATEID,STATE,DESIGNATION,EMPCNT) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,STATEID,STATE,DESIGNATION,COUNT(DESIGNATION) AS EMPCNT '
@@ -702,18 +761,18 @@ BEGIN
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
 			SET @Strsql+='DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,RPTTO.REPORTTO '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
-			SET @Strsql+='INNER JOIN tbl_fts_UserAttendanceLoginlogout ATTEN ON ATTEN.User_Id=USR.user_id AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) ON ATTEN.User_Id=USR.user_id AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
@@ -728,6 +787,7 @@ BEGIN
 	ELSE IF @ACTION='EMP' AND @RPTTYPE='Detail'
 		BEGIN
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,DEPARTMENT) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''EMP'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,'
@@ -737,7 +797,13 @@ BEGIN
 			--Rev 2.0 End
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
@@ -745,18 +811,22 @@ BEGIN
 			--Rev 2.0 Start		
 			SET @Strsql+=' ,DEPT.cost_description as Department '
 			--Rev 2.0 End
-			SET @Strsql+='FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--ET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
@@ -764,18 +834,18 @@ BEGIN
 			--Rev 2.0
 			--Rev 10.0
 			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC WITH (NOLOCK) ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
 			--End of Rev 10.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT WITH (NOLOCK) ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -822,14 +892,17 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					-- Rev 13.0
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			else
 			begin
 				IF  @STATEID<>'' and @BRANCHID<>''
 				BEGIN
-					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user where user_contactid=DB.EMPCODE)) '
+					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user WITH (NOLOCK) where user_contactid=DB.EMPCODE)) '
 				END
 			end
 			-- End of Rev 12.0
@@ -840,6 +913,7 @@ BEGIN
 	ELSE IF @ACTION='AT_WORK' AND @RPTTYPE='Detail'
 		BEGIN
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,LOGGEDIN,LOGEDOUT,'
 			SET @Strsql+='CURRENT_STATUS,TOTAL_HRS_WORKED,GPS_INACTIVE_DURATION,DISTANCE_COVERED,SHOPS_VISITED,TOTAL_ORDER_BOOKED_VALUE,TOTAL_COLLECTION '
@@ -856,7 +930,13 @@ BEGIN
 			--Rev 2.0 End
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
@@ -870,37 +950,41 @@ BEGIN
 			--Rev 2.0 Start		
 			SET @Strsql+=' ,DEPT.cost_description as Department '
 			--Rev 2.0 End
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0
 			--Rev 10.0
 			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC WITH (NOLOCK) ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
 			--End of Rev 10.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT WITH (NOLOCK) ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -914,36 +998,36 @@ BEGIN
 			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SDate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			--SET @Strsql+='GROUP BY User_Id) SHOPUSR ON SHOPUSR.user_id=USR.user_id '
 			SET @Strsql+='INNER JOIN (SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId FROM('
-			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(Login_datetime) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(Login_datetime) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId '
 			SET @Strsql+='UNION ALL '
-			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(Logout_datetime) AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(Logout_datetime) AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId '
 			SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT GPS.User_Id,CNT.cnt_internalId,CAST(ISNULL(CAST((SUM(DATEPART(HOUR,ISNULL(GPS.Duration,''00:00:00'')) * 60)) AS FLOAT) +CAST(SUM(DATEPART(MINUTE,ISNULL(GPS.Duration,''00:00:00'')) * 1) AS FLOAT),0) AS VARCHAR(100)) AS GPS_Inactive_duration '
-			SET @Strsql+='FROM tbl_FTS_GPSSubmission GPS '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=GPS.User_Id '
+			SET @Strsql+='FROM tbl_FTS_GPSSubmission GPS WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=GPS.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),GPS.GPsDate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY GPS.User_Id,CNT.cnt_internalId) GPSSM ON GPSSM.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.total_visit_count) AS shop_visited FROM tbl_trans_shopActivitysubmit SHOPACT '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.total_visit_count) AS shop_visited FROM tbl_trans_shopActivitysubmit SHOPACT WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=SHOPACT.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_date,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ORDH.userID '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=COLLEC.user_id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY COLLEC.user_id,CNT.cnt_internalId) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId) AS DB '
@@ -985,14 +1069,17 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					-- Rev 13.0
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			else
 			begin
 				IF  @STATEID<>'' and @BRANCHID<>''
 				BEGIN
-					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user where user_contactid=DB.EMPCODE)) '
+					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user WITH (NOLOCK) where user_contactid=DB.EMPCODE)) '
 				END
 			end
 			-- End of Rev 12.0
@@ -1004,42 +1091,53 @@ BEGIN
 	ELSE IF @ACTION='AT_WORKTRAVEL' AND @RPTTYPE='Summary'
 		BEGIN
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,DISTANCE_COVERED) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''AT_WORKTRAVEL'' AS ACTION,''Summary'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY EMPCODE) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,'
 			SET @Strsql+='STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,DISTANCE_COVERED FROM('
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
 			SET @Strsql+='DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOUID,RPTTO.REPORTTO,ISNULL(DISTANCE_COVERED,0) AS DISTANCE_COVERED '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
-			SET @Strsql+='INNER JOIN tbl_fts_UserAttendanceLoginlogout ATTEN ON ATTEN.User_Id=USR.user_id AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='INNER JOIN tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) ON ATTEN.User_Id=USR.user_id AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1086,7 +1184,10 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					-- Rev 13.0
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			-- End of Rev 12.0
@@ -1096,6 +1197,7 @@ BEGIN
 	ELSE IF @ACTION='ON_LEAVE' AND @RPTTYPE='Detail'
 		BEGIN
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,REPORTTOUID,REPORTTO,LEAVEDATE,DEPARTMENT) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''ON_LEAVE'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,'
@@ -1106,7 +1208,13 @@ BEGIN
 			SET @Strsql+='FROM('
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
@@ -1114,40 +1222,44 @@ BEGIN
 			--Rev 2.0 Start		
 			SET @Strsql+=' ,DEPT.cost_description as Department '
 			--Rev 2.0 End
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 2.0 Start
 			--Rev 10.0
 			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC WITH (NOLOCK) ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
 			--End of Rev 10.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT WITH (NOLOCK) ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department'' '
 			--Rev 2.0 End
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--Rev 1.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 1.0
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1157,8 +1269,8 @@ BEGIN
 			--End of Rev 11.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			--Rev 1.0
 			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
@@ -1208,14 +1320,17 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					-- Rev 13.0
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			else
 			begin
 				IF  @STATEID<>'' and @BRANCHID<>''
 				BEGIN
-					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user where user_contactid=DB.EMPCODE)) '
+					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user WITH (NOLOCK) where user_contactid=DB.EMPCODE)) '
 				END
 			end
 			-- End of Rev 12.0
@@ -1225,16 +1340,17 @@ BEGIN
 		END
 	ELSE IF @ACTION='NOT_LOGIN' AND @RPTTYPE='Detail'
 		BEGIN
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO #TEMPNOTLOGIN '
 			SET @Strsql+='SELECT DISTINCT '+STR(@USERID)+' AS USERID,''NOT_LOGIN'' AS ACTION,''Summary'' AS RPTTYPE,EMPCODE FROM('
-			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP '
+			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP WITH (NOLOCK) '
 			--Rev 5.0
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -1243,22 +1359,22 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK FROM tbl_fts_UserAttendanceLoginlogout '
+			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY User_Id,CAST(Work_datetime AS DATE),Isonleave) ATTENLILO ON ATTENLILO.USERID=USR.user_id WHERE USR.user_inactive=''N'' '
 			IF @STATEID<>''
 				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
 			SET @Strsql+='UNION ALL '
-			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP '
+			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP WITH (NOLOCK) '
 			--Rev 5.0
 			--SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			--Rev 5.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
@@ -1266,10 +1382,10 @@ BEGIN
 			--SET @Strsql+='FROM tbl_master_employee EMP INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			--End of Rev 5.0
-			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE FROM tbl_fts_UserAttendanceLoginlogout '
+			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			--Rev 1.0
 			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY User_Id,'
 			--Rev 3.0
@@ -1286,6 +1402,7 @@ BEGIN
 			EXEC (@Strsql)
 
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,DEPARTMENT) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''NOT_LOGIN'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,'
@@ -1295,7 +1412,13 @@ BEGIN
 			--Rev 2.0 End
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
@@ -1303,18 +1426,22 @@ BEGIN
 			--Rev 2.0 Start		
 			SET @Strsql+=' ,DEPT.cost_description as Department '
 			--Rev 2.0 End
-			SET @Strsql+='FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
@@ -1322,18 +1449,18 @@ BEGIN
 			--Rev 2.0 Start
 			--Rev 10.0
 			--SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
-			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC WITH (NOLOCK) ON CTC.emp_cntId=CNT.cnt_internalId AND CTC.emp_effectiveuntil IS NULL '
 			--End of Rev 10.0
-			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
+			SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT WITH (NOLOCK) ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 			--Rev 2.0 End
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1381,14 +1508,17 @@ BEGIN
 			begin
 				IF  @STATEID<>'' 
 				BEGIN
-					SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					-- Rev 13.0
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BranchId) '
+					-- End of Rev 13.0
 				END
 			end
 			else
 			begin
 				IF  @STATEID<>'' and @BRANCHID<>''
 				BEGIN
-					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user where user_contactid=DB.EMPCODE)) '
+					SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=(select top 1 user_branchId from tbl_master_user WITH (NOLOCK) where user_contactid=DB.EMPCODE)) '
 				END
 			end
 			-- End of Rev 12.0
@@ -1399,42 +1529,53 @@ BEGIN
 	ELSE IF @ACTION='GRAPH' AND @RPTTYPE='Detail'
 		BEGIN
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''EMP'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,'
 			SET @Strsql+='DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO FROM( '
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
 			SET @Strsql+='DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOUID,RPTTO.REPORTTO '
-			SET @Strsql+='FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1474,6 +1615,7 @@ BEGIN
 			EXEC SP_EXECUTESQL @Strsql
 
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,REPORTTOUID,REPORTTO,LOGGEDIN,LOGEDOUT,'
 			SET @Strsql+='GPS_INACTIVE_DURATION,DISTANCE_COVERED,SHOPS_VISITED,TOTAL_ORDER_BOOKED_VALUE,TOTAL_COLLECTION) '
@@ -1483,7 +1625,13 @@ BEGIN
 			SET @Strsql+='DISTANCE_COVERED,Shops_Visited,Total_Order_Booked_Value,Total_Collection FROM('
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
@@ -1491,30 +1639,34 @@ BEGIN
 			SET @Strsql+='CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(ATTEN.LOGEDOUT,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(ATTEN.LOGEDOUT,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 			SET @Strsql+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(ATTEN.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(ATTEN.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS Total_Hrs_Worked,'
 			SET @Strsql+='ISNULL(GPSSM.GPS_Inactive_duration,0) AS GPS_Inactive_duration,ISNULL(DISTANCE_COVERED,0) AS DISTANCE_COVERED,ISNULL(SHOPACT.shop_visited,0) AS Shops_Visited,ISNULL(ORDHEAD.Ordervalue,0) AS Total_Order_Booked_Value,ISNULL(COLLEC.collectionvalue,0) AS Total_Collection '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1524,40 +1676,40 @@ BEGIN
 			--End of Rev 11.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN (SELECT User_Id,SUM(CAST(DISTANCE_COVERED AS DECIMAL(18,2))) AS DISTANCE_COVERED FROM tbl_trans_shopuser '
+			SET @Strsql+='INNER JOIN (SELECT User_Id,SUM(CAST(DISTANCE_COVERED AS DECIMAL(18,2))) AS DISTANCE_COVERED FROM tbl_trans_shopuser WITH (NOLOCK) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SDate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY User_Id) SHOPUSR ON SHOPUSR.user_id=USR.user_id '
 			SET @Strsql+='INNER JOIN (SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId FROM('
-			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(Login_datetime) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(Login_datetime) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId '
 			SET @Strsql+='UNION ALL '
-			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(Logout_datetime) AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(Logout_datetime) AS LOGEDOUT,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId '
 			SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT GPS.User_Id,CNT.cnt_internalId,CAST(ISNULL(CAST((SUM(DATEPART(HOUR,ISNULL(GPS.Duration,''00:00:00'')) * 60)) AS FLOAT) +CAST(SUM(DATEPART(MINUTE,ISNULL(GPS.Duration,''00:00:00'')) * 1) AS FLOAT),0) AS VARCHAR(100)) AS GPS_Inactive_duration '
-			SET @Strsql+='FROM tbl_FTS_GPSSubmission GPS '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=GPS.User_Id '
+			SET @Strsql+='FROM tbl_FTS_GPSSubmission GPS WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=GPS.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),GPS.GPsDate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY GPS.User_Id,CNT.cnt_internalId) GPSSM ON GPSSM.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.total_visit_count) AS shop_visited FROM tbl_trans_shopActivitysubmit SHOPACT '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=SHOPACT.User_Id '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT SHOPACT.User_Id,CNT.cnt_internalId,COUNT(SHOPACT.total_visit_count) AS shop_visited FROM tbl_trans_shopActivitysubmit SHOPACT WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=SHOPACT.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_date,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId) SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue FROM tbl_trans_fts_Orderupdate ORDH WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ORDH.userID '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=COLLEC.user_id '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=COLLEC.user_id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY COLLEC.user_id,CNT.cnt_internalId) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId) AS DB '
@@ -1592,41 +1744,52 @@ BEGIN
 			EXEC SP_EXECUTESQL @Strsql
 
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,REPORTTOUID,REPORTTO,LEAVEDATE) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''ON_LEAVE'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,'
 			SET @Strsql+='DEG_ID,DESIGNATION,REPORTTOUID,REPORTTO,LEAVEDATE FROM('
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
 			SET @Strsql+='DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,RPTTO.REPORTTOUID,RPTTO.REPORTTO,CONVERT(VARCHAR(10),ATTEN.LEAVEDATE,105) +'' ''+ CONVERT(VARCHAR(15),CAST(ATTEN.LEAVEDATE AS TIME),100) AS LEAVEDATE '
-			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 12.0
 			--End of Rev 8.0
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			IF @IsShowOnlyDSTLInDashboard='0'
@@ -1636,8 +1799,8 @@ BEGIN
 			--End of Rev 11.0
 			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL '
 			SET @Strsql+=') RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,Work_datetime AS LEAVEDATE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''true'' '
@@ -1673,31 +1836,32 @@ BEGIN
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO #TEMPNOTLOGIN '
 			SET @Strsql+='SELECT DISTINCT '+STR(@USERID)+' AS USERID,''NOT_LOGIN'' AS ACTION,''Summary'' AS RPTTYPE,EMPCODE FROM('
-			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,USR.user_id,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO '
-			SET @Strsql+='FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK FROM tbl_fts_UserAttendanceLoginlogout '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
 			SET @Strsql+='GROUP BY User_Id,CAST(Work_datetime AS DATE),Isonleave) ATTENLILO ON ATTENLILO.USERID=USR.user_id WHERE USR.user_inactive=''N'' '
 			SET @Strsql+='UNION ALL '
-			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMPCTC.emp_cntId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,USR.user_id,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO '
-			SET @Strsql+='FROM tbl_master_employee EMP INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE FROM tbl_fts_UserAttendanceLoginlogout '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY User_Id,'
 			SET @Strsql+='CAST(Work_datetime AS DATE),Isonleave) ATTENLILO ON ATTENLILO.USERID=USR.user_id WHERE USR.user_inactive=''N'' '
 			SET @Strsql+=') AS NOTLOGIN '
@@ -1705,41 +1869,52 @@ BEGIN
 			EXEC (@Strsql)
 
 			--Rev 8.0 && Some new fields have been added as BRANCHID,BRANCH,EMPID & REPORTTOUID
+			--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO) '
 			SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,''NOT_LOGIN'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCHID,BRANCH,EMPID,EMPCODE,EMPNAME,STATEID,STATE,'
 			SET @Strsql+='DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO FROM('
 			--Rev 4.0
 			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
-			SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			-- Rev 13.0
+			--SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			IF(@ActivateEmployeeBranchHierarchy = 0)
+				SET @Strsql+='SELECT BMAP.BranchId AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			ELSE IF(@ActivateEmployeeBranchHierarchy = 1)
+				SET @Strsql+='SELECT BR.BRANCH_ID AS BRANCHID,BR.BRANCH_DESCRIPTION AS BRANCH,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
+			--End of Rev 13.0
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,'
 			--End of Rev 4.0
 			SET @Strsql+='DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOUID,RPTTO.REPORTTO '
-			SET @Strsql+='FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 8.0
 			-- Rev 12.0
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				-- Rev 13.0
+				--SET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				-- End of Rev 13.0
 			end
 			else
 			begin
-				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of 12.0
 			--End of Rev 8.0
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+			SET @Strsql+='LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG '
 			SET @Strsql+='ON DESG.emp_cntId=EMP.emp_contactId '
 			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,CNT.cnt_UCC AS REPORTTOUID,'
-			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP '
-			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO FROM tbl_master_employee EMP WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
 			--Rev 11.0
 			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId WHERE emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
 			IF @IsShowOnlyDSTLInDashboard='0'
