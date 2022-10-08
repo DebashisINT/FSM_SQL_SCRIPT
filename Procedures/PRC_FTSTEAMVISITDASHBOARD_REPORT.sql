@@ -351,6 +351,10 @@ BEGIN
 			-- End of Rev 9.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			--Rev 1.0
 			--IF @STATEID<>''
 			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
@@ -408,6 +412,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK '
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
@@ -452,6 +461,13 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' ' 
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN (SELECT ATTEN.User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(Isonleave) ELSE 0 END AS ON_LEAVE,CNT.cnt_internalId FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND ATTEN.Login_datetime IS NOT NULL AND ATTEN.Logout_datetime IS NULL AND ATTEN.Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,ATTEN.Isonleave) ATTEN '
@@ -494,6 +510,10 @@ BEGIN
 			-- End of Rev 9.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			--Rev 1.0
 			--IF @STATEID<>''
 			--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
@@ -546,6 +566,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''false'' THEN COUNT(Isonleave) ELSE 0 END AS AT_WORK '
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
@@ -583,6 +608,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+			-- End of Rev 9.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN (SELECT User_Id AS USERID,CASE WHEN Isonleave=''true'' THEN COUNT(DISTINCT Isonleave) ELSE 0 END AS ON_LEAVE '
 			SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout WITH (NOLOCK) '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),Work_datetime,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
@@ -638,6 +668,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -723,11 +759,14 @@ BEGIN
 				--ET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
 				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
 				-- End of Rev 9.0
 			end
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -850,6 +889,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -986,6 +1031,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -1097,6 +1148,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -1192,6 +1249,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -1236,6 +1299,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -1299,6 +1368,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 2.0
@@ -1399,6 +1474,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 1.0
@@ -1499,6 +1580,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 2.0
@@ -1607,6 +1694,12 @@ BEGIN
 			else
 			begin
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON USR.user_branchId=BR.branch_id '
+				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON BMAP.BranchId=BR.branch_id '
+			end
+			else
+			begin
+				SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			end
 			-- End of Rev 9.0
 			--End of Rev 2.0
