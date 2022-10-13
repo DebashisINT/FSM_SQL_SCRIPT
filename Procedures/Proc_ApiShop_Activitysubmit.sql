@@ -20,6 +20,7 @@ As
 										- It should be updated in case of New Visit then visit date will be updated.
 										- And In case of Revisit, the last visit date shall be updated for the shop.
 										Now it has been taken care off.Refer: 0024614
+6.0			Debashis	13-10-2022		Changes in API name - Shopsubmission/ShopVisited.Refer: 0025362
 *****************************************************************************************************************************************/
 BEGIN
 	BEGIN TRAN
@@ -27,27 +28,34 @@ BEGIN
 			 DECLARE @datenew datetime=GETDATE()
 
 			 DECLARE @OUTSTATION_DISTANCE DECIMAL(18,2)=(select value from FTS_APP_CONFIG_SETTINGS where [key]='OutStationDitance')
-
-			 INSERT  INTO  tbl_trans_shopActivitysubmit ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count
-			 ,Createddate,Is_Newshopadd,distance_travelled
-						--Rev 1.0 Start
-					   ,REMARKS
-					   --Rev 1.0 End
-					   --Rev 2.0 Start
-					   ,IsFirstVisit,IsOutStation,Outstation_Distance
-					   --Rev 2.0 End
-					   ,early_revisit_reason,device_model,android_version,battery,net_status,net_type
-					   ,CheckIn_Time
-						,CheckOut_Time
-						,start_timestamp
-						,CheckIn_Address,CheckOut_Address
-						,Revisit_Code
-						--Rev 4.0
-						,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
-						--End of Rev 4.0
+			 --Rev 6.0
+			 --INSERT  INTO  tbl_trans_shopActivitysubmit ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count
+			 IF NOT EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) 
+			 INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
+			 INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')
+			 WHERE tbl_trans_shopActivitysubmit.User_Id=@user_id)
+				BEGIN
+			--End of Rev 6.0
+					INSERT INTO tbl_trans_shopActivitysubmit WITH(TABLOCK)([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count
+					,Createddate,Is_Newshopadd,distance_travelled
+					--Rev 1.0 Start
+					,REMARKS
+					--Rev 1.0 End
+					--Rev 2.0 Start
+					,IsFirstVisit,IsOutStation,Outstation_Distance
+					--Rev 2.0 End
+					,early_revisit_reason,device_model,android_version,battery,net_status,net_type
+					,CheckIn_Time
+					,CheckOut_Time
+					,start_timestamp
+					,CheckIn_Address,CheckOut_Address
+					,Revisit_Code
+					--Rev 4.0
+					,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
+					--End of Rev 4.0
 					)
 	
-					select distinct @user_id,
+					SELECT DISTINCT @user_id,
 					XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	,
 					XMLproduct.value('(visited_date/text())[1]','date')	,
 					XMLproduct.value('(visited_time/text())[1]','datetime'),
@@ -85,51 +93,74 @@ BEGIN
 					,XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 					,XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
 					--End of Rev 4.0
-					from
-					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
-					inner join tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
-					WHERE NOT EXISTS(select ActivityId from  tbl_trans_shopActivitysubmit where  shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+					--Rev 6.0
+			--		from
+			--		@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			--		inner join tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
+			--		WHERE NOT EXISTS(select ActivityId from  tbl_trans_shopActivitysubmit where  shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
 
-					UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
-					distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
-					,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
-					,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
-					,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
-					,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
-					,battery=XMLproduct.value('(battery/text())[1]','varchar(100)')
-					,net_status=XMLproduct.value('(net_type/text())[1]','varchar(100)')
-					,net_type=XMLproduct.value('(net_type/text())[1]','varchar(100)')
-					,CheckIn_Time=XMLproduct.value('(in_time/text())[1]','varchar(100)')
-					,CheckOut_Time=XMLproduct.value('(out_time/text())[1]','varchar(100)')
-					,start_timestamp=XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
-					,CheckIn_Address=XMLproduct.value('(in_location/text())[1]','varchar(100)')
-					,CheckOut_Address=XMLproduct.value('(out_location/text())[1]','varchar(100)')
-					,Revisit_Code=XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
-					--Rev 4.0
-					,Pros_Id=XMLproduct.value('(pros_id/text())[1]','bigint')
-					,Updated_by=XMLproduct.value('(updated_by/text())[1]','bigint')
-					,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
-					,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
-					,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
-					--End of Rev 4.0
-					from tbl_trans_shopActivitysubmit TTSAS
-					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
-					ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	 and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
-					and spent_duration='00:00:00'
+			--		UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
+			--		distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
+			--		,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+			--		,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
+			--		,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
+			--		,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
+			--		,battery=XMLproduct.value('(battery/text())[1]','varchar(100)')
+			--		,net_status=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+			--		,net_type=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+			--		,CheckIn_Time=XMLproduct.value('(in_time/text())[1]','varchar(100)')
+			--		,CheckOut_Time=XMLproduct.value('(out_time/text())[1]','varchar(100)')
+			--		,start_timestamp=XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
+			--		,CheckIn_Address=XMLproduct.value('(in_location/text())[1]','varchar(100)')
+			--		,CheckOut_Address=XMLproduct.value('(out_location/text())[1]','varchar(100)')
+			--		,Revisit_Code=XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
+			--		--Rev 4.0
+			--		,Pros_Id=XMLproduct.value('(pros_id/text())[1]','bigint')
+			--		,Updated_by=XMLproduct.value('(updated_by/text())[1]','bigint')
+			--		,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
+			--		,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
+			--		,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+			--		--End of Rev 4.0
+			--		from tbl_trans_shopActivitysubmit TTSAS
+			--		INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			--		ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	 and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
+			--		and spent_duration='00:00:00'
 
-					--Rev 5.0
+			--		--Rev 5.0
+			--		UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
+			--		FROM [tbl_Master_shop] MS
+			--		INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			--		ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+			--		--End of Rev 5.0
+			--select
+			--XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
+			--XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
+			--XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
+			--XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
+			--XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
+			--FROM  @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					
+					FROM
+					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')
+					WHERE NOT EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+
 					UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
-					FROM [tbl_Master_shop] MS
+					FROM [tbl_Master_shop] MS WITH(NOLOCK)
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
-					--End of Rev 5.0
-			select
-			XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
-			XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
-			XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
-			XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
-			XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
-			FROM  @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+
+					SELECT
+					XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
+					XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
+					XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
+					XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
+					XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
+					FROM  @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
+					WHERE EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+				END
+			--End of Rev 6.0
 
 		COMMIT TRAN
 	END TRY
