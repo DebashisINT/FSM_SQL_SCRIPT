@@ -38,6 +38,7 @@ As
 2.0					TANMOY		10-04-2021		Extra patient details insert
 3.0		v2.0.26		Debashis	29-12-2021		Enhancement done for Row No. 597
 4.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 606 & 607
+5.0		v2.0.33		Debashis	13-10-2022		Product_Qty length has been increased.Refer: 25368
 *************************************************************************************************************************************/
 BEGIN
 
@@ -73,10 +74,11 @@ BEGIN
 				BEGIN
 					--Rev 3.0 && Three new columns Scheme_Qty,Scheme_Rate & Total_Scheme_Price has been added.
 					--Rev 4.0 && A new column added as MRP
+					--Rev 5.0 && Column size increase from XMLproduct.value('(qty/text())[1]','decimal(18,2)')	to XMLproduct.value('(qty/text())[1]','decimal(18,3)')
 					INSERT  INTO  tbl_FTs_OrderdetailsProduct (Order_ID,Product_Id,Product_Qty,Product_Rate,Product_Price,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,Shop_code,User_Id)
 					select distinct @OrderUniqueId,
 					XMLproduct.value('(id/text())[1]','bigint')	,
-					XMLproduct.value('(qty/text())[1]','decimal(18,2)')	,
+					XMLproduct.value('(qty/text())[1]','decimal(18,3)')	,
 					XMLproduct.value('(rate/text())[1]','decimal(18,2)')	,
 					XMLproduct.value('(total_price/text())[1]','decimal(18,2)'),
 					XMLproduct.value('(scheme_qty/text())[1]','decimal(18,2)'),
