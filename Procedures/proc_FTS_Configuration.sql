@@ -150,7 +150,8 @@ BEGIN
 	132.0		Debashis	15-09-2022	ADD SETTINGS @Action=GlobalCheck' IsDistributorSelectionRequiredinAttendance.Row 740
 	133.0		Debashis	22-09-2022	ADD SETTINGS @Action='UserCheck' GPSNetworkIntervalMins.Row 741
 	*****************************************************************************************************************************************************************************/ 
-	
+	SET NOCOUNT ON
+
 	DECLARE @max_accuracy varchar(50)
 	DECLARE @min_accuracy varchar(50)
 	DECLARE @min_distance varchar(50)
@@ -1548,4 +1549,6 @@ BEGIN
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 133.0
 	END
+
+	SET NOCOUNT OFF
 END

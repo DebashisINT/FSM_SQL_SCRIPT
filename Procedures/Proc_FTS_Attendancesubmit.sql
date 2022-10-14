@@ -6,36 +6,36 @@ EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Proc_FTS_Attendancesubmi
 END
 GO
 
-ALTER  PROCEDURE [dbo].[Proc_FTS_Attendancesubmit]
+ALTER PROCEDURE [dbo].[Proc_FTS_Attendancesubmit]
 (
-@user_id varchar(MAX),
-@wtype   varchar(MAX)=NULL,
-@wdesc varchar(MAX)=NULL,
-@wlatitude varchar(MAX)=NULL,
-@wlongitude varchar(MAX)=NULL,
-@Waddress varchar(MAX)=NULL,
+@user_id NVARCHAR(MAX),
+@wtype NVARCHAR(MAX)=NULL,
+@wdesc NVARCHAR(MAX)=NULL,
+@wlatitude NVARCHAR(MAX)=NULL,
+@wlongitude NVARCHAR(MAX)=NULL,
+@Waddress NVARCHAR(MAX)=NULL,
 @Wdatetime datetime=NULL,
-@Isonleave varchar(50)=NULL,
-@SessionToken varchar(MAX)=NULL,
+@Isonleave NVARCHAR(50)=NULL,
+@SessionToken NVARCHAR(MAX)=NULL,
 @add_attendence_time varchar(50)=NULL,
-@RouteID   varchar(MAX)=NULL,
+@RouteID NVARCHAR(MAX)=NULL,
 @ShopList_List XML=NULL,
 @Target_List XML=NULL,
-@leave_from_date  varchar(MAX)=NULL,
-@leave_to_date  varchar(MAX)=NULL,
-@leave_type  varchar(MAX)=NULL,
-@order_taken varchar(MAX)=NULL,
-@collection_taken varchar(MAX)=NULL,
-@new_shop_visit varchar(MAX)=NULL ,
-@revisit_shop varchar(MAX)=NULL,
-@state_id varchar(MAX)=NULL,
+@leave_from_date NVARCHAR(MAX)=NULL,
+@leave_to_date NVARCHAR(MAX)=NULL,
+@leave_type NVARCHAR(MAX)=NULL,
+@order_taken NVARCHAR(MAX)=NULL,
+@collection_taken NVARCHAR(MAX)=NULL,
+@new_shop_visit NVARCHAR(MAX)=NULL ,
+@revisit_shop NVARCHAR(MAX)=NULL,
+@state_id NVARCHAR(MAX)=NULL,
 @Distributor_Name NVARCHAR(500)=NULL,
 @Market_Worked NVARCHAR(500)=NULL,
 ----REV 3.0 START
 @IsNoPlanUpdate NVARCHAR(5)=NULL,
 ----REV 3.0 END
 --REV 6.0 START
-@leave_reason nvarchar(500)=null,
+@leave_reason NVARCHAR(500)=null,
 --REV 6.0 END
 --REV 9.0 START
 @from_Areaid NVARCHAR(100)=null,
@@ -61,15 +61,16 @@ As
 10.0				Tanmoy      08-12-2020      add new column STATICDISTANCE
 11.0	v2.0.32		Debashis	09-08-2022		New column has been added.Row: 725
 ************************************************************************************************/ 
-Begin
-   
+BEGIN
+	SET NOCOUNT ON
+
 	declare @InternalID varchar(50)
 	declare @identity varchar(50)
 	declare @SQL nvarchar(MAX)
 	declare @val nvarchar(MAX)
 	declare @datefetch datetime =GETDATE()
-	set @InternalID=(select  user_contactId  from tbl_master_user where user_id=@user_id)
-	set @SessionToken=right(@SessionToken,10)+convert(varchar(100),@datefetch,109)
+	set @InternalID=(select user_contactId from tbl_master_user WITH(NOLOCK) where user_id=@user_id)
+	set @SessionToken=right(@SessionToken,10)+convert(Nvarchar(100),@datefetch,109)
 	--if exists(select  User_Id from tbl_fleet_UserAttendance where User_Id=@user_id and Login_datetime is not null)
 	--BEgin
 	declare @sqlyyMM varchar(50)
@@ -80,7 +81,7 @@ Begin
 
 	DECLARE @STATICDISTANCE NUMERIC(18,2)
 
-	SET @STATICDISTANCE=(SELECT ISNULL(Distance,0) FROM FTS_AreaDistance WHERE From_AreaID=@from_Areaid AND To_AreaID=@to_Areaid)
+	SET @STATICDISTANCE=(SELECT ISNULL(Distance,0) FROM FTS_AreaDistance WITH(NOLOCK) WHERE From_AreaID=@from_Areaid AND To_AreaID=@to_Areaid)
 
 	if(@leave_from_date ='')
 	SET @leave_from_date=null
@@ -106,13 +107,13 @@ Begin
 	---REV 5.0
 	DECLARE @VALIDATION_LEAVE BIT=1
 
-	IF EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CAST(@leave_from_date AS date) BETWEEN 
+	IF EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WITH(NOLOCK) WHERE USER_ID=@user_id AND CAST(@leave_from_date AS date) BETWEEN 
 	CAST(LEAVE_START_DATE AS date) AND CAST(LEAVE_END_DATE  AS date) AND CURRENT_STATUS IN ('APPROVE','PENDING') AND @Isonleave='TRUE')
 		BEGIN
 			SET @VALIDATION_LEAVE=0
 		END
 
-	IF EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CAST(@leave_to_date AS date) BETWEEN 
+	IF EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WITH(NOLOCK) WHERE USER_ID=@user_id AND CAST(@leave_to_date AS date) BETWEEN 
 	CAST(LEAVE_START_DATE AS date) AND CAST(LEAVE_END_DATE  AS date)AND CURRENT_STATUS IN ('APPROVE','PENDING')AND @Isonleave='TRUE')
 		BEGIN
 		SET @VALIDATION_LEAVE=0
@@ -121,7 +122,7 @@ Begin
 
 	DECLARE @VALIDATION_ATWORK BIT=1
 
-    IF  EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CAST(getdate() AS date) BETWEEN 
+    IF  EXISTS(SELECT 1 FROM FTS_USER_LEAVEAPPLICATION WITH(NOLOCK) WHERE USER_ID=@user_id AND CAST(getdate() AS date) BETWEEN 
 	CAST(LEAVE_START_DATE AS date) AND CAST(LEAVE_END_DATE  AS date) AND CURRENT_STATUS IN ('APPROVE','PENDING') AND @Isonleave='FALSE')
 		BEGIN
 			SET @VALIDATION_ATWORK=0
@@ -135,10 +136,10 @@ Begin
 				set @datefetch=GETDATE()
 				set @sqlyyMM =SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),3,2) +  SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),5,2)
 
-				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
+				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
 				BEGIN
 					--Rev 11.0 &&Added a new column as Beat_ID
-					insert into tbl_fts_UserAttendanceLoginlogout (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
+					insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 					Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 					--REV 9.0 START
 					,From_AreaId,To_AreaId,Distance
@@ -172,13 +173,13 @@ Begin
 
 						if(isnull(@order_taken,'')<>'' and isnull(@collection_taken,'')<>'' and isnull(@new_shop_visit,'')<>'' and isnull(@revisit_shop,'')<>'' and @Isonleave='false')
 						BEGIN
-							insert into FTS_Attendance_Target(Attendanceid,UserID,Order_taken,Collection_taken,New_shop_visit,Revisit_shop,Createddate,CreatedBy)
+							insert into FTS_Attendance_Target WITH(TABLOCK) (Attendanceid,UserID,Order_taken,Collection_taken,New_shop_visit,Revisit_shop,Createddate,CreatedBy)
 							values(@identity,@user_id,@order_taken,@collection_taken,@new_shop_visit,@revisit_shop,GETDATE(),@user_id)
 						END
 
 						if(@ShopList_List is not null)
 						BEGIN
-							INSERT  INTO  tbl_attendance_RouteShop(attendanceid,RouteID,ShopID,UserID)
+							INSERT  INTO  tbl_attendance_RouteShop WITH(TABLOCK) (attendanceid,RouteID,ShopID,UserID)
 							select @identity,XMLproduct.value('(route/text())[1]','bigint')	,XMLproduct.value('(shop_id/text())[1]','varchar(MAX)')	
 							,@user_id FROM  @ShopList_List.nodes('/root/data')AS TEMPTABLE(XMLproduct)   
 						END
@@ -187,22 +188,22 @@ Begin
 
 					--------------------------Attendane Main table Synchronization------------------------------------------
 
-					INSERT INTO  tbl_EmpAttendanceDetails (Emp_InternalId,LogTime)values(@InternalID,@datefetch)
+					INSERT INTO  tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@datefetch)
 
-					IF NOT exists(select  *  from tbl_Employee_Attendance where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+					IF NOT exists(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
 						BEGIN
 
-							INSERT INTO tbl_Employee_Attendance(UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
+							INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
 							values (@SessionToken,@InternalID,@datefetch,null,NULL,@user_id,@datefetch,@sqlyyMM,case when  @Isonleave='false' then  'P' else 'AB' end,'')
 						END
 					ELSE
 						BEGIN
-						update tbl_Employee_Attendance set Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
+						update tbl_Employee_Attendance WITH(TABLOCK) set Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
 						END
 
-					IF NOT exists(select  *  from tbl_EmpWiseAttendanceStatus where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+					IF NOT exists(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
 						BEGIN
-							insert into tbl_EmpWiseAttendanceStatus(Emp_InternalId,YYMM)
+							insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
 							VALUES(@InternalID,@sqlyyMM)
 							if(@Isonleave='true')
 							set @val='AB'
@@ -257,19 +258,19 @@ Begin
 									END
 									--Rev 4.0 End
 
-									IF NOT EXISTS (SELECT * FROM FTS_UserDalyFundPlan WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND CAST(PLAN_DATE AS DATE)=CAST(@PLAN_DATE AS DATE))
+									IF NOT EXISTS (SELECT PLAN_ID FROM FTS_UserDalyFundPlan WITH(NOLOCK) WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND CAST(PLAN_DATE AS DATE)=CAST(@PLAN_DATE AS DATE))
 										BEGIN
-											INSERT INTO FTS_UserDalyFundPlan (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+											INSERT INTO FTS_UserDalyFundPlan WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 											VALUES (@User_id,@PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_DATE,@ACHIV_REMARKS,GETDATE())
 										END
 									ELSE
 										BEGIN
-											UPDATE FTS_UserDalyFundPlan SET PLAN_AMT=@PLAN_AMT,PLAN_REMARKS=@PLAN_REMARKS,ACHIV_AMT=@ACHIV_AMT,ACHIV_DATE=@ACHIV_DATE,
+											UPDATE FTS_UserDalyFundPlan WITH(TABLOCK) SET PLAN_AMT=@PLAN_AMT,PLAN_REMARKS=@PLAN_REMARKS,ACHIV_AMT=@ACHIV_AMT,ACHIV_DATE=@ACHIV_DATE,
 											ACHIV_REMARKS=@ACHIV_REMARKS,UPDATE_DATE=GETDATE()
 											WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND PLAN_DATE=@PLAN_DATE
 										END
 
-									INSERT INTO FTS_UserDalyFundPlan_LOG (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+									INSERT INTO FTS_UserDalyFundPlan_LOG WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 											VALUES (@User_id,@PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_DATE,@ACHIV_REMARKS,GETDATE())
 
 									FETCH NEXT FROM FUNDPLAN_CURSOR INTO  @PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_REMARKS
@@ -281,13 +282,13 @@ Begin
 					ELSE
 						BEGIN
 						--Rev 8.0 Start
-							IF (SELECT IsShowPlanDetails FROM tbl_master_user WHERE user_contactId=@InternalID)=1
+							IF (SELECT IsShowPlanDetails FROM tbl_master_user WITH(NOLOCK) WHERE user_contactId=@InternalID)=1
 							--Rev 8.0 End
 								BEGIN
-									INSERT INTO FTS_UserDalyFundPlan (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+									INSERT INTO FTS_UserDalyFundPlan WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 									VALUES (@User_id,(SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='NoPlanID'),0,GETDATE(),'',0,GETDATE(),'',GETDATE())
 
-									INSERT INTO FTS_UserDalyFundPlan_LOG (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+									INSERT INTO FTS_UserDalyFundPlan_LOG WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 									VALUES (@User_id,(SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='NoPlanID'),0,GETDATE(),'',0,GETDATE(),'',GETDATE())
 								END
 						END
@@ -302,10 +303,10 @@ Begin
 				set @datefetch=@Wdatetime
 				set @sqlyyMM =SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),3,2) +  SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),5,2)
 				--select @sqlyyMM
-				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
+				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
 					BEGIN
 						--Rev 11.0 &&Added a new column as Beat_ID
-						insert into tbl_fts_UserAttendanceLoginlogout (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
+						insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 						Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 						--REV 9.0 START
 						,From_AreaId,To_AreaId,Distance
@@ -339,7 +340,7 @@ Begin
 
 							if(isnull(@order_taken,'')<>'' and isnull(@collection_taken,'')<>'' and isnull(@new_shop_visit,'')<>'' and isnull(@revisit_shop,'')<>'' and @Isonleave='false')
 							BEGIN
-								insert into FTS_Attendance_Target(Attendanceid,UserID,Order_taken,Collection_taken,New_shop_visit,Revisit_shop,Createddate,CreatedBy)
+								insert into FTS_Attendance_Target WITH(TABLOCK) (Attendanceid,UserID,Order_taken,Collection_taken,New_shop_visit,Revisit_shop,Createddate,CreatedBy)
 								values(@identity,@user_id,@order_taken,@collection_taken,@new_shop_visit,@revisit_shop,GETDATE(),@user_id)
 							END
 
@@ -347,7 +348,7 @@ Begin
 
 							if(@ShopList_List is not null)
 							BEGIN
-								INSERT  INTO  tbl_attendance_RouteShop(attendanceid,RouteID,ShopID,UserID)
+								INSERT INTO tbl_attendance_RouteShop WITH(TABLOCK) (attendanceid,RouteID,ShopID,UserID)
 								select @identity,XMLproduct.value('(route/text())[1]','bigint')	,
 								XMLproduct.value('(shop_id/text())[1]','varchar(MAX)'),@user_id
 								FROM  @ShopList_List.nodes('/root/data')AS TEMPTABLE(XMLproduct)   
@@ -357,7 +358,7 @@ Begin
 
 							if(@Target_List is not null)
 							BEGIN
-								INSERT  INTO  FTS_Attendance_Target_Statewise (Attendanceid,UserID,State_Id,Target_Value,Createddate)
+								INSERT INTO FTS_Attendance_Target_Statewise WITH(TABLOCK) (Attendanceid,UserID,State_Id,Target_Value,Createddate)
 								select @identity,@user_id,XMLproduct.value('(id/text())[1]','bigint')	,
 								XMLproduct.value('(primary_value/text())[1]','decimal(18,2)')	,GETDATE()
 								FROM  @Target_List.nodes('/root/data')AS TEMPTABLE(XMLproduct)   
@@ -368,11 +369,11 @@ Begin
 
 						--------------------------Attendane Main table Synchronization------------------------------------------
 
-						INSERT INTO  tbl_EmpAttendanceDetails (Emp_InternalId,LogTime)values(@InternalID,@Wdatetime)
+						INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@Wdatetime)
 
-						IF NOT exists(select  *  from tbl_Employee_Attendance where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+						IF NOT exists(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
 							BEGIN
-								INSERT INTO tbl_Employee_Attendance(UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
+								INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
 								values (@SessionToken,@InternalID,case when  @Isonleave='false' then @datefetch else NULL end
 								,case when  @Isonleave='false' then @Wdatetime else NULL end,NULL,@user_id,@datefetch
 								--,right(datepart(yy,@datefetch),2)+ +RIGHT('00' + CAST(DATEPART(mm, @datefetch) AS varchar(2)), 2)
@@ -381,12 +382,12 @@ Begin
 							END
 						ELSE
 							BEGIN
-							update tbl_Employee_Attendance set Out_Time=case when  @Isonleave='true' then @datefetch else NULL end   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
+							update tbl_Employee_Attendance WITH(TABLOCK) set Out_Time=case when  @Isonleave='true' then @datefetch else NULL end   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
 							END
 
-						IF NOT exists(select  *  from tbl_EmpWiseAttendanceStatus where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+						IF NOT exists(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
 							BEGIN
-								insert into tbl_EmpWiseAttendanceStatus(Emp_InternalId,YYMM)
+								insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
 								VALUES(@InternalID,@sqlyyMM)
 								if(@Isonleave='true')
 								set @val='AB'
@@ -441,19 +442,19 @@ Begin
 										END
 										--Rev 4.0 End
 
-										IF NOT EXISTS (SELECT * FROM FTS_UserDalyFundPlan WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND CAST(PLAN_DATE AS DATE)=CAST(@PLAN_DATE AS DATE))
+										IF NOT EXISTS (SELECT PLAN_ID FROM FTS_UserDalyFundPlan WITH(NOLOCK) WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND CAST(PLAN_DATE AS DATE)=CAST(@PLAN_DATE AS DATE))
 											BEGIN
-												INSERT INTO FTS_UserDalyFundPlan (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+												INSERT INTO FTS_UserDalyFundPlan WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 												VALUES (@User_id,@PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_DATE,@ACHIV_REMARKS,GETDATE())
 											END
 										ELSE
 											BEGIN
-												UPDATE FTS_UserDalyFundPlan SET PLAN_AMT=@PLAN_AMT,PLAN_REMARKS=@PLAN_REMARKS,ACHIV_AMT=@ACHIV_AMT,ACHIV_DATE=@ACHIV_DATE,
+												UPDATE FTS_UserDalyFundPlan WITH(TABLOCK) SET PLAN_AMT=@PLAN_AMT,PLAN_REMARKS=@PLAN_REMARKS,ACHIV_AMT=@ACHIV_AMT,ACHIV_DATE=@ACHIV_DATE,
 												ACHIV_REMARKS=@ACHIV_REMARKS,UPDATE_DATE=GETDATE()
 												WHERE USER_ID=@User_id AND PLAN_ID=@PLAN_ID AND PLAN_DATE=@PLAN_DATE
 											END
 
-										INSERT INTO FTS_UserDalyFundPlan_LOG (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+										INSERT INTO FTS_UserDalyFundPlan_LOG WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 												VALUES (@User_id,@PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_DATE,@ACHIV_REMARKS,GETDATE())
 
 										FETCH NEXT FROM FUNDPLAN_CURSOR INTO  @PLAN_ID,@PLAN_AMT,@PLAN_DATE,@PLAN_REMARKS,@ACHIV_AMT,@ACHIV_REMARKS
@@ -465,13 +466,13 @@ Begin
 						ELSE
 							BEGIN
 							--Rev 8.0 Start
-							IF (SELECT IsShowPlanDetails FROM tbl_master_user WHERE user_contactId=@InternalID)=1
+							IF (SELECT IsShowPlanDetails FROM tbl_master_user WITH(NOLOCK) WHERE user_contactId=@InternalID)=1
 							--Rev 8.0 End
 								BEGIN
-									INSERT INTO FTS_UserDalyFundPlan (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+									INSERT INTO FTS_UserDalyFundPlan WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 									VALUES (@User_id,(SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='NoPlanID'),0,GETDATE(),'',0,GETDATE(),'',GETDATE())
 
-									INSERT INTO FTS_UserDalyFundPlan_LOG (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
+									INSERT INTO FTS_UserDalyFundPlan_LOG WITH(TABLOCK) (USER_ID,PLAN_ID,PLAN_AMT,PLAN_DATE,PLAN_REMARKS,ACHIV_AMT,ACHIV_DATE,ACHIV_REMARKS,CREATE_DATE)
 									VALUES (@User_id,(SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='NoPlanID'),0,GETDATE(),'',0,GETDATE(),'',GETDATE())
 								END
 							END
@@ -490,4 +491,6 @@ Begin
 	END
 	---END REV 5.0
 	--End
+
+	SET NOCOUNT OFF
 END

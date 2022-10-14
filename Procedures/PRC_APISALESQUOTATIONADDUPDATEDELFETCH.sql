@@ -37,6 +37,7 @@ AS
 Written By : Debashis Talukder On 21/02/2022
 Purpose : For New Sales Quptation.Row 647 to 652
 1.0		v2.0.32		Debashis	01/09/2022		Some new Parameters,columns added as RATE.Row: 732 to 735
+2.0		v2.0.35		Debashis	14/10/2022		A new field added as Pincode.Row: 747
 ****************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -116,14 +117,15 @@ BEGIN
 	ELSE IF @ACTION='SHOWQUOTATIONDETAILS'
 		BEGIN
 			--Rev 1.0 && Some new fields added as REMARKS & DOCUMENT_NUMBER
+			--Rev 2.0 && A new field added as Pincode
 			SELECT QH.QUOTATION_NUMBER AS quotation_number,CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,105)+' '+CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,108) AS save_date_time,
 			CONVERT(NVARCHAR(10),QH.QUOTATION_DATE_SELECTION,105) AS quotation_date_selection,QH.PROJECT_NAME AS project_name,QH.TAXES AS taxes,QH.FREIGHT AS Freight,QH.DELIVERY_TIME AS delivery_time,
 			QH.PAYMENT AS payment,QH.VALIDITY AS validity,QH.BILLING AS billing,QH.PRODUCT_TOLERANCE_OF_THICKNESS AS product_tolerance_of_thickness,QH.TOLERANCE_OF_COATING_THICKNESS AS tolerance_of_coating_thickness,
 			QH.SALESMAN_USER_ID AS salesman_user_id,QH.SHOP_ID AS shop_id,MS.Shop_Name AS shop_name,MS.Shop_Owner_Contact AS shop_phone_no,QH.QUOTATION_CREATED_LAT AS quotation_created_lat,
 			QH.QUOTATION_CREATED_LONG AS quotation_created_long,QH.QUOTATION_CREATED_ADDRESS AS quotation_created_address,MS.Address AS shop_addr,MS.Shop_Owner_Email AS shop_email,
 			MS.Shop_Owner AS shop_owner_name,SM.salesman_name,SM.salesman_designation,SM.salesman_login_id,SM.salesman_email,SM.salesman_phone_no,QH.REMARKS AS Remarks,QH.DOCUMENT_NUMBER AS document_number,
-			QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,QHD.RATE_SQMTR AS rate_sqmtr,
-			CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
+			MS.Pincode AS shop_address_pincode,QHD.PROD_ID AS product_id,MP.sProducts_Name AS product_name,QHD.COLOR_ID AS color_id,MC.Color_Name AS color_name,QHD.RATE_SQFT AS rate_sqft,
+			QHD.RATE_SQMTR AS rate_sqmtr,CAST(QHD.QTY AS int) AS qty,QHD.AMOUNT AS amount
 			FROM FSMAPIQUOTATIONHEAD QH
 			INNER JOIN FSMAPIQUOTATIONDETAILS QHD ON QH.ID=QHD.HEADID AND QH.QUOTATION_NUMBER=QHD.QUOTATION_NUMBER AND QH.SHOP_ID=QHD.SHOP_ID
 			INNER JOIN tbl_Master_shop MS ON QH.SHOP_ID=MS.Shop_Code
@@ -135,7 +137,7 @@ BEGIN
 			FROM #TEMPCONTACT CNT
 			INNER JOIN TBL_MASTER_USER USR ON CNT.cnt_internalId=USR.user_contactId
 			INNER JOIN (
-			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
+			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt 
 			LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL 
 			GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=CNT.cnt_internalId
 			LEFT OUTER JOIN TBL_MASTER_EMAIL ME ON CNT.cnt_internalId=ME.eml_cntId AND ME.eml_type='Official'

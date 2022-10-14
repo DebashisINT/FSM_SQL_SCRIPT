@@ -6,33 +6,33 @@ GO
 
 ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 (
-@session_token  varchar(MAX),
-@user_id  varchar(MAX),
-@shop_name  varchar(MAX)=NULL,
-@address  varchar(MAX)=NULL,
-@pin_code  varchar(MAX)=NULL,
-@shop_lat  varchar(MAX)=NULL,
-@shop_long  varchar(MAX)=NULL,
-@owner_name  varchar(MAX)=NULL,
-@owner_contact_no  varchar(MAX)=NULL,
-@owner_email  varchar(MAX)=NULL,
-@shop_image  nvarchar(MAX)=NULL,
+@session_token  NVARCHAR(MAX),
+@user_id  NVARCHAR(MAX),
+@shop_name  NVARCHAR(MAX)=NULL,
+@address  NVARCHAR(MAX)=NULL,
+@pin_code  NVARCHAR(MAX)=NULL,
+@shop_lat  NVARCHAR(MAX)=NULL,
+@shop_long  NVARCHAR(MAX)=NULL,
+@owner_name  NVARCHAR(MAX)=NULL,
+@owner_contact_no  NVARCHAR(MAX)=NULL,
+@owner_email  NVARCHAR(MAX)=NULL,
+@shop_image  NVARCHAR(MAX)=NULL,
 @type int =NULL,
-@dob varchar(MAX) =NULL,
-@date_aniversary varchar(MAX) =NULL,
-@shop_id varchar(MAX) =NULL,
-@error varchar(MAX) =NULL,
-@added_date varchar(MAX) =NULL,
-@assigned_to_pp_id varchar(MAX) =NULL,
-@assigned_to_dd_id  varchar(MAX) =NULL,
-@amount varchar(100)=NULL,
+@dob NVARCHAR(MAX) =NULL,
+@date_aniversary NVARCHAR(MAX) =NULL,
+@shop_id NVARCHAR(MAX) =NULL,
+@error NVARCHAR(MAX) =NULL,
+@added_date NVARCHAR(MAX) =NULL,
+@assigned_to_pp_id NVARCHAR(MAX) =NULL,
+@assigned_to_dd_id  NVARCHAR(MAX) =NULL,
+@amount NVARCHAR(100)=NULL,
 --1.0 Rev start
 @family_member_dob datetime =NULL,
 @addtional_dob datetime =NULL,
 @addtional_doa datetime =NULL,
-@director_name varchar(MAX) =NULL,
-@key_person_name  varchar(MAX) =NULL,
-@phone_no varchar(100)=NULL,
+@director_name NVARCHAR(MAX) =NULL,
+@key_person_name  NVARCHAR(MAX) =NULL,
+@phone_no NVARCHAR(100)=NULL,
 --1.0 Rev End
 --2.0 Rev Start
 @DOC_FAMILY_MEMBER_DOB DATETIME=NULL,
@@ -135,7 +135,7 @@ As
 18.0	v2.0.28		Debashis		18-04-2022			New parameter added as @shopStatusUpdate.Refer: 682
 ************************************************************************************************************************************************/
 BEGIN
-	
+	SET NOCOUNT ON
 	--IF ISNULL(@Entered_by,'')=''
 	--BEGIN
 	--	SET @Entered_by=@user_id
@@ -154,7 +154,7 @@ BEGIN
 		BEGIN
 			IF ISNUMERIC(@CityId)=0
 			BEGIN
-				SET @CityId=(SELECT TOP(1)city_id FROM TBL_MASTER_AREA WHERE area_id=@AreaId)
+				SET @CityId=(SELECT TOP(1)city_id FROM TBL_MASTER_AREA WITH(NOLOCK) WHERE area_id=@AreaId)
 			END
 		END
 		ELSE
@@ -215,20 +215,22 @@ BEGIN
 
 	--BEGIN
 	declare @StateID  varchar(50)=NULL
-	set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin  inner join tbl_master_city as cty  on cty.city_id=pin.city_id  inner join tbl_master_state as stat on stat.id=cty.state_id where pin.pin_code=@pin_code)
+	set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin WITH(NOLOCK) 
+	inner join tbl_master_city as cty WITH(NOLOCK) on cty.city_id=pin.city_id  
+	inner join tbl_master_state as stat WITH(NOLOCK) on stat.id=cty.state_id where pin.pin_code=@pin_code)
 
 
 	if(isnull(@StateID,'')='')
 	BEGIN
 		set @StateID=(
 		select  top 1 STAT.id as [state]
-		FROM tbl_master_user as usr
-		LEFT OUTER JOIN tbl_master_contact  as cont on usr.user_contactId=cont.cnt_internalId
+		FROM tbl_master_user as usr WITH(NOLOCK) 
+		LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
 		LEFT OUTER  JOIN (
-				SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address  where add_addressType='Office'
+				SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 				)S on S.add_cntId=cont.cnt_internalId
 		--LEFT OUTER JOIN tbl_master_pinzip as pinzip on pinzip.pin_id=S.add_pin
-		LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
+		LEFT OUTER JOIN tbl_master_state as STAT WITH(NOLOCK) on STAT.id=S.add_state
 		where usr.user_id=@user_id)
 	END
 
@@ -281,7 +283,7 @@ BEGIN
 			----End of Rev 16.0
 			-- where Shop_Code=@shop_id
 			 
-			 UPDATE [tbl_Master_shop] SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
+			 UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			 [Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
 			 [Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
 			 [Shop_Lat]=CASE WHEN @shop_lat IS NULL OR @shop_lat='' THEN [Shop_Lat] ELSE @shop_lat END,
@@ -358,7 +360,7 @@ BEGIN
 			--,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
 			----End of Rev 16.0
 			--WHERE Shop_Code=@shop_id
-			UPDATE [tbl_Master_shop] SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
+			UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			[Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
 			[Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
 			[Shop_Lat]=CASE WHEN @shop_lat IS NULL OR @shop_lat='' THEN [Shop_Lat] ELSE @shop_lat END,
@@ -416,12 +418,12 @@ BEGIN
 
 	--Rev 18.0
 	IF @shopStatusUpdate=0
-		UPDATE [tbl_Master_shop] SET Entity_Status=0 WHERE Shop_Code=@shop_id
+		UPDATE [tbl_Master_shop] WITH(TABLOCK) SET Entity_Status=0 WHERE Shop_Code=@shop_id
 	--End of Rev 18.0
 
 	 IF(ISNULL(@stage_id,'')<>'')
 		BEGIN
-			INSERT INTO FTS_STAGEMAP(SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+			INSERT INTO FTS_STAGEMAP WITH(TABLOCK) (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
 			VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
 		END
 
@@ -450,14 +452,14 @@ BEGIN
 
 
 	DECLARE @SHOPID BIGINT
-	SET @SHOPID=(SELECT SHOP_ID FROM tbl_Master_shop WHERE Shop_Code=@shop_id)
+	SET @SHOPID=(SELECT SHOP_ID FROM tbl_Master_shop WITH(NOLOCK) WHERE Shop_Code=@shop_id)
 	--1.0 Rev start
-	UPDATE FTS_ShopMoreDetails SET FamilyMember_DOB=@family_member_dob,Addtional_DOB=@addtional_dob,Addtional_DOA=@addtional_doa,Director_Name=@director_name,
+	UPDATE FTS_ShopMoreDetails WITH(TABLOCK) SET FamilyMember_DOB=@family_member_dob,Addtional_DOB=@addtional_dob,Addtional_DOA=@addtional_doa,Director_Name=@director_name,
 	KeyPerson_Name=@key_person_name,phone_no=@phone_no,Update_Date=GETDATE() WHERE SHOP_ID=@SHOPID
 	--1.0 Rev End
 
 	--2.0 Rev start
-	UPDATE FTS_DOCTOR_DETAILS SET FAMILY_MEMBER_DOB=@DOC_FAMILY_MEMBER_DOB,SPECIALIZATION=@SPECIALIZATION,AVG_PATIENT_PER_DAY=@AVG_PATIENT_PER_DAY,CATEGORY=@CATEGORY,
+	UPDATE FTS_DOCTOR_DETAILS WITH(TABLOCK) SET FAMILY_MEMBER_DOB=@DOC_FAMILY_MEMBER_DOB,SPECIALIZATION=@SPECIALIZATION,AVG_PATIENT_PER_DAY=@AVG_PATIENT_PER_DAY,CATEGORY=@CATEGORY,
 	DOC_ADDRESS=@DOC_ADDRESS,PINCODE=@DOC_PINCODE,DEGREE=@DEGREE,IsChamberSameHeadquarter=@IsChamberSameHeadquarter,
 	Remarks=@Remarks,CHEMIST_NAME=@CHEMIST_NAME,CHEMIST_ADDRESS=@CHEMIST_ADDRESS,CHEMIST_PINCODE=@CHEMIST_PINCODE,ASSISTANT_NAME=@ASSISTANT_NAME,ASSISTANT_CONTACT_NO=@ASSISTANT_CONTACT_NO,
 	ASSISTANT_DOB=@ASSISTANT_DOB,ASSISTANT_DOA=@ASSISTANT_DOA,ASSISTANT_FAMILY_DOB=@ASSISTANT_FAMILY_DOB,UPDATE_USER=@user_id,UPDATE_DATE=GETDATE()	WHERE SHOP_ID=@SHOPID
@@ -470,5 +472,5 @@ BEGIN
 	--ELSE
 
 	--select '202' as returncode
-
+	SET NOCOUNT OFF
 END

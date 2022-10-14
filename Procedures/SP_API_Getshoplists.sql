@@ -6,13 +6,13 @@ GO
 
 ALTER PROCEDURE [dbo].[SP_API_Getshoplists]
 (
-@user_id varchar(50),
-@session_token varchar(MAX)=NULL,
+@user_id NVARCHAR(50),
+@session_token NVARCHAR(MAX)=NULL,
 @Uniquecont int=NULL,
-@Weburl varchar(MAX)=NULL,
-@FromDate varchar(MAX)=NULL,
-@Todate varchar(MAX)=NULL,
-@DoctorDegree varchar(MAX)=NULL
+@Weburl NVARCHAR(MAX)=NULL,
+@FromDate NVARCHAR(MAX)=NULL,
+@Todate NVARCHAR(MAX)=NULL,
+@DoctorDegree NVARCHAR(MAX)=NULL
 ) --WITH ENCRYPTION
 AS
 /************************************************************************************************************************************************
@@ -34,24 +34,25 @@ AS
 16.0		Debashis		17-06-2022			One field added as Purpose.Row: 704
 ************************************************************************************************************************************************/
 BEGIN
+	SET NOCOUNT ON
 
-	declare @sql nvarchar(MAX)=''
+	declare @sql NVARCHAR(MAX)=''
 
-	declare @topcount nvarchar(100)=@Uniquecont
+	declare @topcount NVARCHAR(100)=@Uniquecont
 	IF(isnull(@Uniquecont,0)<>0)
 		BEGIN
 
 			set @sql='select top  '+@topcount+' cast(shop.Shop_ID as varchar(50))	as shop_Auto,Shop_Code as shop_id,	Shop_Name as shop_name,  '
 			set @sql+=' isnull(Address,'''') as [address],isnull(shop.Pincode,'''') as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name  '
-			set @sql+=' ,Shop_WebSite,Shop_Owner_Email as owner_email	,Shop_Owner_Contact as owner_contact_no   '
+			set @sql+=' ,Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no   '
 			set @sql+=' ,Shop_CreateUser,Shop_CreateTime,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+'''+ Shop_Image as Shop_Image,dob   '
 			set @sql+=' ,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive where Shop_Id=shop.Shop_Code) as total_visit_count, '
-			set @sql+=' (SELECT ISNULL(ISNULL(MAX(visited_time),shop.Lastvisit_date),GETDATE()) from (
-						SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit --where Shop_Id=shop.Shop_Code) 
-						UNION
-						select visited_time,Shop_Id from tbl_trans_shopActivitysubmit_Archive -- where Shop_Id=shop.Shop_Code)
-						)tbl where tbl.Shop_Id=shop.Shop_Code) AS last_visit_date '--Lastvisit_date as last_visit_date  '
-			set @sql+=' ,isAddressUpdated,isnull(assigned_to_pp_id,'''')	 as assigned_to_pp_id,isnull(assigned_to_dd_id,'''') as assigned_to_dd_id  '
+			set @sql+=' (SELECT ISNULL(ISNULL(MAX(visited_time),shop.Lastvisit_date),GETDATE()) from ('
+			set @sql+=' SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit WITH(NOLOCK) '--where Shop_Id=shop.Shop_Code) 
+			set @sql+=' UNION ALL '
+			set @sql+=' select visited_time,Shop_Id from tbl_trans_shopActivitysubmit_Archive WITH(NOLOCK) '-- where Shop_Id=shop.Shop_Code)
+			set @sql+=' )tbl where tbl.Shop_Id=shop.Shop_Code) AS last_visit_date '--Lastvisit_date as last_visit_date  '
+			set @sql+=' ,isAddressUpdated,isnull(assigned_to_pp_id,'''') as assigned_to_pp_id,isnull(assigned_to_dd_id,'''') as assigned_to_dd_id  '
 			set @sql+=' ,cast(isnull(VerifiedOTP,0) as bit) as is_otp_verified,isnull(shop.Amount,0) as amount  '
 			set @sql+=' ,DTLS.FamilyMember_DOB as family_member_dob,DTLS.Addtional_DOB as addtional_dob,  '
 			set @sql+=' DTLS.Addtional_DOA as addtional_doa,isnull(DTLS.Director_Name,'''') as director_name,isnull(DTLS.KeyPerson_Name,'''') as key_person_name,   '
@@ -102,11 +103,11 @@ BEGIN
 			--Rev 16.0
 			set @sql+='ISNULL(shop.Purpose,'''') AS purpose '
 			--End of Rev 16.0
-			set @sql+=' from tbl_Master_shop as shop  '
-			set @sql+=' INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id   '
-			set @sql+=' INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type   '
-			set @sql+=' LEFT OUTER JOIN FTS_ShopMoreDetails DTLS ON DTLS.SHOP_ID=shop.Shop_ID	 '
-			set @sql+=' LEFT OUTER JOIN FTS_DOCTOR_DETAILS DOCDTLS ON DOCDTLS.SHOP_ID=shop.Shop_ID  '
+			set @sql+=' from tbl_Master_shop as shop WITH(NOLOCK)  '
+			set @sql+=' INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id   '
+			set @sql+=' INNER JOIN  tbl_shoptype as typs WITH(NOLOCK) on typs.shop_typeId=shop.type   '
+			set @sql+=' LEFT OUTER JOIN FTS_ShopMoreDetails DTLS WITH(NOLOCK) ON DTLS.SHOP_ID=shop.Shop_ID	 '
+			set @sql+=' LEFT OUTER JOIN FTS_DOCTOR_DETAILS DOCDTLS WITH(NOLOCK) ON DOCDTLS.SHOP_ID=shop.Shop_ID  '
 			--REV 3.0 START
 			set @sql+=' WHERE shop.user_id='+@user_id+'	  '
 			--set @sql+=' WHERE usr.user_id IN (SELECT user_id FROM dbo.Get_UserReporthierarchy ('+@user_id+'))	'	
@@ -121,15 +122,15 @@ BEGIN
 		END
 	ELSE
 		BEGIN
-			select  cast(shop.Shop_ID as varchar(50))	as shop_Auto ,Shop_Code as shop_id,	Shop_Name as shop_name,
+			select cast(shop.Shop_ID as varchar(50)) as shop_Auto ,Shop_Code as shop_id,Shop_Name as shop_name,
 			isnull(Address,'') as [address],isnull(shop.Pincode,'') as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name
 			,Shop_WebSite,Shop_Owner_Email as owner_email	,Shop_Owner_Contact as owner_contact_no
 			,Shop_CreateUser,Shop_CreateTime,Shop_ModifyUser,Shop_ModifyTime,@Weburl+Shop_Image as Shop_Image
 			,dob,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive where Shop_Id=shop.Shop_Code) as total_visit_count
 			,(SELECT ISNULL(ISNULL(MAX(visited_time),shop.Lastvisit_date),GETDATE()) from (
-				SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit --where Shop_Id=shop.Shop_Code) 
+				SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit WITH(NOLOCK) --where Shop_Id=shop.Shop_Code) 
 				UNION
-				select visited_time,Shop_Id from tbl_trans_shopActivitysubmit_Archive -- where Shop_Id=shop.Shop_Code)
+				select visited_time,Shop_Id from tbl_trans_shopActivitysubmit_Archive WITH(NOLOCK) -- where Shop_Id=shop.Shop_Code)
 				)tbl where tbl.Shop_Id=shop.Shop_Code) as last_visit_date,
 			isAddressUpdated,isnull(assigned_to_pp_id,'') as assigned_to_pp_id
 			,isnull(assigned_to_dd_id,'') as assigned_to_dd_id,cast(isnull(VerifiedOTP,0) as bit) as is_otp_verified
@@ -181,11 +182,11 @@ BEGIN
 			--Rev 16.0
 			ISNULL(shop.Purpose,'') AS purpose 
 			--End of Rev 16.0
-			from tbl_Master_shop as shop
-			INNER JOIN  tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id 
-			INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type
-			LEFT OUTER JOIN FTS_ShopMoreDetails DTLS ON DTLS.SHOP_ID=shop.Shop_ID
-			LEFT OUTER JOIN FTS_DOCTOR_DETAILS DOCDTLS ON DOCDTLS.SHOP_ID=shop.Shop_ID	
+			from tbl_Master_shop as shop WITH(NOLOCK) 
+			INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
+			INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
+			LEFT OUTER JOIN FTS_ShopMoreDetails DTLS WITH(NOLOCK) ON DTLS.SHOP_ID=shop.Shop_ID
+			LEFT OUTER JOIN FTS_DOCTOR_DETAILS DOCDTLS WITH(NOLOCK) ON DOCDTLS.SHOP_ID=shop.Shop_ID	
 			--REV 3.0 START
 			WHERE usr.user_id=@user_id
 			--WHERE usr.user_id IN (SELECT user_id FROM dbo.Get_UserReporthierarchy (@user_id))
@@ -196,4 +197,6 @@ BEGIN
 			order  by Shop_ID  desc
 			 --and  SessionToken=@session_token
 		END
+
+	SET NOCOUNT OFF
 END

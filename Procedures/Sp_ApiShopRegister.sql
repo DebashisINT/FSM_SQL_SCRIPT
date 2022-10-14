@@ -146,7 +146,8 @@ As
 20.0		Debashis		17-06-2022			One field added as Purpose.Row: 701,702 & 703
 21.0		Debashis		11-07-2022			A new setting implemented.Row: 713
 ************************************************************************************************************************************************/
-Begin
+BEGIN
+	SET NOCOUNT ON
 
 	IF  ISNULL(@Entered_by,'')=''
 	BEGIN
@@ -156,7 +157,7 @@ Begin
 		BEGIN
 			IF ISNUMERIC(@CityId)=0
 			BEGIN
-				SET @CityId=(SELECT TOP(1)city_id FROM TBL_MASTER_AREA WHERE area_id=@AreaId)
+				SET @CityId=(SELECT TOP(1)city_id FROM TBL_MASTER_AREA WITH(NOLOCK) WHERE area_id=@AreaId)
 			END
 		END
 		ELSE
@@ -219,30 +220,32 @@ Begin
 		END
 	--Rev 21.0
 	DECLARE @IgnoreNumberCheckwhileShopCreation BIT
-	SET @IgnoreNumberCheckwhileShopCreation=(SELECT IgnoreNumberCheckwhileShopCreation FROM tbl_master_user WHERE USER_ID=@user_id)
+	SET @IgnoreNumberCheckwhileShopCreation=(SELECT IgnoreNumberCheckwhileShopCreation FROM tbl_master_user WITH(NOLOCK) WHERE USER_ID=@user_id)
 	--End of Rev 21.0
 
-	if EXISTS(select  user_id  from tbl_master_user where user_id=@user_id)
+	if EXISTS(select  user_id  from tbl_master_user WITH(NOLOCK) where user_id=@user_id)
 		BEGIN
-			if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Code=@shop_id)
+			if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] WITH(NOLOCK) where Shop_Code=@shop_id)
 				BEGIN
 					--Rev 21.0
 					IF @IgnoreNumberCheckwhileShopCreation=1
 						BEGIN
-							set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin  inner join tbl_master_city as cty  on cty.city_id=pin.city_id  inner join tbl_master_state as stat on stat.id=cty.state_id where pin.pin_code=@pin_code)
+							set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin WITH(NOLOCK) 
+							inner join tbl_master_city as cty WITH(NOLOCK) on cty.city_id=pin.city_id  
+							inner join tbl_master_state as stat WITH(NOLOCK) on stat.id=cty.state_id where pin.pin_code=@pin_code)
 							if(isnull(@StateID,'')='')
 								BEGIN
 									set @StateID=(
 									select  top 1 STAT.id as [state]
-									FROM tbl_master_user as usr
-									LEFT OUTER JOIN tbl_master_contact  as cont on usr.user_contactId=cont.cnt_internalId
-									LEFT OUTER  JOIN (
-											SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address  where add_addressType='Office'
+									FROM tbl_master_user as usr WITH(NOLOCK) 
+									LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+									LEFT OUTER JOIN (
+											SELECT add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 											)S on S.add_cntId=cont.cnt_internalId
-									LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
+									LEFT OUTER JOIN tbl_master_state as STAT WITH(NOLOCK) on STAT.id=S.add_state
 									where usr.user_id=@user_id)
 								END
-							INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
+							INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 										,Entered_By,Entered_On,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount,PartyType_id,Entity_Id,Party_Status_id,retailer_id
@@ -260,14 +263,14 @@ Begin
 
 							IF(ISNULL(@stage_id,'')<>'')
 							BEGIN
-								INSERT INTO FTS_STAGEMAP(SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+								INSERT INTO FTS_STAGEMAP WITH(TABLOCK) (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
 								VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
 							END
 
 
 							if(@@ROWCOUNT)>0
 								BEGIN
-									INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
+									INSERT INTO [tbl_trans_shopActivitysubmit] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
 									,Revisit_Code
 									)
 									values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
@@ -281,10 +284,10 @@ Begin
 									@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 									@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
 
-									INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
+									INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 									VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
 
-									INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
+									INSERT INTO FTS_DOCTOR_DETAILS WITH(TABLOCK) (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
 									Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
 									VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
 											@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
@@ -293,20 +296,22 @@ Begin
 					ELSE
 						BEGIN
 					--End of Rev 21.0
-							if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] where Shop_Owner_Contact=@owner_contact_no and Shop_CreateUser=@user_id )
+							if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] WITH(NOLOCK) where Shop_Owner_Contact=@owner_contact_no and Shop_CreateUser=@user_id )
 								BEGIN
-									set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin  inner join tbl_master_city as cty  on cty.city_id=pin.city_id  inner join tbl_master_state as stat on stat.id=cty.state_id where pin.pin_code=@pin_code)
+									set @StateID=(select  top 1 stat.id  from tbl_master_pinzip as pin WITH(NOLOCK) 
+									inner join tbl_master_city as cty WITH(NOLOCK) on cty.city_id=pin.city_id  
+									inner join tbl_master_state as stat WITH(NOLOCK) on stat.id=cty.state_id where pin.pin_code=@pin_code)
 									if(isnull(@StateID,'')='')
 										BEGIN
 											set @StateID=(
 											select  top 1 STAT.id as [state]
 											FROM tbl_master_user as usr
-											LEFT OUTER JOIN tbl_master_contact  as cont on usr.user_contactId=cont.cnt_internalId
+											LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
 											LEFT OUTER  JOIN (
-													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address  where add_addressType='Office'
+													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 													)S on S.add_cntId=cont.cnt_internalId
 											--LEFT OUTER JOIN tbl_master_pinzip as pinzip on pinzip.pin_id=S.add_pin
-											LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
+											LEFT OUTER JOIN tbl_master_state as STAT WITH(NOLOCK) on STAT.id=S.add_state
 											where usr.user_id=@user_id)
 										END
 
@@ -315,7 +320,7 @@ Begin
 									--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
 									--Rev 19.0 @@One field added as IsShopDuplicate
 									--Rev 20.0 @@One field added as Purpose
-									INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
+									INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 											   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 												,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 												--Rev 4.0 Start
@@ -382,14 +387,14 @@ Begin
 
 									IF(ISNULL(@stage_id,'')<>'')
 									BEGIN
-										INSERT INTO FTS_STAGEMAP(SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+										INSERT INTO FTS_STAGEMAP WITH(TABLOCK) (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
 										VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
 									END
 
 
 									if(@@ROWCOUNT)>0
 										BEGIN
-											INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
+											INSERT INTO [tbl_trans_shopActivitysubmit] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
 											,Revisit_Code
 											)
 											values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
@@ -409,12 +414,12 @@ Begin
 											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
 
 											--1.0 Rev start
-											INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
+											INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 											VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
 											--1.0 Rev End
 
 											--2.0 Rev start
-											INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
+											INSERT INTO FTS_DOCTOR_DETAILS WITH(TABLOCK) (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
 											Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
 											VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
 													@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
@@ -438,4 +443,6 @@ Begin
 		BEGIN
 			select '202' as returncode
 		END
+
+	SET NOCOUNT OFF
 END
