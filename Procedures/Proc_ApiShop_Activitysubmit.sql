@@ -12,16 +12,17 @@ ALTER PROCEDURE [dbo].[Proc_ApiShop_Activitysubmit]
 ) --WITH ENCRYPTION
 AS
 /*****************************************************************************************************************************************
-1.0			Tanmoy		14-02-2020		add visit remarks 
-2.0         Indranil                    Distance ,IsFirstShop,IsOutside column added
-3.0         Indranil				    Same day visit allowed for different user
-4.0			Debashis	06-12-2021		Added Five fields as "Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value"
+1.0		Tanmoy		14-02-2020		add visit remarks 
+2.0     Indranil                    Distance ,IsFirstShop,IsOutside column added
+3.0     Indranil				    Same day visit allowed for different user
+4.0		Debashis	06-12-2021		Added Five fields as "Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value"
 										for RowNo: 576(From "FTS App API doc v1.0" Google sheet)
-5.0			Debashis	12-01-2022		Last Visit Date is not getting updated in shop list.
+5.0		Debashis	12-01-2022		Last Visit Date is not getting updated in shop list.
 										- It should be updated in case of New Visit then visit date will be updated.
 										- And In case of Revisit, the last visit date shall be updated for the shop.
 										Now it has been taken care off.Refer: 0024614
-6.0			Debashis	13-10-2022		Changes in API name - Shopsubmission/ShopVisited.Refer: 0025362
+6.0		Debashis	13-10-2022		Changes in API name - Shopsubmission/ShopVisited.Refer: 0025362
+7.0		Debashis	14-10-2022		Extra output in Shopsubmission/ShopVisited response.Refer: 0025375
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -153,15 +154,38 @@ BEGIN
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
 
+					--Rev 7.0
+					--SELECT
+					--XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
+					--XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
+					--XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
+					--XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
+					--XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
+					--FROM  @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					--INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
+					--WHERE EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+
 					SELECT
 					XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
 					XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
 					XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
 					XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
-					XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
-					FROM  @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration,
+					CAST(1 AS BIT) AS IsShopUpdate
+					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
 					WHERE EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+					UNION ALL
+					SELECT
+					XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
+					XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
+					XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
+					XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
+					XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration,
+					CAST(0 AS BIT) AS IsShopUpdate
+					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					WHERE NOT EXISTS(SELECT ActivityId FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') and visited_date=XMLproduct.value('(visited_date/text())[1]','date') and User_Id=@user_id)
+					--End of Rev 7.0
 				END
 			--End of Rev 6.0
 
