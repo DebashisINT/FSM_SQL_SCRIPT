@@ -3,13 +3,14 @@ BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Proc_ApiShop_Activitysubmit] AS'  
 END 
 GO 
+
 ALTER PROCEDURE [dbo].[Proc_ApiShop_Activitysubmit]
 (
-@session_token varchar(MAX)=NULL,
-@user_id varchar(50)=NULL,
+@session_token NVARCHAR(MAX)=NULL,
+@user_id NVARCHAR(50)=NULL,
 @JsonXML XML=NULL
 ) --WITH ENCRYPTION
-As
+AS
 /*****************************************************************************************************************************************
 1.0			Tanmoy		14-02-2020		add visit remarks 
 2.0         Indranil                    Distance ,IsFirstShop,IsOutside column added
@@ -23,6 +24,8 @@ As
 6.0			Debashis	13-10-2022		Changes in API name - Shopsubmission/ShopVisited.Refer: 0025362
 *****************************************************************************************************************************************/
 BEGIN
+	SET NOCOUNT ON
+
 	BEGIN TRAN
 		BEGIN TRY
 			 DECLARE @datenew datetime=GETDATE()
@@ -173,4 +176,6 @@ BEGIN
 	BEGIN CATCH
 	ROLLBACK TRAN
 	END CATCH
+
+	SET NOCOUNT OFF
 END

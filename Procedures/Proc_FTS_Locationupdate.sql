@@ -15,6 +15,7 @@ AS
 1.0			TANMOY		20-01-2020		INSERT EXTRA DATA metting_attended
 ****************************************************************************************************************/
 BEGIN
+	SET NOCOUNT ON
 
 	INSERT INTO [tbl_trans_shopuser] WITH(TABLOCK)([User_Id],[Shop_Id],[Lat_visit],[Long_visit],[location_name],[distance_covered],[SDate],[Stime],[shops_covered],Createddate,[meeting_attended],[home_distance],network_status,battery_percentage,home_duration)
     SELECT @user_id,NULL,
@@ -38,4 +39,5 @@ BEGIN
 
 	SELECT 1
 
+	SET NOCOUNT OFF
 END
