@@ -4,10 +4,13 @@ EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [FSM_HR_Fetch_Employees] 
 END
 GO
 
-
 --exec [FSM_HR_Fetch_Employees] '1900-01-01','9999-12-31',10,1,'','','','S','N','','11706'
 --exec [FSM_HR_Fetch_Employees] '1900-01-01','9999-12-31',10,1,'','','','S','N','','378'
 --exec HR_Fetch_Employees '6/1/2012 12:00:00 AM','10/26/2012 12:00:00 AM','10','1','','','','S','N','',11706
+
+--exec FSM_HR_Fetch_Employees @FromJoinDate ='1900-01-01',@ToJoinDate ='9999-12-31',@PageSize ='10',@PageNumber=1,@SearchString='',
+--@SearchBy ='',@FindOption =0,@ExportType='S',@DevXFilterOn ='N',@DevXFilterString ='',@User_id=378
+
 ALTER PROCEDURE [dbo].[FSM_HR_Fetch_Employees]
 @FromJoinDate Varchar(25),
 @ToJoinDate Varchar(25),
@@ -29,13 +32,17 @@ AS
 	1.0		17-03-2022		Swati		Mantise ID:0024752: Optimize FSM Employee Master 
 	2.0		04-04-2022		Swati		Query optimise of employee master MantieID:-24792
 	3.0		22-04-2022		Sanchita	Employee Master optimization correction done.
+	4.0		04-07-2022		Pratik		Employee Master Add Columns AdditionalReportingHead,Colleague,Colleague1,Colleague2.
+	5.0		17-10-2022		Sanchita	Employee Master getting hanged in ITC Live. Solution given :
+										1) WITH (NOLOCK) added after each table
+										2) Table_Master_Contact table has been replaced with #TEMPCONTACT
 ***************************************************************************************************************************************/
 BEGIN
   Declare @DSql nVarchar(Max),@DSql1 nVarchar(Max), @DSql_SearchBy nVarchar(2000)
 
     
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
-	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@userid)=1)
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 	
 	BEGIN
 		DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@User_id)		
@@ -69,6 +76,40 @@ BEGIN
 		INSERT INTO #EMPHR_EDIT
 		select EMPCODE,RPTTOEMPCODE  from cte 
 	END
+
+	-- Rev 5.0
+	
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_id int ,
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@User_id)=1)
+		BEGIN
+			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+			INSERT INTO #TEMPCONTACT
+			SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
+		END
+	ELSE
+		BEGIN
+			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+			INSERT INTO #TEMPCONTACT
+			SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			WHERE cnt_contactType IN('EM')
+		END
+
+		-- End of Rev 5.0
 
   --This Query Will Be Inserted in Main Queries Where There is Any Filtering Option Like EN--Employee Name or EC--Employee Code
   Set @DSql_SearchBy=''
@@ -181,6 +222,9 @@ BEGIN
 			  DesignationID Varchar(200),Company Varchar(200),OrganizationID Varchar(200),Email_Ids Varchar(250),
 			  PhoneMobile_Numbers Varchar(100),FatherName Varchar(500),PanCardNumber Varchar(100), cnt_OtherID varchar(200)
 			  ,USERID int,CreateDate datetime,LastModifyDate datetime
+			  --rev 4.0
+			  ,AdditionalReportingHead Varchar(500),Colleague Varchar(500),Colleague1 Varchar(500),Colleague2 Varchar(500)
+			  --End of rev 4.0
 			)
 			-- Rev 3.0
 			--CREATE NONCLUSTERED INDEX IX1 ON FTS_Final_Display (Code)
@@ -192,11 +236,12 @@ BEGIN
 	DELETE FROM FSMEmployee_Master WHERE USERID=@User_id
 	-- End of Rev 3.0
 	/*Rev 2.0 start*/
+	/*Rev 4.0 start(Add AdditionalReportingHead,Colleague,Colleague1,Colleague2)*/
 	Set @DSql='Insert into FSMEmployee_Master
   (
 	USERID,Employee_Grade,SRLNO,ContactID,Code,Name,FirstName,MiddleName,LastName,cnt_id,BranchName,Department,DepartmentID,CTC,ReportTo,ReportToID,
 	DOJ,CreatedBy,Designation,DesignationID,Company,OrganizationID,Email_Ids,PhoneMobile_Numbers,FatherName,PanCardNumber,cnt_OtherID
-	
+	,AdditionalReportingHead,Colleague,Colleague1,Colleague2
   )
 	Select '+convert(varchar(50),@User_id) +',empgrade.Employee_Grade,
 	ROW_NUMBER()  OVER (ORDER BY Ltrim(Rtrim(isnull(b.cnt_firstName,'''')))+'' ''+Ltrim(Rtrim(isnull(b.cnt_middleName,'''')))+'' ''+ Ltrim(Rtrim(isnull(b.cnt_lastName,''''))),a.emp_contactId desc) as SRLNO,
@@ -211,32 +256,50 @@ BEGIN
 	,EmpDesg.EmpDesgignation Designation,EmpDesg.deg_id DesignationID
 	, CTC.cmp_Name Company,CTC.emp_organization OrganizationID,Ltrim(Rtrim(eml.eml_email)) Email_Ids
 	,Ltrim(Rtrim(phf.phf_phoneNumber)) PhoneMobile_Numbers,femrel_memberName FatherName,crg_Number PanCardNumber,a.cnt_OtherID
-	From tbl_master_employee a
-	INNER JOIN tbl_master_contact b ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM''
-	--INNER JOIN tbl_master_User USR ON a.emp_contactId=USR.USER_contactid
-	LEFT OUTER JOIN tbl_master_User USR ON a.emp_contactId=USR.USER_contactid
-	INNER JOIN tbl_master_branch BR ON  B.cnt_branchid=BR.branch_id
-	--LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON a.emp_contactId=CTC.emp_cntId
-	--LEFT OUTER JOIN tbl_master_costCenter cost ON CTC.emp_Department=cost.cost_id
-	--LEFT OUTER JOIN tbl_master_designation deg ON CTC.emp_designation=deg.deg_id
-	--LEFT OUTER JOIN tbl_master_company cmp ON emp_organization=cmp.cmp_id
+	,CTC.AdditionalReportingHead as AdditionalReportingHead,CTC.Colleague as Colleague,CTC.Colleague1 as Colleague1,CTC.Colleague2 as Colleague2
+	From tbl_master_employee a WITH (NOLOCK) 
+	INNER JOIN #TEMPCONTACT b WITH (NOLOCK) ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM''
+	--INNER JOIN tbl_master_User USR WITH (NOLOCK) ON a.emp_contactId=USR.USER_contactid
+	LEFT OUTER JOIN tbl_master_User USR WITH (NOLOCK) ON a.emp_contactId=USR.USER_contactid
+	INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON  B.cnt_branchid=BR.branch_id
+	--LEFT OUTER JOIN tbl_trans_employeeCTC CTC WITH (NOLOCK) ON a.emp_contactId=CTC.emp_cntId
+	--LEFT OUTER JOIN tbl_master_costCenter cost WITH (NOLOCK) ON CTC.emp_Department=cost.cost_id
+	--LEFT OUTER JOIN tbl_master_designation deg WITH (NOLOCK) ON CTC.emp_designation=deg.deg_id
+	--LEFT OUTER JOIN tbl_master_company cmp WITH (NOLOCK) ON emp_organization=cmp.cmp_id
 	LEFT OUTER JOIN 
 	(
 		SELECT Ltrim(Rtrim(DESG.Department))Department,EMPCTC.emp_Department DepartmentID,EMPCTC.emp_currentCTC,
 		ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''')+''[''+EMP.emp_uniqueCode +'']'' AS REPORTTO
+
+		,ISNULL(DeputyCNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(DeputyCNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(DeputyCNT.CNT_LASTNAME,'''')+''[''+DeputyEMP.emp_uniqueCode +'']'' AS AdditionalReportingHead
+		,ISNULL(ColleagueCNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(ColleagueCNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(ColleagueCNT.CNT_LASTNAME,'''')+''[''+ColleagueEMP.emp_uniqueCode +'']'' AS Colleague
+		,ISNULL(Colleague1CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(Colleague1CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(Colleague1CNT.CNT_LASTNAME,'''')+''[''+Colleague1EMP.emp_uniqueCode +'']'' AS Colleague1
+		,ISNULL(Colleague2CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(Colleague2CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(Colleague2CNT.CNT_LASTNAME,'''')+''[''+Colleague2EMP.emp_uniqueCode +'']'' AS Colleague2
+
 		,EMPCTC.emp_reportTo,DESG.deg_designation ,EMPCTC.emp_designation ,EMPCTC.emp_organization,
 		EMPCTC.emp_cntId,CNT.cnt_internalId,DESG.deg_designation AS RPTTODESG ,desg.cmp_Name
-		FROM tbl_master_employee EMP 
-		INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo 
-		INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType=''EM''
+		FROM tbl_master_employee EMP WITH (NOLOCK) 
+		INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo 
+
+		LEFT JOIN tbl_master_employee DeputyEMP WITH (NOLOCK) on EMPCTC.emp_deputy=DeputyEMP.emp_id
+		LEFT JOIN #TEMPCONTACT DeputyCNT WITH (NOLOCK) ON DeputyEMP.emp_contactId=DeputyCNT.cnt_internalId and DeputyCNT.cnt_contactType=''EM''
+		LEFT JOIN tbl_master_employee ColleagueEMP WITH (NOLOCK) on EMPCTC.emp_colleague=ColleagueEMP.emp_id
+		LEFT JOIN #TEMPCONTACT ColleagueCNT WITH (NOLOCK) ON ColleagueEMP.emp_contactId=ColleagueCNT.cnt_internalId and ColleagueCNT.cnt_contactType=''EM''
+		LEFT JOIN tbl_master_employee Colleague1EMP WITH (NOLOCK) on EMPCTC.emp_colleague1=Colleague1EMP.emp_id
+		LEFT JOIN #TEMPCONTACT Colleague1CNT WITH (NOLOCK) ON Colleague1EMP.emp_contactId=Colleague1CNT.cnt_internalId and Colleague1CNT.cnt_contactType=''EM''
+		LEFT JOIN tbl_master_employee Colleague2EMP WITH (NOLOCK) on EMPCTC.emp_colleague2=Colleague2EMP.emp_id
+		LEFT JOIN #TEMPCONTACT Colleague2CNT WITH (NOLOCK) ON Colleague2EMP.emp_contactId=Colleague2CNT.cnt_internalId and Colleague2CNT.cnt_contactType=''EM''
+
+		INNER JOIN #TEMPCONTACT CNT WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType=''EM''
+
 		INNER JOIN 
 		(
 			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id,Ltrim(Rtrim(cost.cost_description))Department 
 			,Ltrim(Rtrim(cmp.cmp_Name)) cmp_Name
-			FROM tbl_trans_employeeCTC as cnt 
-			LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation 
-			LEFT OUTER JOIN tbl_master_costCenter cost ON cost.cost_id=cnt.emp_Department
-			LEFT OUTER JOIN tbl_master_company cmp ON cmp.cmp_id=cnt.emp_organization
+			FROM tbl_trans_employeeCTC as cnt WITH (NOLOCK) 
+			LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
+			LEFT OUTER JOIN tbl_master_costCenter cost WITH (NOLOCK) ON cost.cost_id=cnt.emp_Department
+			LEFT OUTER JOIN tbl_master_company cmp WITH (NOLOCK) ON cmp.cmp_id=cnt.emp_organization
 			WHERE cnt.emp_effectiveuntil IS NULL 
 			GROUP BY emp_cntId,desg.deg_designation,desg.deg_id,cost.cost_description,cmp.cmp_Name
 		) DESG ON DESG.emp_cntId=EMP.emp_contactId 
@@ -245,20 +308,20 @@ BEGIN
 	LEFT OUTER JOIN 
 	(
 		SELECT cnt.emp_cntId,desg.deg_designation EmpDesgignation,MAX(emp_id) as emp_id,desg.deg_id,Ltrim(Rtrim(cost.cost_description))Department    
-		,Ltrim(Rtrim(cmp.cmp_Name)) cmp_Name    FROM tbl_trans_employeeCTC as cnt     
-		LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation     
-		LEFT OUTER JOIN tbl_master_costCenter cost ON cost.cost_id=cnt.emp_Department   
-		LEFT OUTER JOIN tbl_master_company cmp ON cmp.cmp_id=cnt.emp_organization    
+		,Ltrim(Rtrim(cmp.cmp_Name)) cmp_Name    FROM tbl_trans_employeeCTC as cnt WITH (NOLOCK)      
+		LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation     
+		LEFT OUTER JOIN tbl_master_costCenter cost WITH (NOLOCK) ON cost.cost_id=cnt.emp_Department   
+		LEFT OUTER JOIN tbl_master_company cmp WITH (NOLOCK) ON cmp.cmp_id=cnt.emp_organization    
 		WHERE cnt.emp_effectiveuntil IS NULL     
 		GROUP BY emp_cntId,desg.deg_designation,desg.deg_id,cost.cost_description,cmp.cmp_Name  
 	) EmpDesg ON EmpDesg.emp_cntId=a.emp_contactId
-	LEFT OUTER JOIN tbl_master_email eml ON a.emp_contactId=eml.eml_cntId And Len(eml.eml_email)>0 and LTRIM(Rtrim(isnull(eml.eml_email,'''')))!=''''
-	LEFT OUTER JOIN tbl_master_phonefax phf ON a.emp_contactId=phf.phf_cntId And Len(phf.phf_phoneNumber)>0 and LTRIM(Rtrim(isnull(phf.phf_phoneNumber,'''')))!=''''
-	LEFT OUTER JOIN tbl_master_contactFamilyRelationship femrel ON a.emp_contactId=femrel.femrel_cntId 
-	AND femrel_relationId=(Select fam_id from tbl_master_familyRelationship	where Ltrim(Rtrim(fam_familyRelationship))=''FATHER'')
-	LEFT OUTER JOIN tbl_master_contactRegistration crg ON  a.emp_contactId=crg.crg_cntId AND crg.crg_type=''Pancard''
-	LEFT OUTER JOIN  tbl_FTS_MapEmployeeGrade grad ON a.emp_contactId= grad.Emp_Code
-	LEFT OUTER JOIN FTS_Employee_Grade as empgrade ON grad.Emp_Grade=empgrade.Id '
+	LEFT OUTER JOIN tbl_master_email eml WITH (NOLOCK) ON a.emp_contactId=eml.eml_cntId And Len(eml.eml_email)>0 and LTRIM(Rtrim(isnull(eml.eml_email,'''')))!=''''
+	LEFT OUTER JOIN tbl_master_phonefax phf WITH (NOLOCK) ON a.emp_contactId=phf.phf_cntId And Len(phf.phf_phoneNumber)>0 and LTRIM(Rtrim(isnull(phf.phf_phoneNumber,'''')))!=''''
+	LEFT OUTER JOIN tbl_master_contactFamilyRelationship femrel WITH (NOLOCK) ON a.emp_contactId=femrel.femrel_cntId 
+	AND femrel_relationId=(Select fam_id from tbl_master_familyRelationship WITH (NOLOCK)	where Ltrim(Rtrim(fam_familyRelationship))=''FATHER'')
+	LEFT OUTER JOIN tbl_master_contactRegistration crg WITH (NOLOCK) ON  a.emp_contactId=crg.crg_cntId AND crg.crg_type=''Pancard''
+	LEFT OUTER JOIN  tbl_FTS_MapEmployeeGrade grad WITH (NOLOCK) ON a.emp_contactId= grad.Emp_Code
+	LEFT OUTER JOIN FTS_Employee_Grade as empgrade WITH (NOLOCK) ON grad.Emp_Grade=empgrade.Id '
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 			BEGIN
 				Set @DSql=@DSql+'INNER JOIN #EMPHR_EDIT ON emp_contactId=EMPCODE '
@@ -429,7 +492,7 @@ BEGIN
     ----End Debugging Section
 
 	 
-	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@userid)=1)
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 	
 		BEGIN
@@ -442,12 +505,16 @@ BEGIN
      
    
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
-	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@userid)=1)
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 	
 	BEGIN
 		DROP TABLE #EMPHR
 		DROP TABLE #EMPHR_EDIT
 	END
+
+	-- Rev 5.0
+	DROP TABLE #TEMPCONTACT
+	-- End of Rev 5.0
 
   End
   if(@ExportType='E')
