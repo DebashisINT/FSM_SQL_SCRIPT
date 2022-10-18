@@ -28,6 +28,7 @@ Module	   : Dynamic Team Visit Attendance.Refer: 0024720
 												a) DS/TL Name [Contact table]
 												b) DS/TL Type [FaceRegTypeID from tbl_master_user].Refer: 0024870
 4.0		v2.0.33		Debashis	10/10/2022		'Section' and 'Circle' columns required [After the 'Channel' column].Refer: 0025219
+5.0		v2.0.33		Debashis	18/10/2022		Team Visit - data shall be generated based on attendance IN data.Refer: 0025387
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -178,6 +179,10 @@ BEGIN
 					--End of Rev 2.0
 
 					EXEC SP_EXECUTESQL @SqlStrTable
+
+					--Rev 5.0
+					SET @TODATE=@COLUMN_DATE
+					--End of Rev 5.0
 
 					INSERT INTO #TMPATTENDACE EXEC [PRC_FTSTEAMVISITATTENDANCE_FETCH] @COLUMN_DATE,@TODATE,@BRANCHID,@EMPID,@CHANNELID,@USERID
 

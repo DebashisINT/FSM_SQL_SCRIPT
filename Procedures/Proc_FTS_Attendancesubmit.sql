@@ -47,7 +47,7 @@ ALTER PROCEDURE [dbo].[Proc_FTS_Attendancesubmit]
 --End of Rev 11.0
 @FUNDPLAN UDT_FUNDPLAN READONLY
 )--WITH ENCRYPTION
-As
+AS
 /************************************************************************************************
 1.0					Tanmoy		30-10-2019		ADD TWO COLUMEN tbl_fts_UserAttendanceLoginlogout
 2.0					Tanmoy		23-12-2019		INSERT AND UPDATE FUND PLAN
@@ -64,11 +64,12 @@ As
 BEGIN
 	SET NOCOUNT ON
 
-	declare @InternalID varchar(50)
-	declare @identity varchar(50)
-	declare @SQL nvarchar(MAX)
-	declare @val nvarchar(MAX)
-	declare @datefetch datetime =GETDATE()
+	DECLARE @InternalID varchar(50)
+	DECLARE @identity varchar(50)
+	DECLARE @SQL nvarchar(MAX)
+	DECLARE @val nvarchar(MAX)
+	DECLARE @datefetch datetime =GETDATE()
+	
 	set @InternalID=(select user_contactId from tbl_master_user WITH(NOLOCK) where user_id=@user_id)
 	set @SessionToken=right(@SessionToken,10)+convert(Nvarchar(100),@datefetch,109)
 	--if exists(select  User_Id from tbl_fleet_UserAttendance where User_Id=@user_id and Login_datetime is not null)
@@ -103,6 +104,11 @@ BEGIN
 	IF(convert(nvarchar(10),@STATICDISTANCE)='')
 	SET @STATICDISTANCE=null
 	--REV 9.0 end
+
+	--Rev Debashis
+	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
+	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
+	--End of Rev Debashis
 
 	---REV 5.0
 	DECLARE @VALIDATION_LEAVE BIT=1
@@ -187,40 +193,45 @@ BEGIN
 					-----------------------Sub Ordinate tables---------------
 
 					--------------------------Attendane Main table Synchronization------------------------------------------
-
-					INSERT INTO  tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@datefetch)
-
-					IF NOT exists(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+					--Rev Debashis
+					IF @IsDatatableUpdateForDashboardAttendanceTab='1'
 						BEGIN
+					--End of Rev Debashis
+							INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@datefetch)
 
-							INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
-							values (@SessionToken,@InternalID,@datefetch,null,NULL,@user_id,@datefetch,@sqlyyMM,case when  @Isonleave='false' then  'P' else 'AB' end,'')
-						END
-					ELSE
-						BEGIN
-						update tbl_Employee_Attendance WITH(TABLOCK) set Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
-						END
+							IF NOT EXISTS(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+								BEGIN
+									INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
+									values (@SessionToken,@InternalID,@datefetch,null,NULL,@user_id,@datefetch,@sqlyyMM,case when  @Isonleave='false' then  'P' else 'AB' end,'')
+								END
+							ELSE
+								BEGIN
+									update tbl_Employee_Attendance WITH(TABLOCK) SET Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID
+								END
 
-					IF NOT exists(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
-						BEGIN
-							insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
-							VALUES(@InternalID,@sqlyyMM)
-							if(@Isonleave='true')
-							set @val='AB'
-							else
-							set @val='P'
-							set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
-							EXEC sp_ExecuteSql @SQL
+							IF NOT EXISTS(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+								BEGIN
+									insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
+									VALUES(@InternalID,@sqlyyMM)
+									if(@Isonleave='true')
+									set @val='AB'
+									else
+									set @val='P'
+									set @SQL ='update tbl_EmpWiseAttendanceStatus WITH(TABLOCK) set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+									EXEC sp_ExecuteSql @SQL
+								END
+							ELSE
+								BEGIN
+									if(@Isonleave='true')
+									set @val='AB'
+									else
+									set @val='P'
+									set @SQL ='update tbl_EmpWiseAttendanceStatus WITH(TABLOCK) set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+									EXEC sp_ExecuteSql @SQL
+								END
+					--Rev Debashis
 						END
-					ELSE
-						BEGIN
-							if(@Isonleave='true')
-							set @val='AB'
-							else
-							set @val='P'
-							set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
-							EXEC sp_ExecuteSql @SQL
-						END
+					--End of Rev Debashis
 					--------------------------End  Attendane Main table Synchronization------------------------------------------
 
 
@@ -368,47 +379,53 @@ BEGIN
 						END
 
 						--------------------------Attendane Main table Synchronization------------------------------------------
+						--Rev Debashis
+					IF @IsDatatableUpdateForDashboardAttendanceTab='1'
+						BEGIN
+					--End of Rev Debashis
+							INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@Wdatetime)
 
-						INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@Wdatetime)
+							IF NOT EXISTS(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+								BEGIN
+									INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
+									values (@SessionToken,@InternalID,case when  @Isonleave='false' then @datefetch else NULL end
+									,case when  @Isonleave='false' then @Wdatetime else NULL end,NULL,@user_id,@datefetch
+									--,right(datepart(yy,@datefetch),2)+ +RIGHT('00' + CAST(DATEPART(mm, @datefetch) AS varchar(2)), 2)
+									,cast(right(datepart(yy,@datefetch),2) as varchar(50))+ cast(DATEPART(MM,@datefetch) as varchar(50))
+									,case when  @Isonleave='false' then  'P' else 'AB' end,'')
+								END
+							ELSE
+								BEGIN
+									update tbl_Employee_Attendance WITH(TABLOCK) SET Out_Time=case when  @Isonleave='true' then @datefetch else NULL end   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
+								END
 
-						IF NOT exists(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
-							BEGIN
-								INSERT INTO tbl_Employee_Attendance WITH(TABLOCK) (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
-								values (@SessionToken,@InternalID,case when  @Isonleave='false' then @datefetch else NULL end
-								,case when  @Isonleave='false' then @Wdatetime else NULL end,NULL,@user_id,@datefetch
-								--,right(datepart(yy,@datefetch),2)+ +RIGHT('00' + CAST(DATEPART(mm, @datefetch) AS varchar(2)), 2)
-								,cast(right(datepart(yy,@datefetch),2) as varchar(50))+ cast(DATEPART(MM,@datefetch) as varchar(50))
-								,case when  @Isonleave='false' then  'P' else 'AB' end,'')
-							END
-						ELSE
-							BEGIN
-							update tbl_Employee_Attendance WITH(TABLOCK) set Out_Time=case when  @Isonleave='true' then @datefetch else NULL end   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
-							END
+							IF NOT EXISTS(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+								BEGIN
+									insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
+									VALUES(@InternalID,@sqlyyMM)
+									if(@Isonleave='true')
+									set @val='AB'
+									else
+									set @val='P'
+									set @SQL ='update tbl_EmpWiseAttendanceStatus WITH(TABLOCK) set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
 
-						IF NOT exists(select Emp_InternalId from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
-							BEGIN
-								insert into tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (Emp_InternalId,YYMM)
-								VALUES(@InternalID,@sqlyyMM)
-								if(@Isonleave='true')
-								set @val='AB'
-								else
-								set @val='P'
-								set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+									EXEC sp_ExecuteSql @SQL
+								END
+							ELSE
+								BEGIN
+									if(@Isonleave='true')
+									set @val='AB'
+									else
+									set @val='P'
+									set @SQL ='update tbl_EmpWiseAttendanceStatus WITH(TABLOCK) set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+									--SET  @SQL +=' cast(right(datepart(yy,'''+@datefetch+'''),2) as varchar(50)) + cast(DATEPART(MM,'''+@datefetch+''') as varchar(50))'
 
-								EXEC sp_ExecuteSql @SQL
-							END
-						ELSE
-							BEGIN
-								if(@Isonleave='true')
-								set @val='AB'
-								else
-								set @val='P'
-								set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
-								--SET  @SQL +=' cast(right(datepart(yy,'''+@datefetch+'''),2) as varchar(50)) + cast(DATEPART(MM,'''+@datefetch+''') as varchar(50))'
-
-								--select @SQL
-								EXEC sp_ExecuteSql @SQL
-							END
+									--select @SQL
+									EXEC sp_ExecuteSql @SQL
+								END
+					--Rev Debashis
+						END
+					--End of Rev Debashis
 						--------------------------End  Attendane Main table Synchronization------------------------------------------
 
 						----REV 2.0 START

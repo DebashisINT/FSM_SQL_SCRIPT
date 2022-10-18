@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopUserLogin]
 @version_name NVARCHAR(MAX)=NULL,
 @Weburl NVARCHAR(MAX)=NULL,
 @device_token NVARCHAR(300)=NULL
-)--WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************************************
 REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
@@ -62,6 +62,24 @@ BEGIN
 	declare @Outtime NVARCHAR(50)=NULL
 
 	declare @versions int
+	--Rev Debashis
+	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
+	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
+
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+	WHERE cnt_contactType IN('EM')
+	--End of Rev Debashis
 
 	IF EXISTS (SELECT * FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='SalesVisitShow' AND [Value]='1')
 		BEGIN
@@ -87,7 +105,10 @@ BEGIN
 
 		SET @DesignationID=(
 		select  N.deg_id  from tbl_master_user as musr WITH(NOLOCK) 
-		INNER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId = musr.user_contactId
+		--Rev Debashis
+		--INNER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId = musr.user_contactId
+		INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId = musr.user_contactId
+		--End of Rev Debashis
 		INNER JOIN
 		(
 		select  cnt.emp_cntId,desg.deg_designation,MAx(emp_id) as emp_id,desg.deg_id  from 
@@ -187,66 +208,72 @@ BEGIN
 
 						set @sqlyyMM =SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),3,2) +  SUBSTRING(CONVERT(nvarchar(6),@datefetch, 112),5,2)
 
-						INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK)(Emp_InternalId,LogTime)values(@InternalID,@datefetch)
-
-						--Rev 10.0
-						--IF NOT exists(select  *  from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
-						IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_Employee_Attendance WITH(NOLOCK) WHERE CONVERT(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
-						--End of Rev 10.0
+						--Rev Debashis
+						IF @IsDatatableUpdateForDashboardAttendanceTab='1'
 							BEGIN
-								INSERT INTO tbl_Employee_Attendance WITH(TABLOCK)(UniqueKey,
-								Emp_InternalId,
-								Att_Date,
-								In_Time,
-								Out_Time,
-								UpdatedBy,
-								UpdatedOn,
-								YYMM,
-								Emp_status,
-								Remarks)
+						--End of Rev Debashis
+								INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK)(Emp_InternalId,LogTime)values(@InternalID,@datefetch)
 
-								values
-								(
-								@SessionToken,
-								@InternalID
-								,@datefetch
-								,@datefetch
-								,NULL
-								,@UserId
-								,@datefetch
-								,@sqlyyMM
-								,'P'
-								,''
-								)
+								--Rev 10.0
+								--IF NOT exists(select  *  from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+								IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_Employee_Attendance WITH(NOLOCK) WHERE CONVERT(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
+								--End of Rev 10.0
+									BEGIN
+										INSERT INTO tbl_Employee_Attendance WITH(TABLOCK)(UniqueKey,
+										Emp_InternalId,
+										Att_Date,
+										In_Time,
+										Out_Time,
+										UpdatedBy,
+										UpdatedOn,
+										YYMM,
+										Emp_status,
+										Remarks)
+
+										values
+										(
+										@SessionToken,
+										@InternalID
+										,@datefetch
+										,@datefetch
+										,NULL
+										,@UserId
+										,@datefetch
+										,@sqlyyMM
+										,'P'
+										,''
+										)
+									END
+
+								ELSE
+
+									BEGIN
+										update tbl_Employee_Attendance set Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
+									END
+
+								--Rev 10.0
+								--IF NOT exists(select  *  from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+								IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_EmpWiseAttendanceStatus WITH(NOLOCK) WHERE Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
+								--End of Rev 10.0
+									BEGIN
+										INSERT INTO tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (UniqueKey,Emp_InternalId,YYMM)
+										VALUES(@SessionToken,@InternalID,@sqlyyMM)
+
+										set @val='P'
+										set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+
+										EXEC sp_ExecuteSql @SQL
+									END
+								ELSE
+									BEGIN
+										set @val='P'
+
+										set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
+										EXEC sp_ExecuteSql @SQL
+									END
+						--Rev Debashis
 							END
-
-						ELSE
-
-							BEGIN
-								update tbl_Employee_Attendance set Out_Time=@datefetch   where convert(date,Att_Date)=convert(date,@datefetch)  and Emp_InternalId=@InternalID
-							END
-
-						--Rev 10.0
-						--IF NOT exists(select  *  from tbl_EmpWiseAttendanceStatus WITH(NOLOCK) where Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
-						IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_EmpWiseAttendanceStatus WITH(NOLOCK) WHERE Emp_InternalId=@InternalID and YYMM=@sqlyyMM)
-						--End of Rev 10.0
-							BEGIN
-								INSERT INTO tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (UniqueKey,Emp_InternalId,YYMM)
-								VALUES(@SessionToken,@InternalID,@sqlyyMM)
-
-								set @val='P'
-								set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
-
-								EXEC sp_ExecuteSql @SQL
-							END
-						ELSE
-							BEGIN
-								set @val='P'
-
-								set @SQL ='update tbl_EmpWiseAttendanceStatus set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
-								EXEC sp_ExecuteSql @SQL
-							END
-
+						--End of Rev Debashis
 						--------------------------End  Attendane Main table Synchronization------------------------------------------
 
 						----------------------------Version  Insertion----------------------------
@@ -344,7 +371,10 @@ BEGIN
 						--End of Rev 9.0
 						FROM tbl_master_user as usr WITH(NOLOCK) 
 						LEFT OUTER JOIN [Master_AppVersionUsages] ver WITH(NOLOCK) on  usr.user_id=ver.UserId
-						LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+						--Rev Debashis
+						--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+						LEFT OUTER JOIN #TEMPCONTACT CONT ON usr.user_contactId=cont.cnt_internalId
+						--End of Rev Debashis
 						LEFT OUTER JOIN tbl_master_address as addr WITH(NOLOCK) on addr.add_cntId= usr.user_contactId 
 						LEFT OUTER JOIN tbl_master_phonefax as phf WITH(NOLOCK) on phf.phf_cntId= usr.user_contactId 
 						LEFT OUTER JOIN tbl_master_email as eml WITH(NOLOCK) on eml.eml_internalId= usr.user_contactId 
@@ -428,7 +458,10 @@ BEGIN
 			SELECT 0
 			SELECT '206' as success,'New version is available now. Please update it from the Play Store.' as 'Dynamic_message' -- Unless you can''t login into the app.
 		END
-
+	--Rev Debashis
+	DROP TABLE #TEMPCONTACT
+	--End of Rev Debashis
 	--COMMIT TRAN
+	
 	SET NOCOUNT OFF
 END
