@@ -46,7 +46,7 @@ BEGIN
 			set @sql+=' isnull(Address,'''') as [address],isnull(shop.Pincode,'''') as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name  '
 			set @sql+=' ,Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no   '
 			set @sql+=' ,Shop_CreateUser,Shop_CreateTime,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+'''+ Shop_Image as Shop_Image,dob   '
-			set @sql+=' ,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive where Shop_Id=shop.Shop_Code) as total_visit_count, '
+			set @sql+=' ,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit WITH(NOLOCK) where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive WITH(NOLOCK) where Shop_Id=shop.Shop_Code) as total_visit_count, '
 			set @sql+=' (SELECT ISNULL(ISNULL(MAX(visited_time),shop.Lastvisit_date),GETDATE()) from ('
 			set @sql+=' SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit WITH(NOLOCK) '--where Shop_Id=shop.Shop_Code) 
 			set @sql+=' UNION ALL '
@@ -126,7 +126,7 @@ BEGIN
 			isnull(Address,'') as [address],isnull(shop.Pincode,'') as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name
 			,Shop_WebSite,Shop_Owner_Email as owner_email	,Shop_Owner_Contact as owner_contact_no
 			,Shop_CreateUser,Shop_CreateTime,Shop_ModifyUser,Shop_ModifyTime,@Weburl+Shop_Image as Shop_Image
-			,dob,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive where Shop_Id=shop.Shop_Code) as total_visit_count
+			,dob,date_aniversary,typs.Name as Shoptype,shop.type,(select count(0) from tbl_trans_shopActivitysubmit WITH(NOLOCK) where Shop_Id=shop.Shop_Code) + (select count(0) from tbl_trans_shopActivitysubmit_Archive WITH(NOLOCK) where Shop_Id=shop.Shop_Code) as total_visit_count
 			,(SELECT ISNULL(ISNULL(MAX(visited_time),shop.Lastvisit_date),GETDATE()) from (
 				SELECT visited_time,Shop_Id from tbl_trans_shopActivitysubmit WITH(NOLOCK) --where Shop_Id=shop.Shop_Code) 
 				UNION

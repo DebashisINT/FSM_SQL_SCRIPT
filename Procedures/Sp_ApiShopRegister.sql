@@ -8,33 +8,33 @@ GO
 
 ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 (
-@session_token  VARCHAR(MAX)=NULL,
-@user_id  VARCHAR(MAX),
-@shop_name  VARCHAR(MAX)=NULL,
-@address  VARCHAR(MAX)=NULL,
-@pin_code  VARCHAR(MAX)=NULL,
-@shop_lat  VARCHAR(MAX)=NULL,
-@shop_long  VARCHAR(MAX)=NULL,
-@owner_name  VARCHAR(MAX)=NULL,
-@owner_contact_no  VARCHAR(MAX)=NULL,
-@owner_email  VARCHAR(MAX)=NULL,
+@session_token  NVARCHAR(MAX)=NULL,
+@user_id  NVARCHAR(MAX),
+@shop_name  NVARCHAR(MAX)=NULL,
+@address  NVARCHAR(MAX)=NULL,
+@pin_code  NVARCHAR(MAX)=NULL,
+@shop_lat  NVARCHAR(MAX)=NULL,
+@shop_long  NVARCHAR(MAX)=NULL,
+@owner_name  NVARCHAR(MAX)=NULL,
+@owner_contact_no  NVARCHAR(MAX)=NULL,
+@owner_email  NVARCHAR(MAX)=NULL,
 @shop_image  NVARCHAR(MAX)=NULL,
 @type int =NULL,
-@dob VARCHAR(MAX) =NULL,
-@date_aniversary VARCHAR(MAX) =NULL,
-@shop_id VARCHAR(MAX) =NULL,
-@error VARCHAR(MAX) =NULL,
+@dob NVARCHAR(MAX) =NULL,
+@date_aniversary NVARCHAR(MAX) =NULL,
+@shop_id NVARCHAR(MAX) =NULL,
+@error NVARCHAR(MAX) =NULL,
 @added_date DATETIME =NULL,
-@assigned_to_pp_id VARCHAR(MAX) =NULL,
-@assigned_to_dd_id  VARCHAR(MAX) =NULL,
-@amount VARCHAR(100)=NULL,
+@assigned_to_pp_id NVARCHAR(MAX) =NULL,
+@assigned_to_dd_id  NVARCHAR(MAX) =NULL,
+@amount NVARCHAR(100)=NULL,
 --1.0 Rev start
 @family_member_dob DATETIME =NULL,
 @addtional_dob DATETIME =NULL,
 @addtional_doa DATETIME =NULL,
-@director_name VARCHAR(MAX) =NULL,
-@key_person_name  VARCHAR(MAX) =NULL,
-@phone_no VARCHAR(100)=NULL,
+@director_name NVARCHAR(MAX) =NULL,
+@key_person_name  NVARCHAR(MAX) =NULL,
+@phone_no NVARCHAR(100)=NULL,
 --1.0 Rev End
 --2.0 Rev Start
 @DOC_FAMILY_MEMBER_DOB DATETIME=NULL,
@@ -122,7 +122,7 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 @purpose NVARCHAR(MAX)=NULL
 --End of Rev 20.0
 ) --WITH ENCRYPTION
-As
+AS
 /************************************************************************************************************************************************
 1.0			TANMOY			31-12-2019			ADD EXTER FIELD FOR MORE DETAILS AND INSER NEW TABLE WITHE HEADER ID
 2.0			TANMOY			06-01-2019			STORE EXTRA DETAILS INTO ANOTHER TABLE FOR DECTOR
@@ -149,7 +149,7 @@ As
 BEGIN
 	SET NOCOUNT ON
 
-	IF  ISNULL(@Entered_by,'')=''
+	IF ISNULL(@Entered_by,'')=''
 	BEGIN
 		SET @Entered_by=@user_id
 		SET @Entity_Status=1
@@ -223,6 +223,17 @@ BEGIN
 	SET @IgnoreNumberCheckwhileShopCreation=(SELECT IgnoreNumberCheckwhileShopCreation FROM tbl_master_user WITH(NOLOCK) WHERE USER_ID=@user_id)
 	--End of Rev 21.0
 
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+	WHERE cnt_contactType IN('EM')
+
 	if EXISTS(select  user_id  from tbl_master_user WITH(NOLOCK) where user_id=@user_id)
 		BEGIN
 			if NOT EXISTS(select  Shop_ID  from [tbl_Master_shop] WITH(NOLOCK) where Shop_Code=@shop_id)
@@ -238,7 +249,11 @@ BEGIN
 									set @StateID=(
 									select  top 1 STAT.id as [state]
 									FROM tbl_master_user as usr WITH(NOLOCK) 
-									LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+									
+									--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+
+									LEFT OUTER JOIN #TEMPCONTACT CONT ON usr.user_contactId=cont.cnt_internalId
+
 									LEFT OUTER JOIN (
 											SELECT add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 											)S on S.add_cntId=cont.cnt_internalId
@@ -305,10 +320,14 @@ BEGIN
 										BEGIN
 											set @StateID=(
 											select  top 1 STAT.id as [state]
-											FROM tbl_master_user as usr
-											LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+											FROM tbl_master_user as usr WITH(NOLOCK)
+
+											--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+
+											LEFT OUTER JOIN #TEMPCONTACT CONT ON usr.user_contactId=cont.cnt_internalId
+
 											LEFT OUTER  JOIN (
-													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
+													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1 FROM tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 													)S on S.add_cntId=cont.cnt_internalId
 											--LEFT OUTER JOIN tbl_master_pinzip as pinzip on pinzip.pin_id=S.add_pin
 											LEFT OUTER JOIN tbl_master_state as STAT WITH(NOLOCK) on STAT.id=S.add_state
@@ -444,5 +463,7 @@ BEGIN
 			select '202' as returncode
 		END
 
+	DROP TABLE #TEMPCONTACT
+	
 	SET NOCOUNT OFF
 END

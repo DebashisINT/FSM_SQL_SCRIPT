@@ -210,6 +210,17 @@ BEGIN
 		set @amount=0
 	END
 
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId ASC)
+	INSERT INTO #TEMPCONTACT
+	SELECT cnt_internalId FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+	WHERE cnt_contactType IN('EM')
+
 
 	--if EXISTS(select  [Shop_CreateUser]  from [tbl_Master_shop] where [Shop_CreateUser]=@user_id and Shop_Code=@shop_id)
 
@@ -225,7 +236,11 @@ BEGIN
 		set @StateID=(
 		select  top 1 STAT.id as [state]
 		FROM tbl_master_user as usr WITH(NOLOCK) 
-		LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+
+		--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
+
+		LEFT OUTER JOIN #TEMPCONTACT cont ON usr.user_contactId=cont.cnt_internalId
+
 		LEFT OUTER  JOIN (
 				SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 				)S on S.add_cntId=cont.cnt_internalId
