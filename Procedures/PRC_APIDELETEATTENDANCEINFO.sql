@@ -25,32 +25,33 @@ BEGIN
 
 	IF @ACTION='DELETELEAVEATTENDANCE'
 		BEGIN
-			DELETE FROM tbl_attendance_worktype WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE attendanceid=ID AND User_Id=@USER_ID 
+			DELETE FROM tbl_attendance_worktype WITH(TABLOCK) WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 
-			DELETE FROM tbl_attendance_Route WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE attendanceid=ID AND User_Id=@USER_ID 
+			DELETE FROM tbl_attendance_Route WITH(TABLOCK) WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 
-			DELETE FROM FTS_Attendance_Target WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE Attendanceid=ID AND User_Id=@USER_ID 
+			DELETE FROM FTS_Attendance_Target WITH(TABLOCK) WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE Attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 
-			DELETE FROM tbl_attendance_RouteShop WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE attendanceid=ID AND User_Id=@USER_ID 
+			DELETE FROM tbl_attendance_RouteShop WITH(TABLOCK) WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 
-			DELETE FROM FTS_Attendance_Target_Statewise WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WHERE Attendanceid=ID AND User_Id=@USER_ID 
+			DELETE FROM FTS_Attendance_Target_Statewise WITH(TABLOCK) WHERE EXISTS (SELECT id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE Attendanceid=ID AND User_Id=@USER_ID 
 			AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 
 			--Rev 1.0
 			IF @ISLEAVEDELETE='1'
 				BEGIN
-					DELETE FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS (SELECT ATTEN.User_Id FROM tbl_fts_UserAttendanceLoginlogout ATTEN WHERE ATTEN.User_Id=FTS_USER_LEAVEAPPLICATION.USER_ID 
-					AND ATTEN.User_Id=@USER_ID AND CAST(ATTEN.Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE)) AND FTS_USER_LEAVEAPPLICATION.LEAVE_START_DATE=@LEAVE_APPLY_DATE
+					DELETE FROM FTS_USER_LEAVEAPPLICATION WITH(TABLOCK) WHERE EXISTS (SELECT ATTEN.User_Id FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) 
+					WHERE ATTEN.User_Id=FTS_USER_LEAVEAPPLICATION.USER_ID AND ATTEN.User_Id=@USER_ID AND CAST(ATTEN.Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE)) 
+					AND FTS_USER_LEAVEAPPLICATION.LEAVE_START_DATE=@LEAVE_APPLY_DATE
 				END
 			--End of Rev 1.0
 
-			DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE User_Id=@user_id AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE
+			DELETE FROM tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) WHERE User_Id=@user_id AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE
 
-			IF NOT EXISTS(SELECT * FROM tbl_fts_UserAttendanceLoginlogout WHERE User_Id=@user_id AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
+			IF NOT EXISTS(SELECT User_Id FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE User_Id=@user_id AND CAST(Work_datetime AS DATE)=CAST(@LEAVE_APPLY_DATE AS DATE) AND Isonleave=@ISONLEAVE)
 				SELECT 1
 		END
 

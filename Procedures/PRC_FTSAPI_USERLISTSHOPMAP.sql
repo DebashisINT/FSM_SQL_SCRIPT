@@ -78,35 +78,35 @@ BEGIN
 			--Rev 14.0
 			USR.UpdateOtherID,USR.UpdateUserID,EMP.cnt_OtherID AS OtherID
 			--End of Rev 14.0
-			FROM FTS_EmployeeShopMap MAP
-			INNER JOIN TBL_MASTER_USER USR ON MAP.USER_ID=USR.USER_ID
+			FROM FTS_EmployeeShopMap MAP WITH(NOLOCK)
+			INNER JOIN TBL_MASTER_USER USR WITH(NOLOCK) ON MAP.USER_ID=USR.USER_ID
 			--Rev 4.0
 			and USR.user_inactive='N'
 			--End of Rev 4.0
 			--Rev 2.0
-			INNER JOIN tbl_Master_shop MS ON MAP.SHOP_CODE=MS.Shop_Code AND MS.type=4
+			INNER JOIN tbl_Master_shop MS WITH(NOLOCK) ON MAP.SHOP_CODE=MS.Shop_Code AND MS.type=4
 			--End of Rev 2.0
 			--Rev 14.0
-			INNER JOIN tbl_master_employee EMP ON USR.user_contactId=EMP.emp_contactId
+			INNER JOIN tbl_master_employee EMP WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId
 			--End of Rev 14.0
 			--Rev 6.0
-			LEFT OUTER JOIN FSMEMPLOYEEAADHARINFORMATION AADHINFO ON USR.USER_ID=AADHINFO.USER_ID
+			LEFT OUTER JOIN FSMEMPLOYEEAADHARINFORMATION AADHINFO WITH(NOLOCK) ON USR.USER_ID=AADHINFO.USER_ID
 			--End of Rev 6.0
 			--Rev 9.0
-			LEFT OUTER JOIN FSMUSERAADHARIMAGEDETECTION AADHDETINFO ON USR.USER_ID=AADHDETINFO.USER_ID
+			LEFT OUTER JOIN FSMUSERAADHARIMAGEDETECTION AADHDETINFO WITH(NOLOCK) ON USR.USER_ID=AADHDETINFO.USER_ID
 			--End of Rev 9.0
 			--Rev 8.0
-			LEFT OUTER JOIN FTS_Stage FTSSTG ON USR.FaceRegTypeID=FTSSTG.StageID
+			LEFT OUTER JOIN FTS_Stage FTSSTG WITH(NOLOCK) ON USR.FaceRegTypeID=FTSSTG.StageID
 			--End of Rev 8.0
 			--Rev 10.0
-			LEFT OUTER JOIN tbl_master_phonefax PHNO ON USR.user_contactId=PHNO.phf_cntId AND phf_entity='employee' AND phf_type='Office'
+			LEFT OUTER JOIN tbl_master_phonefax PHNO WITH(NOLOCK) ON USR.user_contactId=PHNO.phf_cntId AND phf_entity='employee' AND phf_type='Office'
 			--End of Rev 10.0
-			WHERE EXISTS(SELECT SHOP_CODE FROM FTS_EmployeeShopMap WHERE USER_ID=@USER_ID AND MAP.SHOP_CODE =FTS_EmployeeShopMap.SHOP_CODE )
+			WHERE EXISTS(SELECT SHOP_CODE FROM FTS_EmployeeShopMap WITH(NOLOCK) WHERE USER_ID=@USER_ID AND MAP.SHOP_CODE =FTS_EmployeeShopMap.SHOP_CODE )
 		END
 	ELSE IF @Action='FaceMatch'
 		BEGIN
 			SELECT USR.USER_ID AS user_id,ISNULL(USR.FaceImage,'') AS face_image_link,isFaceRegistered AS isFaceRegistered 
-			FROM TBL_MASTER_USER USR WHERE user_id=@USER_ID AND FaceImage<>''
+			FROM TBL_MASTER_USER USR WITH(NOLOCK) WHERE user_id=@USER_ID AND FaceImage<>''
 		END
 	ELSE IF @Action='FaceImgDel'
 		BEGIN
@@ -117,13 +117,13 @@ BEGIN
 
 			--UPDATE TBL_MASTER_USER SET FaceImage='',isFaceRegistered=0 WHERE user_id=@USER_ID
 
-			SELECT USR.USER_ID,ISNULL(USR.FaceImage,'') AS face_image_link,ISNULL(USR.AadharImage,'') AS aadhar_image_link INTO #TMPGETIMG FROM TBL_MASTER_USER USR WHERE user_id=@USER_ID
+			SELECT USR.USER_ID,ISNULL(USR.FaceImage,'') AS face_image_link,ISNULL(USR.AadharImage,'') AS aadhar_image_link INTO #TMPGETIMG FROM TBL_MASTER_USER USR WITH(NOLOCK) WHERE user_id=@USER_ID
 
 			SELECT USER_ID,face_image_link,aadhar_image_link FROM #TMPGETIMG
 
-			UPDATE TBL_MASTER_USER SET FaceImage='',isFaceRegistered=0,Registration_Datetime=NULL,AadharImage='',isAadharRegistered=0,AadharRegistration_Datetime=NULL WHERE user_id=@USER_ID
+			UPDATE TBL_MASTER_USER  WITH(TABLOCK)SET FaceImage='',isFaceRegistered=0,Registration_Datetime=NULL,AadharImage='',isAadharRegistered=0,AadharRegistration_Datetime=NULL WHERE user_id=@USER_ID
 
-			DELETE FROM FSMUSERAADHARIMAGEDETECTION WHERE USER_ID=@USER_ID
+			DELETE FROM FSMUSERAADHARIMAGEDETECTION WITH(TABLOCK) WHERE USER_ID=@USER_ID
 			--End of Rev 7.0
 
 			--SELECT USR.USER_ID AS user_id,ISNULL(USR.FaceImage,'') AS face_image_link,isFaceRegistered AS isFaceRegistered 
