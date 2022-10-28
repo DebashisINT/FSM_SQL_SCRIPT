@@ -1,0 +1,275 @@
+--EXEC PRC_FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT 'SEP','','','2022',378
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT]') AND TYPE in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT] AS' 
+END
+GO
+
+ALTER PROCEDURE [dbo].[PRC_FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT]
+(
+@MONTH NVARCHAR(3)=NULL,
+@STATEID NVARCHAR(MAX)=NULL,
+@EMPID NVARCHAR(MAX)=NULL,
+@YEARS NVARCHAR(10)=NULL,
+@USERID INT
+) --WITH ENCRYPTION
+AS
+/****************************************************************************************************************************************************************************
+Written by : Debashis Talukder on 28/10/2022
+Module	   : Dealer/Distributor Wise Performance
+****************************************************************************************************************************************************************************/
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @Strsql NVARCHAR(MAX),@SqlStrTable NVARCHAR(MAX),@MONTHNAME NVARCHAR(3),@MONTHNO INT=0,@FROMDATE NVARCHAR(10),@TODATE NVARCHAR(10),@isRevisitTeamDetail NVARCHAR(100)
+
+	SELECT @isRevisitTeamDetail=[Value] FROM fts_app_config_settings WHERE [Key]='isRevisitTeamDetail' AND [Description]='Revisit from Team Details in Portal'
+
+	SET @MONTHNAME=@MONTH
+	SET @MONTHNO=DATEPART(MM,@MONTHNAME+'01 1900')
+	SET @FROMDATE=CONVERT(NVARCHAR(10),DATEADD(MONTH, CONVERT(INT,@MONTHNO) - 1, @YEARS),120)
+	SET @TODATE=CONVERT(NVARCHAR(10),DATEADD(DAY, -1, DATEADD(MONTH, CONVERT(INT,@MONTHNO), @YEARS)),120)
+
+	IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
+		DROP TABLE #STATEID_LIST
+	CREATE TABLE #STATEID_LIST (State_Id INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
+	IF @STATEID <> ''
+		BEGIN
+			SET @STATEID=REPLACE(@STATEID,'''','')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #STATEID_LIST SELECT id from tbl_master_state WITH (NOLOCK) where ID IN('+@STATEID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+
+	IF OBJECT_ID('tempdb..#EMPLOYEE_LIST') IS NOT NULL
+		DROP TABLE #EMPLOYEE_LIST
+	CREATE TABLE #EMPLOYEE_LIST (emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS)
+	IF @EMPID <> ''
+		BEGIN
+			SET @EMPID = REPLACE(''''+@EMPID+'''',',',''',''')
+			SET @SqlStrTable=''
+			SET @SqlStrTable='INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId FROM tbl_master_employee WITH (NOLOCK) WHERE emp_contactId IN('+@EMPID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+		END
+
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			DECLARE @empcodes VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@Userid)		
+			CREATE TABLE #EMPHRS
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+			
+			INSERT INTO #EMPHRS
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH (NOLOCK)
+			LEFT JOIN tbl_master_employee TME WITH (NOLOCK) ON TME.emp_id= CTC.emp_reportTO 
+			WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(SELECT	EMPCODE,RPTTOEMPCODE FROM #EMPHRS WHERE EMPCODE IS NULL OR EMPCODE=@empcodes  
+			UNION ALL
+			SELECT a.EMPCODE,a.RPTTOEMPCODE FROM #EMPHRS a
+			JOIN cte b ON a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			SELECT EMPCODE,RPTTOEMPCODE FROM cte 
+		END
+
+	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+		DROP TABLE #TEMPCONTACT
+	CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_branchid INT,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
+		END
+	ELSE
+		BEGIN
+			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			WHERE cnt_contactType IN('EM')
+		END
+
+	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT') AND TYPE IN (N'U'))
+		BEGIN
+			CREATE TABLE FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT
+			(
+			  USERID INT,
+			  SEQ INT,
+			  EMPCODE NVARCHAR(100) NULL,
+			  EMPNAME NVARCHAR(300) NULL,
+			  EMPID NVARCHAR(100) NULL,
+			  CONTACTNO NVARCHAR(50) NULL,
+			  DEG_ID INT,
+			  DESIGNATION NVARCHAR(50) NULL,
+			  DATEOFJOINING NVARCHAR(10),
+			  STATEID INT,
+			  STATE NVARCHAR(50) NULL,
+			  BRANCHDESC NVARCHAR(300),
+			  REPORTTO NVARCHAR(300) NULL,
+			  RPTTODESG NVARCHAR(50) NULL,
+			  SHOP_TYPE NVARCHAR(50),
+			  SHOP_CODE NVARCHAR(100),
+			  SHOP_NAME NVARCHAR(300) NULL,
+			  SHOPCITY NVARCHAR(50) NULL,
+			  TOTAL_VISIT INT,
+			  NEWSHOP_VISITED INT,
+			  RE_VISITED INT,
+			  ORDSHPCNT INT,
+			  TOTALORDERVALUE DECIMAL(38,2),
+			  AVGORDVALUE DECIMAL(38,2),
+			  AVGVISITVALUE DECIMAL(38,2)
+			)
+			CREATE NONCLUSTERED INDEX IX1 ON FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT (SEQ)
+		END
+	DELETE FROM FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT WHERE USERID=@USERID
+
+	IF OBJECT_ID('tempdb..#TMPATTENLOGINDDP') IS NOT NULL
+		DROP TABLE #TMPATTENLOGINDDP
+
+	CREATE TABLE #TMPATTENLOGINDDP(USERID BIGINT,LOGGEDIN NVARCHAR(10),cnt_internalId NVARCHAR(10),Login_datetime NVARCHAR(10))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINDDP(USERID,cnt_internalId,Login_datetime)
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO #TMPATTENLOGINDDP(USERID,LOGGEDIN,cnt_internalId,Login_datetime) '
+	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
+	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	IF OBJECT_ID('tempdb..#TMPSHOPSUBMITACTDDP') IS NOT NULL
+		DROP TABLE #TMPSHOPSUBMITACTDDP
+
+	CREATE TABLE #TMPSHOPSUBMITACTDDP(USER_ID BIGINT,cnt_internalId NVARCHAR(10),Shop_Id VARCHAR(100),NEWSHOP_VISITED INT,RE_VISITED INT,VISITED_TIME NVARCHAR(20))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPSHOPSUBMITACTDDP(USER_ID,cnt_internalId,Shop_Id)
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO #TMPSHOPSUBMITACTDDP(USER_ID,cnt_internalId,Shop_Id,NEWSHOP_VISITED,RE_VISITED,VISITED_TIME) '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,COUNT(SHOPACT.Shop_Id) AS NEWSHOP_VISITED,0 AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME '
+	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=1 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
+	SET @Strsql+='UNION ALL '
+	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME '
+	SET @Strsql+='FROM tbl_trans_shopActivitysubmit SHOPACT WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=SHOPACT.User_Id '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time '
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	SET @Strsql=''
+	SET @Strsql='INSERT INTO FTSDEALERDISTRIBUTORWISEPERFORMANCE_REPORT(USERID,SEQ,EMPCODE,EMPNAME,EMPID,CONTACTNO,DEG_ID,DESIGNATION,DATEOFJOINING,STATEID,STATE,BRANCHDESC,REPORTTO,RPTTODESG,SHOP_TYPE,'
+	SET @Strsql+='SHOP_CODE,SHOP_NAME,SHOPCITY,TOTAL_VISIT,NEWSHOP_VISITED,RE_VISITED,ORDSHPCNT,TOTALORDERVALUE,AVGORDVALUE,AVGVISITVALUE) '
+	SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY SHOP_NAME) AS SEQ,EMPCODE,EMPNAME,EMPID,CONTACTNO,DEG_ID,DESIGNATION,DATEOFJOINING,STATEID,STATE,BRANCHDESC,'
+	SET @Strsql+='REPORTTO,RPTTODESG,SHOP_TYPE,SHOP_CODE,SHOP_NAME,SHOPCITY,TOTAL_VISIT,NEWSHOP_VISITED,RE_VISITED,ORDSHPCNT,TOTAL_ORDER_BOOKED_VALUE,'
+	SET @Strsql+='TOTAL_ORDER_BOOKED_VALUE/(CASE WHEN ORDSHPCNT<>0 THEN ORDSHPCNT ELSE 1 END) AS AVGORDVALUE,TOTAL_ORDER_BOOKED_VALUE/(CASE WHEN TOTAL_VISIT<>0 THEN TOTAL_VISIT ELSE 1 END) AS AVGVISITVALUE '
+	SET @Strsql+='FROM('
+	SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
+	SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ST.STATE,BR.branch_description AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
+	SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTO,RPTTO.RPTTODESG,EMP.emp_uniqueCode AS EMPID,SHOP.SHOP_TYPE,SHOP.Shop_Code,SHOP.Shop_Name,SHOP.CITY_NAME AS SHOPCITY,'
+	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,'
+	SET @Strsql+='ISNULL(ORDHEAD.ORDSHPCNT,0) AS ORDSHPCNT,ISNULL(ORDHEAD.Ordervalue,0) AS Total_Order_Booked_Value '
+	SET @Strsql+='FROM tbl_master_employee EMP WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	SET @Strsql+='INNER JOIN tbl_master_branch BR WITH(NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+	SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+	SET @Strsql+='INNER JOIN tbl_master_state ST WITH(NOLOCK) ON ST.id=ADDR.add_state '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) '
+	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
+	SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC WITH(NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) '
+	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,cnt_internalId,Login_datetime FROM('
+	SET @Strsql+='SELECT USERID,LOGGEDIN,cnt_internalId,Login_datetime FROM #TMPATTENLOGINDDP '
+	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime '
+	SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT User_Id,cnt_internalId,Shop_Id,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED,VISITED_TIME FROM('
+	SET @Strsql+='SELECT USER_ID,cnt_internalId,Shop_Id,NEWSHOP_VISITED,RE_VISITED,VISITED_TIME FROM #TMPSHOPSUBMITACTDDP '
+	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME '
+	SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
+	SET @Strsql+='INNER JOIN ('
+	SET @Strsql+='SELECT DISTINCT shop.Shop_Code,shop.Shop_CreateUser,shop.Shop_Name,shop.Shop_Owner_Contact,shop.Type,SHOPTYPE.Name AS SHOP_TYPE,CITY.CITY_NAME '
+	SET @Strsql+='FROM tbl_Master_shop shop WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_shoptype SHOPTYPE WITH(NOLOCK) ON shop.TYPE=SHOPTYPE.shop_typeId '
+	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY WITH(NOLOCK) ON shop.Shop_City=CITY.city_id '
+	SET @Strsql+='WHERE SHOPTYPE.TypeId IN(1,4) '
+	IF @isRevisitTeamDetail='1'
+		SET @Strsql+=') SHOP ON SHOP.Shop_Code=SHOPACT.Shop_Id '
+	ELSE IF @isRevisitTeamDetail='0'
+		SET @Strsql+=') SHOP ON SHOP.Shop_CreateUser=USR.user_id AND SHOP.Shop_Code=SHOPACT.Shop_Id '
+	SET @Strsql+='LEFT OUTER JOIN ('
+	SET @Strsql+='SELECT ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,COUNT(ORDH.SHOP_CODE) AS ORDSHPCNT,SUM(ISNULL(Ordervalue,0)) AS Ordervalue,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) AS ORDDATE '
+	SET @Strsql+='FROM tbl_trans_fts_Orderupdate ORDH WITH(NOLOCK) '
+	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ORDH.userID '
+	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+='GROUP BY ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) '
+	SET @Strsql+=') ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=ORDHEAD.ORDDATE AND ORDHEAD.SHOP_CODE=SHOP.SHOP_CODE '
+	SET @Strsql+=') AS DB '
+	IF @STATEID<>'' AND @EMPID=''
+		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	ELSE IF @STATEID='' AND @EMPID<>''
+		SET @Strsql+='WHERE EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	ELSE IF @STATEID<>'' AND @EMPID<>''
+		BEGIN
+			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+		END
+
+	--SELECT @Strsql
+	EXEC SP_EXECUTESQL @Strsql
+
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
+		BEGIN
+			DROP TABLE #EMPHR_EDIT
+			DROP TABLE #EMPHRS
+		END
+	DROP TABLE #EMPLOYEE_LIST
+	DROP TABLE #STATEID_LIST
+	DROP TABLE #TEMPCONTACT
+	DROP TABLE #TMPATTENLOGINDDP
+	DROP TABLE #TMPSHOPSUBMITACTDDP
+	
+	SET NOCOUNT OFF
+END
