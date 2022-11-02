@@ -108,8 +108,11 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 @whatsappNoForCustomer NVARCHAR(100)=NULL,
 --End of Rev 16.0
 --Rev 18.0
-@shopStatusUpdate BIT=NULL
+@shopStatusUpdate BIT=NULL,
 --End of Rev 18.0
+--Rev 19.0
+@GSTN_Number NVARCHAR(100)=NULL
+--End of Rev 19.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -133,6 +136,7 @@ As
 														LIKE 'ENTITY CODE'. There may be some more fields that to be coditional with ISNULL CHECK.
 														Refer: 0024762
 18.0	v2.0.28		Debashis		18-04-2022			New parameter added as @shopStatusUpdate.Refer: 682
+19.0	v2.0.35		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -346,8 +350,11 @@ BEGIN
 			 AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
 			 WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END,
 			 --Rev 18.0
-			 ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END
+			 ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END,
 			 --End of Rev 18.0
+			 --Rev 19.0
+			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END
+			 --End of Rev 19.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
 	--Rev 13.0
@@ -424,8 +431,11 @@ BEGIN
 			AlternateNoForCustomer=CASE WHEN @alternateNoForCustomer IS NULL OR @alternateNoForCustomer='' THEN [AlternateNoForCustomer] ELSE @alternateNoForCustomer END,
 			WhatsappNoForCustomer=CASE WHEN @whatsappNoForCustomer IS NULL OR @whatsappNoForCustomer='' THEN [WhatsappNoForCustomer] ELSE @whatsappNoForCustomer END,
 			--Rev 18.0
-			ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END
+			ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END,
 			--End of Rev 18.0
+			--Rev 19.0
+			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END
+			 --End of Rev 19.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
 		END

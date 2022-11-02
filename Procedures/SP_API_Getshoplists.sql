@@ -32,6 +32,7 @@ AS
 14.0		Debashis		10-02-2022			Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer.Refer: 637
 15.0		Debashis		01-06-2022			One field added as IsShopDuplicate.Row: 694
 16.0		Debashis		17-06-2022			One field added as Purpose.Row: 704
+17.0		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -70,19 +71,15 @@ BEGIN
 			--Rev 8.0 Start
 			set @sql+=' ,convert(nvarchar(10),shop.PartyType_id) as type_id   '
 			--Rev 8.0 End
-
 			--Rev 10.0 Start
 			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.Entity_Id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.Entity_Id),'''') END as entity_id'
 			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.Party_Status_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.Party_Status_id),'''')  END as party_status_id'
 			--Rev 10.0 End
-
 			--Rev 11.0 Start
 			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.retailer_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.retailer_id),'''') END as retailer_id'
 			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.dealer_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.dealer_id),'''')  END as dealer_id'
-			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.beat_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.beat_id),'''')  END as beat_id'
-			
+			set @sql+=',CASE WHEN ISNULL(convert(varchar(10),shop.beat_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),shop.beat_id),'''')  END as beat_id'			
 			--Rev 11.0 End
-
 			--Rev 12.0 Start
 			set @sql+=',ISNULL(account_holder,'''') as account_holder'
 			set @sql+=',ISNULL(account_no,'''') as account_no'
@@ -101,8 +98,11 @@ BEGIN
 			set @sql+='CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate,'
 			--End of Rev 15.0
 			--Rev 16.0
-			set @sql+='ISNULL(shop.Purpose,'''') AS purpose '
+			set @sql+='ISNULL(shop.Purpose,'''') AS purpose,'
 			--End of Rev 16.0
+			--Rev 17.0
+			set @sql+='ISNULL(shop.GSTN_Number,'''') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'''') AS ShopOwner_PAN '
+			--End of Rev 17.0
 			set @sql+=' from tbl_Master_shop as shop WITH(NOLOCK)  '
 			set @sql+=' INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype as typs WITH(NOLOCK) on typs.shop_typeId=shop.type   '
@@ -154,14 +154,12 @@ BEGIN
 			--Rev 10.0 Start
 			,CASE WHEN ISNULL(convert(varchar(10),shop.Entity_Id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.Entity_Id),'') END as entity_id
 			,CASE WHEN ISNULL(convert(varchar(10),shop.Party_Status_id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.Party_Status_id),'')  END as party_status_id
-			--Rev 10.0 End
-			
+			--Rev 10.0 End			
 			--Rev 11.0 Start
 			,CASE WHEN ISNULL(convert(varchar(10),shop.retailer_id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.retailer_id),'') END as retailer_id
 			,CASE WHEN ISNULL(convert(varchar(10),shop.dealer_id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.dealer_id),'')  END as dealer_id
 			,CASE WHEN ISNULL(convert(varchar(10),shop.beat_id),'')='0' THEN '' ELSE ISNULL(convert(varchar(10),shop.beat_id),'')  END as beat_id		
 			--Rev 11.0 End
-
 			--Rev 12.0 Start
 			,ISNULL(account_holder,'') as account_holder
 			,ISNULL(account_no,'') as account_no
@@ -180,8 +178,11 @@ BEGIN
 			CAST(ISNULL(shop.IsShopDuplicate,0) AS BIT) AS isShopDuplicate, 
 			--End of Rev 15.0
 			--Rev 16.0
-			ISNULL(shop.Purpose,'') AS purpose 
+			ISNULL(shop.Purpose,'') AS purpose, 
 			--End of Rev 16.0
+			--Rev 17.0
+			ISNULL(shop.GSTN_Number,'') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'') AS ShopOwner_PAN
+			--End of Rev 17.0
 			from tbl_Master_shop as shop WITH(NOLOCK) 
 			INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 			INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
