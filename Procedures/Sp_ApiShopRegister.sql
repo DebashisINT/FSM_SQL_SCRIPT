@@ -119,8 +119,11 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 @isShopDuplicate BIT=NULL,
 --End of Rev 19.0
 --Rev 20.0
-@purpose NVARCHAR(MAX)=NULL
+@purpose NVARCHAR(MAX)=NULL,
 --End of Rev 20.0
+--Rev 22.0
+@GSTN_Number NVARCHAR(100)=NULL
+--End of Rev 22.0
 ) --WITH ENCRYPTION
 AS
 /************************************************************************************************************************************************
@@ -145,6 +148,7 @@ AS
 19.0		Debashis		01-06-2022			One field added as IsShopDuplicate.Row: 691,692 & 693
 20.0		Debashis		17-06-2022			One field added as Purpose.Row: 701,702 & 703
 21.0		Debashis		11-07-2022			A new setting implemented.Row: 713
+22.0		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -248,31 +252,29 @@ BEGIN
 								BEGIN
 									set @StateID=(
 									select  top 1 STAT.id as [state]
-									FROM tbl_master_user as usr WITH(NOLOCK) 
-									
+									FROM tbl_master_user as usr WITH(NOLOCK) 									
 									--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
-
 									LEFT OUTER JOIN #TEMPCONTACT CONT ON usr.user_contactId=cont.cnt_internalId
-
 									LEFT OUTER JOIN (
 											SELECT add_cntId,add_state,add_city,add_country,add_pin,add_address1  FROM  tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 											)S on S.add_cntId=cont.cnt_internalId
 									LEFT OUTER JOIN tbl_master_state as STAT WITH(NOLOCK) on STAT.id=S.add_state
 									where usr.user_id=@user_id)
 								END
+							--Rev 22.0 && A new field added as GSTN_Number
 							INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 										,Entered_By,Entered_On,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount,PartyType_id,Entity_Id,Party_Status_id,retailer_id
 										,dealer_id,beat_id,assigned_to_shop_id,actual_address,competitor_img,Agency_Name,Lead_Contact_Number
-										,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose
+										,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose,GSTN_Number
 										)
 								 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,@user_id,@added_date,@type,@dob,@date_aniversary
 										,@shop_image,@shop_id,1,@added_date,1,@assigned_to_pp_id,@assigned_to_dd_id,@StateID,@amount,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,
 										@Entity_Type,@ShopOwner_PAN,@ShopOwner_Aadhar,@EntityRemarks,@AreaId,@CityId,@Entered_by,GETDATE(),@model_id,@primary_app_id,@secondary_app_id,@lead_id,
-										@funnel_stage_id,@stage_id,@booking_amount,@PartyType_id,@entity_id,@party_status_id,@retailer_id,@dealer_id,@beat_id,@assigned_to_shop_id,@actual_address
-										,@competitor_img,@agency_name,@lead_contact_number,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
-										)
+										@funnel_stage_id,@stage_id,@booking_amount,@PartyType_id,@entity_id,@party_status_id,@retailer_id,@dealer_id,@beat_id,@assigned_to_shop_id,@actual_address,
+										@competitor_img,@agency_name,@lead_contact_number,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,
+										@GSTN_Number)
 
 							SET @COUNT=SCOPE_IDENTITY();
 
@@ -291,13 +293,13 @@ BEGIN
 									values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
 									,@shop_revisit_uniqKey
 									)
-
+									--Rev 22.0 && Two new fields added as ShopOwner_PAN & GSTN_Number
 									select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 									,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 									,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 									,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 									@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
-									@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+									@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
 
 									INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 									VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
@@ -321,11 +323,8 @@ BEGIN
 											set @StateID=(
 											select  top 1 STAT.id as [state]
 											FROM tbl_master_user as usr WITH(NOLOCK)
-
 											--LEFT OUTER JOIN tbl_master_contact  as cont WITH(NOLOCK) on usr.user_contactId=cont.cnt_internalId
-
 											LEFT OUTER JOIN #TEMPCONTACT CONT ON usr.user_contactId=cont.cnt_internalId
-
 											LEFT OUTER  JOIN (
 													SELECT   add_cntId,add_state,add_city,add_country,add_pin,add_address1 FROM tbl_master_address WITH(NOLOCK) where add_addressType='Office'
 													)S on S.add_cntId=cont.cnt_internalId
@@ -339,6 +338,7 @@ BEGIN
 									--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
 									--Rev 19.0 @@One field added as IsShopDuplicate
 									--Rev 20.0 @@One field added as Purpose
+									--Rev 22.0 && A new field added as GSTN_Number
 									INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 											   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 												,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
@@ -368,7 +368,7 @@ BEGIN
 												--Rev 13.0 End
 												,competitor_img
 												,Agency_Name,Lead_Contact_Number
-												,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose
+												,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose,GSTN_Number
 												)
 										 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,@user_id,@added_date,@type,@dob,@date_aniversary
 												,@shop_image,@shop_id,1,@added_date,1,@assigned_to_pp_id,@assigned_to_dd_id,@StateID,@amount,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,
@@ -399,7 +399,7 @@ BEGIN
 												--Rev 13.0 End
 												,@competitor_img
 												,@agency_name,@lead_contact_number
-												,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+												,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@GSTN_Number
 												)
 
 									SET @COUNT=SCOPE_IDENTITY();
@@ -425,12 +425,13 @@ BEGIN
 											--Rev 18.0 @@Two fields added as AlternateNoForCustomer & WhatsappNoForCustomer
 											--Rev 19.0 @@One field added as IsShopDuplicate
 											--Rev 20.0 @@One field added as Purpose
+											--Rev 22.0 && Two new fields added as ShopOwner_PAN & GSTN_Number
 											select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 											,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 											,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 											,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 											@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
-											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose
+											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
 
 											--1.0 Rev start
 											INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
