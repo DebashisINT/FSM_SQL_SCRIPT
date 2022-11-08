@@ -8,16 +8,17 @@ GO
 
 ALTER PROCEDURE [dbo].[PRC_APIITCDAYWISESHOP]
 (
-@user_id INT =NULL,
+@user_id INT=NULL,
 @from_date NVARCHAR(50)=NULL,
-@to_date NVARCHAR(50) =NULL,
-@date_span INT =NULL,
+@to_date NVARCHAR(50)=NULL,
+@date_span INT=NULL,
 @Action INT=NULL
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 19/10/2022
 Module	   : ITC Daywise Shop Visit.Refer:Row:749
+1.0		v2.0.36		Debashis	08/11/2022		Daywiseshop/ITCRecords days updation to 45 days.Refer: 0025436
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -72,21 +73,33 @@ BEGIN
 				BEGIN
 					SELECT SUM(totcount) AS totcount,SUM(avgshop) AS avgshop FROM(
 					SELECT ISNULL(COUNT(Shop_Id),0) AS totcount,ISNULL(AVG(ISNULL(total_visit_count,0)),0) AS avgshop FROM [tbl_trans_shopActivitysubmit] WITH(NOLOCK) 
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(ISMEETING,0)=0
 					UNION ALL
 					SELECT ISNULL(COUNT(Shop_Id),0) AS totcount,ISNULL(AVG(ISNULL(total_visit_count,0)),0) AS avgshop FROM Trans_ShopActivitySubmit_TodayData WITH(NOLOCK) 
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(ISMEETING,0)=0
 					) SHPACT
 
 					SELECT DISTINCT [date] FROM(
 					SELECT DISTINCT CAST(visited_date AS VARCHAR(50)) AS [date] FROM [tbl_trans_shopActivitysubmit] WITH(NOLOCK) 
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(ISMEETING,0)=0
 					UNION ALL
 					SELECT DISTINCT CAST(visited_date AS VARCHAR(50)) AS [date] FROM Trans_ShopActivitySubmit_TodayData WITH(NOLOCK) 
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(ISMEETING,0)=0
 					) SHPACT
 
@@ -100,7 +113,10 @@ BEGIN
 					ISNULL(lastactivty.Approximate_1st_Billing_Value,0.00) AS approximate_1st_billing_value
 					FROM [tbl_trans_shopActivitysubmit] AS lastactivty WITH(NOLOCK) 
 					INNER JOIN tbl_Master_shop AS shop WITH(NOLOCK) ON shop.Shop_Code=lastactivty.Shop_Id
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(lastactivty.ISMEETING,0)=0
 					UNION ALL
 					SELECT DISTINCT CAST(visited_date AS VARCHAR(50)) AS [date],CAST(lastactivty.Shop_Id AS VARCHAR(50)) AS shopid,
@@ -113,7 +129,10 @@ BEGIN
 					ISNULL(lastactivty.Approximate_1st_Billing_Value,0.00) AS approximate_1st_billing_value
 					FROM Trans_ShopActivitySubmit_TodayData AS lastactivty WITH(NOLOCK) 
 					INNER JOIN tbl_Master_shop AS shop WITH(NOLOCK) ON shop.Shop_Code=lastactivty.Shop_Id
-					WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--Rev 1.0
+					--WHERE visited_date BETWEEN DateAdd(DAY,-30,convert(date,GETDATE())) AND convert(date,GETDATE())
+					WHERE visited_date BETWEEN DateAdd(DAY,-45,convert(date,GETDATE())) AND convert(date,GETDATE())
+					--End of Rev 1.0
 					AND User_Id=@user_id AND ISNULL(lastactivty.ISMEETING,0)=0
 				END
 		END
