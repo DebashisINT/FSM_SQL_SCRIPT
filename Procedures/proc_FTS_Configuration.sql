@@ -150,6 +150,7 @@ BEGIN
 	132.0		Debashis	15-09-2022	ADD SETTINGS @Action=GlobalCheck' IsDistributorSelectionRequiredinAttendance.Row 740
 	133.0		Debashis	22-09-2022	ADD SETTINGS @Action='UserCheck' GPSNetworkIntervalMins.Row 741
 	134.0		Debashis	02-11-2022	ADD SETTINGS @Action=GlobalCheck' IsAllowNearbyshopWithBeat & IsGSTINPANEnableInShop.Row 751 & 752
+	135.0		Debashis	09-11-2022	ADD SETTINGS @Action=GlobalCheck' IsMultipleImagesRequired.Row 760
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -294,6 +295,9 @@ BEGIN
 	,@IsAllowNearbyshopWithBeat BIT
 	,@IsGSTINPANEnableInShop BIT
 	--End of Rev 134.0
+	--Rev 135.0
+	,@IsMultipleImagesRequired BIT
+	--End of Rev 135.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -489,6 +493,9 @@ BEGIN
 		SET @IsAllowNearbyshopWithBeat =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowNearbyshopWithBeat' AND IsActive=1)
 		SET @IsGSTINPANEnableInShop =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsGSTINPANEnableInShop' AND IsActive=1)
 		--End of Rev 134.0
+		--Rev 135.0
+		SET @IsMultipleImagesRequired =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsMultipleImagesRequired' AND IsActive=1)
+		--End of Rev 135.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -663,6 +670,9 @@ BEGIN
 			,@IsAllowNearbyshopWithBeat AS IsAllowNearbyshopWithBeat
 			,@IsGSTINPANEnableInShop AS IsGSTINPANEnableInShop
 			--End of Rev 134.0
+			--Rev 135.0
+			,@IsMultipleImagesRequired AS IsMultipleImagesRequired
+			--End of Rev 135.0
 	END
 
 	else if(@Action='UserCheck')
