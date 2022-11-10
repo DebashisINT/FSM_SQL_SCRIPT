@@ -12,7 +12,8 @@ ALTER PROCEDURE [dbo].[PRC_APISHOPATTACHMENTIMAGEINFO]
 @AttachmentImage1 NVARCHAR(500)=NULL,
 @AttachmentImage2 NVARCHAR(500)=NULL,
 @AttachmentImage3 NVARCHAR(500)=NULL,
-@AttachmentImage4 NVARCHAR(500)=NULL
+@AttachmentImage4 NVARCHAR(500)=NULL,
+@APIHostingPort NVARCHAR(500)=NULL
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -48,7 +49,10 @@ BEGIN
 			END
 		IF @ACTION='FETCHATTACHMENTIMAGES'
 			BEGIN
-				SELECT Shop_Code,Shop_CreateUser,AttachmentImage1 AS attachment_image1,AttachmentImage2 AS attachment_image2,AttachmentImage3 AS attachment_image3,AttachmentImage4 AS attachment_image4 
+				SELECT Shop_Code,Shop_CreateUser,CASE WHEN AttachmentImage1<>'' THEN @APIHostingPort+AttachmentImage1 ELSE '' END AS attachment_image1,
+				CASE WHEN AttachmentImage2<>'' THEN @APIHostingPort+AttachmentImage2 ELSE '' END AS attachment_image2,
+				CASE WHEN AttachmentImage3<>'' THEN @APIHostingPort+AttachmentImage3 ELSE '' END AS attachment_image3,
+				CASE WHEN AttachmentImage4<>'' THEN @APIHostingPort+AttachmentImage4 ELSE '' END AS attachment_image4 
 				FROM tbl_Master_shop WHERE Shop_CreateUser=@USER_ID AND Shop_Code=@SHOP_ID
 			END
 
