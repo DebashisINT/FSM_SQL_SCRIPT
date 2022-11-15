@@ -27,9 +27,14 @@ Module	   : Employee Attendance.Refer: 0024461
 												a) DS/TL Name [Contact table]
 												b) DS/TL Type [FaceRegTypeID from tbl_master_user].Refer: 0024870
 4.0		v2.0.33		Debashis	09/10/2022		Code optimized.Refer: 0025331
+5.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
+
+	--Rev 5.0
+	SET LOCK_TIMEOUT -1
+	--End of Rev 5.0
 
 	DECLARE @SqlStr NVARCHAR(MAX),@SqlStrTable NVARCHAR(MAX)
 
@@ -130,138 +135,234 @@ BEGIN
 		DAYENDTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
 		cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
 		cnt_branchid INT,
-		Login_datetime NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
+		LOGIN_DATETIME NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
 		)
-	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENDANCE(USERID,Login_datetime)
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENDANCE(USERID,cnt_internalId,LOGIN_DATETIME)
 
-	IF OBJECT_ID('tempdb..#TMPATTENLOGOUT') IS NOT NULL
-		DROP TABLE #TMPATTENLOGOUT
-	CREATE TABLE #TMPATTENLOGOUT
-		(
-		USERID BIGINT,
-		LOGGEDIN NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		LOGEDOUT NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_branchid INT,
-		Login_datetime NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
-		)
-	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGOUT(USERID,Login_datetime)
+	--Rev 5.0
+	--IF OBJECT_ID('tempdb..#TMPATTENLOGOUT') IS NOT NULL
+	--	DROP TABLE #TMPATTENLOGOUT
+	--CREATE TABLE #TMPATTENLOGOUT
+	--	(
+	--	USERID BIGINT,
+	--	LOGGEDIN NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	LOGEDOUT NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_branchid INT,
+	--	Login_datetime NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
+	--	)
+	--CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGOUT(USERID,Login_datetime)
 
-	IF OBJECT_ID('tempdb..#TMPDAYLOGIN') IS NOT NULL
-		DROP TABLE #TMPDAYLOGIN
-	CREATE TABLE #TMPDAYLOGIN
-		(
-		USERID BIGINT,
-		DAYSTTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		DAYENDTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_branchid INT,
-		STARTENDDATE NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
-		)
-	CREATE NONCLUSTERED INDEX IX1 ON #TMPDAYLOGIN(USERID,STARTENDDATE)
+	--IF OBJECT_ID('tempdb..#TMPDAYLOGIN') IS NOT NULL
+	--	DROP TABLE #TMPDAYLOGIN
+	--CREATE TABLE #TMPDAYLOGIN
+	--	(
+	--	USERID BIGINT,
+	--	DAYSTTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	DAYENDTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_branchid INT,
+	--	STARTENDDATE NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
+	--	)
+	--CREATE NONCLUSTERED INDEX IX1 ON #TMPDAYLOGIN(USERID,STARTENDDATE)
 
-	IF OBJECT_ID('tempdb..#TMPDAYLOGOUT') IS NOT NULL
-		DROP TABLE #TMPDAYLOGOUT
-	CREATE TABLE #TMPDAYLOGOUT
-		(
-		USERID BIGINT,
-		DAYSTTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		DAYENDTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
-		cnt_branchid INT,
-		STARTENDDATE NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
-		)
-	CREATE NONCLUSTERED INDEX IX1 ON #TMPDAYLOGOUT(USERID,STARTENDDATE)
+	--IF OBJECT_ID('tempdb..#TMPDAYLOGOUT') IS NOT NULL
+	--	DROP TABLE #TMPDAYLOGOUT
+	--CREATE TABLE #TMPDAYLOGOUT
+	--	(
+	--	USERID BIGINT,
+	--	DAYSTTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	DAYENDTIME NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	--	cnt_branchid INT,
+	--	STARTENDDATE NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS
+	--	)
+	--CREATE NONCLUSTERED INDEX IX1 ON #TMPDAYLOGOUT(USERID,STARTENDDATE)
 
-	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	----Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--SET @SqlStr=''
+	--SET @SqlStr='INSERT INTO #TMPATTENDANCE(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,cnt_branchid,Login_datetime) '
+	--SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108) AS LOGGEDIN,'''' AS LOGEDOUT,CNT.cnt_internalId,CNT.cnt_branchid,'
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetime '
+	--SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	--IF @BRANCHID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
+	--IF @EMPID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+
+	----SELECT @SqlStr
+	--EXEC SP_EXECUTESQL @SqlStr
+
+	----Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--SET @SqlStr=''
+	--SET @SqlStr='INSERT INTO #TMPATTENLOGOUT(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,cnt_branchid,Login_datetime) '
+	--SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,'''' AS LOGGEDIN,CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108) AS LOGEDOUT,CNT.cnt_internalId,CNT.cnt_branchid,'
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetime '
+	--SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--SET @SqlStr+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	--IF @BRANCHID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
+	--IF @EMPID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+
+	----SELECT @SqlStr
+	--EXEC SP_EXECUTESQL @SqlStr
+
+	----Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--SET @SqlStr=''
+	--SET @SqlStr='INSERT INTO #TMPDAYLOGIN(USERID,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,STARTENDDATE) '
+	--SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYSTTIME,'''' AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) AS STARTENDDATE '
+	--SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=DAYSTEND.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE ISSTART=1 '
+	--SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--IF @BRANCHID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
+	--IF @EMPID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+
+	----SELECT @SqlStr
+	--EXEC SP_EXECUTESQL @SqlStr
+
+	----Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--SET @SqlStr=''
+	--SET @SqlStr='INSERT INTO #TMPDAYLOGOUT(USERID,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,STARTENDDATE) '
+	--SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,'''' AS DAYSTTIME,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
+	--SET @SqlStr+='CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) AS STARTENDDATE '
+	--SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
+	--SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=DAYSTEND.User_Id AND USR.user_inactive=''N'' '
+	--SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--SET @SqlStr+='WHERE ISEND=1 '
+	--SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	--IF @BRANCHID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
+	--IF @EMPID<>''
+	--	SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+
+	----SELECT @SqlStr
+	--EXEC SP_EXECUTESQL @SqlStr
+
+	----THIS IS DONE FOR MAINTAIN EVERY EMPLOYEE IN A SINGLE LINE LOGIN,LOGOUT,DAYSTTIME & DAYENDTIME
+	--UPDATE A SET A.LOGEDOUT=B.LOGEDOUT
+	--FROM #TMPATTENDANCE A
+	--INNER JOIN #TMPATTENLOGOUT B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.Login_datetime
+
+	--UPDATE A SET A.DAYSTTIME=B.DAYSTTIME
+	--FROM #TMPATTENDANCE A
+	--INNER JOIN #TMPDAYLOGIN B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.STARTENDDATE
+
+	--UPDATE A SET A.DAYENDTIME=B.DAYENDTIME
+	--FROM #TMPATTENDANCE A
+	--INNER JOIN #TMPDAYLOGOUT B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.STARTENDDATE
+	----End of Rev 2.0
+	IF OBJECT_ID('tempdb..#TMPATTENNOTLOGINOUT') IS NOT NULL
+		DROP TABLE #TMPATTENNOTLOGINOUT
+	CREATE TABLE #TMPATTENNOTLOGINOUT
+	(USERID BIGINT,cnt_internalId NVARCHAR(10),NOTLOGOUTDAYS INT)
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENNOTLOGINOUT(USERID,cnt_internalId)
+
 	SET @SqlStr=''
-	SET @SqlStr='INSERT INTO #TMPATTENDANCE(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,cnt_branchid,Login_datetime) '
-	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108) AS LOGGEDIN,'''' AS LOGEDOUT,CNT.cnt_internalId,CNT.cnt_branchid,'
+	SET @SqlStr='INSERT INTO #TMPATTENDANCE(USERID,LOGGEDIN,LOGEDOUT,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,LOGIN_DATETIME) '
+	SET @SqlStr+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,MIN(DAYSTTIME) AS DAYSTTIME,MAX(DAYENDTIME) AS DAYENDTIME,cnt_internalId,cnt_branchid,Login_datetime FROM('
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108) AS LOGGEDIN,NULL AS LOGEDOUT,NULL AS DAYSTTIME,NULL AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetime '
 	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC ECTC WITH (NOLOCK) ON CNT.cnt_internalId=ECTC.emp_cntId AND ECTC.emp_effectiveuntil IS NULL '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=ECTC.emp_Designation '
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @SqlStr+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	SET @SqlStr+='AND desg.deg_designation IN(''DS'',''TL'') '
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
 	IF @EMPID<>''
 		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
-
-	--SELECT @SqlStr
-	EXEC SP_EXECUTESQL @SqlStr
-
-	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
-	SET @SqlStr=''
-	SET @SqlStr='INSERT INTO #TMPATTENLOGOUT(USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,cnt_branchid,Login_datetime) '
-	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,'''' AS LOGGEDIN,CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108) AS LOGEDOUT,CNT.cnt_internalId,CNT.cnt_branchid,'
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108) AS LOGEDOUT,NULL AS DAYSTTIME,NULL AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) AS Login_datetime '
 	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC ECTC WITH (NOLOCK) ON CNT.cnt_internalId=ECTC.emp_cntId AND ECTC.emp_effectiveuntil IS NULL '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=ECTC.emp_Designation '
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @SqlStr+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	SET @SqlStr+='AND desg.deg_designation IN(''DS'',''TL'') '
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
 	IF @EMPID<>''
 		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
-
-	--SELECT @SqlStr
-	EXEC SP_EXECUTESQL @SqlStr
-
-	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
-	SET @SqlStr=''
-	SET @SqlStr='INSERT INTO #TMPDAYLOGIN(USERID,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,STARTENDDATE) '
-	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYSTTIME,'''' AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,NULL AS LOGGEDIN,NULL AS LOGEDOUT,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYSTTIME,NULL AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) AS STARTENDDATE '
 	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=DAYSTEND.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC ECTC WITH (NOLOCK) ON CNT.cnt_internalId=ECTC.emp_cntId AND ECTC.emp_effectiveuntil IS NULL '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=ECTC.emp_Designation '
 	SET @SqlStr+='WHERE ISSTART=1 '
+	SET @SqlStr+='AND desg.deg_designation IN(''DS'',''TL'') '
 	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
 	IF @EMPID<>''
 		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
-
-	--SELECT @SqlStr
-	EXEC SP_EXECUTESQL @SqlStr
-
-	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
-	SET @SqlStr=''
-	SET @SqlStr='INSERT INTO #TMPDAYLOGOUT(USERID,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,STARTENDDATE) '
-	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,'''' AS DAYSTTIME,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
+	SET @SqlStr+='UNION ALL '
+	SET @SqlStr+='SELECT DAYSTEND.User_Id AS USERID,NULL AS LOGGEDIN,NULL AS LOGEDOUT,NULL AS DAYSTTIME,CONVERT(VARCHAR(5),CAST(DAYSTEND.STARTENDDATE AS TIME),108) AS DAYENDTIME,CNT.cnt_internalId,CNT.cnt_branchid,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) AS STARTENDDATE '
 	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=DAYSTEND.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC ECTC WITH (NOLOCK) ON CNT.cnt_internalId=ECTC.emp_cntId AND ECTC.emp_effectiveuntil IS NULL '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=ECTC.emp_Designation '
 	SET @SqlStr+='WHERE ISEND=1 '
+	SET @SqlStr+='AND desg.deg_designation IN(''DS'',''TL'') '
 	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
 	IF @EMPID<>''
 		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	SET @SqlStr+=') AA GROUP BY USERID,cnt_internalId,cnt_branchid,Login_datetime ORDER BY USERID,Login_datetime '
 
 	--SELECT @SqlStr
 	EXEC SP_EXECUTESQL @SqlStr
 
-	--THIS IS DONE FOR MAINTAIN EVERY EMPLOYEE IN A SINGLE LINE LOGIN,LOGOUT,DAYSTTIME & DAYENDTIME
-	UPDATE A SET A.LOGEDOUT=B.LOGEDOUT
-	FROM #TMPATTENDANCE A
-	INNER JOIN #TMPATTENLOGOUT B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.Login_datetime
+	SET @SqlStr=''
+	SET @SqlStr='INSERT INTO #TMPATTENNOTLOGINOUT(USERID,cnt_internalId,NOTLOGOUTDAYS) '
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,CNT.cnt_internalId,COUNT(CAST(ATTEN.Work_datetime AS DATE)) AS NOTLOGOUTDAYS '
+	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
+	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	SET @SqlStr+='INNER JOIN tbl_trans_employeeCTC ECTC WITH (NOLOCK) ON CNT.cnt_internalId=ECTC.emp_cntId AND ECTC.emp_effectiveuntil IS NULL '
+	SET @SqlStr+='LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=ECTC.emp_Designation '
+	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @SqlStr+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' AND USR.user_inactive=''N'' '
+	SET @SqlStr+='AND desg.deg_designation IN(''DS'',''TL'') '
+	SET @SqlStr+='AND NOT EXISTS(SELECT DAYSTEND.User_Id FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) WHERE ATTEN.User_Id=DAYSTEND.USER_ID AND ISEND=0) '
+	IF @BRANCHID<>''
+		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=CNT.cnt_branchid) '
+	IF @EMPID<>''
+		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	SET @SqlStr+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId '
 
-	UPDATE A SET A.DAYSTTIME=B.DAYSTTIME
-	FROM #TMPATTENDANCE A
-	INNER JOIN #TMPDAYLOGIN B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.STARTENDDATE
-
-	UPDATE A SET A.DAYENDTIME=B.DAYENDTIME
-	FROM #TMPATTENDANCE A
-	INNER JOIN #TMPDAYLOGOUT B ON A.USERID=B.USERID AND A.cnt_internalId=B.cnt_internalId AND A.cnt_branchid=B.cnt_branchid AND A.Login_datetime=B.STARTENDDATE
-	--End of Rev 2.0
+	--SELECT @SqlStr
+	EXEC SP_EXECUTESQL @SqlStr
+	--End of Rev 5.0
 
 	--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--Rev 5.0 && Added a new column as LOGIN_DATETIME
 	SET @SqlStr=''
-	SET @SqlStr+='SELECT BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
+	SET @SqlStr+='SELECT ATTEN.LOGIN_DATETIME,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	--Rev 3.0
 	SET @SqlStr+='STG.Stage AS DSTLTYPE,'
@@ -274,7 +375,12 @@ BEGIN
 	--SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,DAYSTARTEND.DAYSTTIME,DAYSTARTEND.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,'
 	SET @SqlStr+='USR.user_loginId AS CONTACTNO,ATTEN.LOGGEDIN,ATTEN.LOGEDOUT,ATTEN.DAYSTTIME,ATTEN.DAYENDTIME,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,'
 	--End of Rev 2.0
-	SET @SqlStr+='HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG FROM tbl_master_employee EMP WITH (NOLOCK) '
+	--Rev 5.0
+	--SET @SqlStr+='HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG FROM tbl_master_employee EMP WITH (NOLOCK) '
+	SET @SqlStr+='HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,ISNULL(NOLOGOUT.NOTLOGOUTDAYS,0) AS NOTLOGOUTDAYS,'
+	SET @SqlStr+='CASE WHEN ATTEN.LOGGEDIN<>'''' THEN 1 ELSE 0 END AS CNTPRESENT '
+	SET @SqlStr+='FROM tbl_master_employee EMP WITH (NOLOCK) '
+	--End of Rev 5.0
 	--End of Rev 1.0
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
@@ -340,11 +446,16 @@ BEGIN
 	--SET @SqlStr+='GROUP BY DAYSTEND.User_Id '
 	--SET @SqlStr+=') DAYSTEND GROUP BY USERID) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id '
 	--Rev 3.0
+	--Rev 5.0
+	--SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG WITH (NOLOCK) ON USR.FaceRegTypeID=STG.StageID '
+	----End of Rev 3.0
+	--SET @SqlStr+='LEFT OUTER JOIN ('
+	--SET @SqlStr+='SELECT USERID,LOGGEDIN,LOGEDOUT,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,LOGIN_DATETIME FROM #TMPATTENDANCE '
+	--SET @SqlStr+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	SET @SqlStr+='INNER JOIN #TMPATTENDANCE ATTEN ON CNT.cnt_internalId=ATTEN.cnt_internalId AND USR.user_id=ATTEN.USERID '
+	SET @SqlStr+='LEFT OUTER JOIN #TMPATTENNOTLOGINOUT NOLOGOUT ON CNT.cnt_internalId=NOLOGOUT.cnt_internalId AND USR.user_id=NOLOGOUT.USERID '
 	SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG WITH (NOLOCK) ON USR.FaceRegTypeID=STG.StageID '
-	--End of Rev 3.0
-	SET @SqlStr+='LEFT OUTER JOIN ('
-	SET @SqlStr+='SELECT USERID,LOGGEDIN,LOGEDOUT,DAYSTTIME,DAYENDTIME,cnt_internalId,cnt_branchid,Login_datetime FROM #TMPATTENDANCE '
-	SET @SqlStr+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+	--End of Rev 5.0
 	--End of Rev 2.0
 	--Rev 1.0
 	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
@@ -354,7 +465,10 @@ BEGIN
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 	IF @EMPID<>''
 		SET @SqlStr+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
-	
+	--Rev 5.0
+	SET @SqlStr+='ORDER BY ATTEN.LOGIN_DATETIME '
+	--End of Rev 5.0
+
 	--SELECT @SqlStr
 	EXEC SP_EXECUTESQL @SqlStr
 
@@ -369,9 +483,12 @@ BEGIN
 	END
 	--Rev 2.0
 	DROP TABLE #TMPATTENDANCE
-	DROP TABLE #TMPATTENLOGOUT
-	DROP TABLE #TMPDAYLOGIN
-	DROP TABLE #TMPDAYLOGOUT
+	--Rev 5.0
+	--DROP TABLE #TMPATTENLOGOUT
+	--DROP TABLE #TMPDAYLOGIN
+	--DROP TABLE #TMPDAYLOGOUT
+	DROP TABLE #TMPATTENNOTLOGINOUT
+	--End of Rev 5.0
 	--End of Rev 2.0
 	
 	SET NOCOUNT OFF
