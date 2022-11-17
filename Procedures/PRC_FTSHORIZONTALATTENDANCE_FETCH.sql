@@ -22,8 +22,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_FETCH]
 AS
 /****************************************************************************************************************************************************************************
 1.0					Tanmoy		26-11-2020		CREATE PROCEDURE
-2.0		v2.0.32			Swatilekha  16.08.2022		Attendance register report enhancement required refer:0025111
-
+2.0		v2.0.32			Swatilekha  16.08.2022	Attendance register report enhancement required refer:0025111
+3.0		v2.0.37		Sanchita	16-11-2022		Attendance Register Report- Multiple rows generating against a singular User ID if the user logs out multiple times.
+												Also the distance travelled is showing zero though the total distance travelled showing data.
+												Refer: 25444
 ****************************************************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -129,6 +131,86 @@ BEGIN
 		INNER JOIN TBL_TRANS_EMPLOYEECTC ctc ON wo.Id=ctc.emp_workinghours
 	 END
 	--End of Rev work 2.0
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
+	begin
+			IF OBJECT_ID('tempdb..#TMPLOGINOUTLOC') IS NOT NULL		
+				DROP TABLE #TMPLOGINOUTLOC
+
+			CREATE TABLE #TMPLOGINOUTLOC(USERID BIGINT,SDATE NVARCHAR(10),LOGINLOATION NVARCHAR(MAX),LOGOUTLOATION NVARCHAR(MAX))
+			
+			SET @sqlStr=''
+			SET @sqlStr+=' INSERT INTO #TMPLOGINOUTLOC(USERID,SDATE,LOGINLOATION,LOGOUTLOATION) '
+			SET @sqlStr+=' SELECT User_Id,SDate,'''' AS LOGINLOATION,'''' AS LOGOUTLOATION FROM( '
+			SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,LoginLogout '
+			SET @sqlStr+=' FROM tbl_trans_shopuser  '
+			SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),tbl_trans_shopuser.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120)  '
+			SET @sqlStr+=' AND LoginLogout IN(0,1) '
+			SET @sqlStr+=' UNION ALL '
+			SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,LoginLogout   '
+			SET @sqlStr+=' FROM TBL_TRANS_SHOPUSER_ARCH '
+			SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),TBL_TRANS_SHOPUSER_ARCH.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
+			SET @sqlStr+=' AND LoginLogout IN(0,1) '
+			SET @sqlStr+=' ) AA GROUP BY User_Id,SDate '
+			EXEC SP_EXECUTESQL @sqlStr
+
+			If @ISONLYLOGINDATA=1
+			BEGIN
+				IF OBJECT_ID('tempdb..#TMPLOGINLOC') IS NOT NULL	
+					DROP TABLE #TMPLOGINLOC
+
+				CREATE TABLE #TMPLOGINLOC(USERID BIGINT,SDATE NVARCHAR(10),LOGINLOATION NVARCHAR(MAX))
+
+				SET @sqlStr=''
+				SET @sqlStr+=' INSERT INTO #TMPLOGINLOC(USERID,SDATE,LOGINLOATION) '
+				SET @sqlStr+=' SELECT User_Id,SDate,LOGINLOATION  FROM  (  '
+				SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,location_name AS LOGINLOATION '
+				SET @sqlStr+=' FROM tbl_trans_shopuser  '
+				SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),tbl_trans_shopuser.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120)  '
+				SET @sqlStr+=' AND LoginLogout =1 '
+				SET @sqlStr+=' UNION ALL  '
+				SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,location_name AS LOGINLOATION '
+				SET @sqlStr+=' FROM TBL_TRANS_SHOPUSER_ARCH  '
+				SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),TBL_TRANS_SHOPUSER_ARCH.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
+				SET @sqlStr+=' AND LoginLogout =1 '
+				SET @sqlStr+=' ) BB ORDER BY User_Id '
+				EXEC SP_EXECUTESQL @sqlStr
+
+				UPDATE A SET A.LOGINLOATION=B.LOGINLOATION
+				FROM #TMPLOGINOUTLOC A
+				INNER JOIN #TMPLOGINLOC B ON A.USERID=B.USERID AND A.SDate=B.SDate
+
+			END
+
+			IF @ISONLYLOGOUTDATA=1
+			BEGIN
+				IF OBJECT_ID('tempdb..#TMPLOGOUTLOC') IS NOT NULL
+					DROP TABLE #TMPLOGOUTLOC
+
+				CREATE TABLE #TMPLOGOUTLOC(USERID BIGINT,SDATE NVARCHAR(10),LOGOUTLOATION NVARCHAR(MAX)) 
+
+				SET @sqlStr=''
+				SET @sqlStr+=' INSERT INTO #TMPLOGOUTLOC(USERID,SDATE,LOGOUTLOATION) '
+				SET @sqlStr+=' SELECT User_Id,SDate,LOGOUTLOATION  FROM  (  '
+				SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,location_name AS LOGOUTLOATION '
+				SET @sqlStr+=' FROM tbl_trans_shopuser  '
+				SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),tbl_trans_shopuser.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
+				SET @sqlStr+=' AND LoginLogout =0 '
+				SET @sqlStr+=' UNION ALL '
+				SET @sqlStr+=' SELECT User_Id,cast(SDate as date) as SDate,location_name AS LOGOUTLOATION '
+				SET @sqlStr+=' FROM TBL_TRANS_SHOPUSER_ARCH  '
+				SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),TBL_TRANS_SHOPUSER_ARCH.SDate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
+				SET @sqlStr+=' AND LoginLogout =0 '
+				SET @sqlStr+=' ) BB ORDER BY User_Id '
+				EXEC SP_EXECUTESQL @sqlStr
+
+				UPDATE A SET A.LOGOUTLOATION=B.LOGOUTLOATION
+				FROM #TMPLOGINOUTLOC A
+				INNER JOIN #TMPLOGOUTLOC B ON A.USERID=B.USERID AND A.SDate=B.SDate
+			END
+
+	end
+	-- End of Rev 3.0
 
 	SET @sqlStr=''
 	SET @sqlStr+=' SELECT EmpCode,EMP_NAME,LoginID,Department,user_id,LOGGEDIN,LOGEDOUT,ATTEN_STATUS , '
@@ -171,11 +253,11 @@ BEGIN
 	--Rev work 2.0
 	If @ISONLYLOGINDATA=1
 	 Begin
-		SET @sqlStr+=' ,loginloation '
+		SET @sqlStr+=' ,ATTEN.loginloation '
 	 End
 	If @ISONLYLOGOUTDATA=1
 	 Begin
-	 	SET @sqlStr+=' ,logoutloation '
+	 	SET @sqlStr+=' ,ATTEN.logoutloation '
 	 End
 	IF @ShowFullday=1
 	 Begin
@@ -219,11 +301,11 @@ BEGIN
 	--Rev work 2.0
 	IF @ISONLYLOGINDATA=1
 	 Begin
-		SET @sqlStr+=' ,loginloation '		
+		SET @sqlStr+=' ,DISTNC.loginloation '		
 	 End
 	 IF @ISONLYLOGOUTDATA=1
 	 Begin
-	 	SET @sqlStr+=' ,NULL AS logoutloation '
+	 	SET @sqlStr+=' ,DISTNC.logoutloation '
 	 End
 	--End of Rev work 2.0
 
@@ -237,37 +319,67 @@ BEGIN
 	 Begin
 		SET @sqlStr+=' ,loginloation '
 	 End
+	 -- Rev 3.0
+	 IF @ISONLYLOGOUTDATA=1
+	 Begin
+		SET @sqlStr+=' ,logoutloation '
+	 End
+	 -- End of Rev 3.0
 	SET @sqlStr+=' FROM  ( '
-	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(SDate as date) as SDate '	
+	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(tbl_trans_shopuser.SDate as date) as SDate '	
 	--Rev work 2.0
 	IF @ISONLYLOGINDATA=1
 	 Begin
-		SET @sqlStr+='  ,location_name as loginloation '
+		SET @sqlStr+='  ,LINOUT.LOGINLOATION as loginloation '
 	 End
 	--End of Rev work 2.0
+	 -- Rev 3.0
+	 IF @ISONLYLOGOUTDATA=1
+	 Begin
+		SET @sqlStr+=' ,LINOUT.LOGOUTLOATION as logoutloation '
+	 End
+	 -- End of Rev 3.0
 	SET @sqlStr+=' FROM tbl_trans_shopuser '
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
+		SET @sqlStr+=' LEFT OUTER JOIN #TMPLOGINOUTLOC LINOUT ON tbl_trans_shopuser.User_Id=LINOUT.USERID AND cast(tbl_trans_shopuser.SDate as date)=LINOUT.SDATE '
+	-- End of Rev 3.0
 	SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),tbl_trans_shopuser.SDate,120) =CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
 	--Rev work 2.0
-	If @ISONLYLOGINDATA=1
-	 Begin
-		SET @sqlStr+=' and LoginLogout=1 '
-	 End
+	-- Rev 3.0
+	--If @ISONLYLOGINDATA=1
+	-- Begin
+	--	SET @sqlStr+=' and LoginLogout=1 '
+	-- End
+	-- end of Rev 3.0	
 	--End of Rev work 2.0
 	SET @sqlStr+=' UNION ALL '
-	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(SDate as date) as SDate '
+	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(TBL_TRANS_SHOPUSER_ARCH.SDate as date) as SDate '
 	--Rev work 2.0
 	IF @ISONLYLOGINDATA=1
 	 Begin
-		SET @sqlStr+='  ,location_name as loginloation '
+		SET @sqlStr+='  ,LINOUT.LOGINLOATION as loginloation '
 	 End
 	--End of Rev work 2.0
+	-- Rev 3.0
+	 IF @ISONLYLOGOUTDATA=1
+	 Begin
+		SET @sqlStr+=' ,LINOUT.LOGOUTLOATION as logoutloation '
+	 End
+	 -- End of Rev 3.0
 	SET @sqlStr+=' FROM TBL_TRANS_SHOPUSER_ARCH '
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
+		SET @sqlStr+=' LEFT OUTER JOIN #TMPLOGINOUTLOC LINOUT ON TBL_TRANS_SHOPUSER_ARCH.User_Id=LINOUT.USERID AND cast(TBL_TRANS_SHOPUSER_ARCH.SDate as date)=LINOUT.SDATE '
+	-- End of Rev 3.0
 	SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),TBL_TRANS_SHOPUSER_ARCH.SDate,120) =CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
 	--Rev work 2.0
-	If @ISONLYLOGINDATA=1
-	 Begin
-		SET @sqlStr+=' and LoginLogout=1 '
-	 End
+	-- Rev 3.0
+	--If @ISONLYLOGINDATA=1
+	-- Begin
+	--	SET @sqlStr+=' and LoginLogout=1 '
+	-- End
+	-- End of Rev 3.0
 	--End of Rev work 2.0
 	SET @sqlStr+=' ) T GROUP BY User_Id,T.SDate '
 	--Rev work 2.0
@@ -276,6 +388,12 @@ BEGIN
 		SET @sqlStr+=' ,T.loginloation'
 	 End
 	--End of Rev work 2.0
+	-- Rev 3.0
+	IF @ISONLYLOGOUTDATA=1
+	 Begin
+		SET @sqlStr+=' ,T.logoutloation'
+	 End
+	 -- End of Rev 3.0
 	SET @sqlStr+=' ) DISTNC ON ATTEN.User_Id=DISTNC.User_Id AND CAST(ATTEN.Work_datetime AS DATE)=cast(DISTNC.SDate as date) '
 	SET @sqlStr+=' LEFT OUTER JOIN FTS_AttendanceImage IMG ON ATTEN.User_Id=IMG.USER_ID AND CAST(ATTEN.Work_datetime AS DATE)=cast(IMG.Attendance_DATE as date) '
 	SET @sqlStr+=' LEFT OUTER JOIN (SELECT user_id,SUM(IDEAL_TIME) AS IDEAL_TIME,CAST(start_ideal_date_time AS DATE) AS start_ideal_date_time FROM(  '
@@ -298,6 +416,12 @@ BEGIN
 		SET @sqlStr+=' ,loginloation '
 	 End
 	--End of Rev work 2.0
+	-- Rev 3.0
+	IF @ISONLYLOGOUTDATA=1
+	 Begin
+		SET @sqlStr+=' ,logoutloation '
+	 End
+	 -- End of Rev 3.0
 	SET @sqlStr+=' UNION ALL '
 				   
 	SET @sqlStr+=' SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime, '
@@ -311,11 +435,14 @@ BEGIN
 	--Rev work 2.0
 	If @ISONLYLOGINDATA=1
 	 Begin
-		SET @sqlStr+=',Null as loginloation '
+		-- Rev 3.0
+		--SET @sqlStr+=',Null as loginloation '
+		SET @sqlStr+=',DISTNC.loginloation '
+		-- End of Rev 3.0
 	 End
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
-		SET @sqlStr+=' ,logoutloation '
+		SET @sqlStr+=' ,DISTNC.logoutloation '
 	 End
 	--End of Rev work 2.0
 
@@ -326,45 +453,82 @@ BEGIN
 	SET @sqlStr+=' LEFT OUTER JOIN ( '
 	SET @sqlStr+=' SELECT SUM(distance_covered) AS distance_covered,User_Id,SDate '
 	--Rev work 2.0
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1
+	 Begin
+		SET @sqlStr+=',loginloation '
+	 End
+	 -- End of Rev 3.0
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
 		SET @sqlStr+=' ,logoutloation  '
 	 End
 	--End of Rev 2.0
 	SET @sqlStr+=' FROM  ( '
-	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(SDate as date) as SDate '
+	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(tbl_trans_shopuser.SDate as date) as SDate '
+	-- Rev 3.0
+	IF @ISONLYLOGINDATA=1
+	 Begin
+		SET @sqlStr+=' ,LINOUT.LOGINLOATION as loginloation '
+	 End
+	 -- End of Rev 3.0
 	--Rev work 2.0
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
-		SET @sqlStr+=' ,location_name as logoutloation '
+		SET @sqlStr+=' ,LINOUT.LOGOUTLOATION as logoutloation '
 	 End
 	--End of Rev 2.0
 	SET @sqlStr+=' FROM tbl_trans_shopuser '
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
+		SET @sqlStr+=' LEFT OUTER JOIN #TMPLOGINOUTLOC LINOUT ON tbl_trans_shopuser.User_Id=LINOUT.USERID AND cast(tbl_trans_shopuser.SDate as date)=LINOUT.SDATE '
+	-- End of Rev 3.0
 	SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),tbl_trans_shopuser.SDate,120) =CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
-	--Rev work 2.0
-	IF @ISONLYLOGOUTDATA=1
-	  Begin
-		SET @sqlStr+=' AND LoginLogout=0 '
-	  End
+	
+	 --Rev work 2.0
+	-- Rev 3.0
+	--IF @ISONLYLOGOUTDATA=1
+	--  Begin
+	--	SET @sqlStr+=' AND LoginLogout=0 '
+	--  End
+	-- End of Rev 3.0
 	--End of Rev work 2.0
 	SET @sqlStr+=' UNION ALL '
-	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(SDate as date) as SDate '
+	SET @sqlStr+=' SELECT ISNULL(distance_covered,0) AS distance_covered,User_Id,cast(TBL_TRANS_SHOPUSER_ARCH.SDate as date) as SDate '
+	-- Rev 3.0
+	IF @ISONLYLOGINDATA=1
+	 Begin
+		SET @sqlStr+=' ,LINOUT.LOGINLOATION as loginloation '
+	 End
+	 -- End of Rev 3.0
 	--Rev work 2.0
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
-		SET @sqlStr+=' ,location_name as logoutloation '
+		SET @sqlStr+=' ,LINOUT.LOGOUTLOATION as logoutloation '
 	 End
 	--End of Rev 2.0
 	SET @sqlStr+=' FROM TBL_TRANS_SHOPUSER_ARCH '
+	-- Rev 3.0
+	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
+		SET @sqlStr+=' LEFT OUTER JOIN #TMPLOGINOUTLOC LINOUT ON TBL_TRANS_SHOPUSER_ARCH.User_Id=LINOUT.USERID AND cast(TBL_TRANS_SHOPUSER_ARCH.SDate as date)=LINOUT.SDATE '
+	-- End of Rev 3.0
 	SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),TBL_TRANS_SHOPUSER_ARCH.SDate,120) =CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
-	--Rev work 2.0
-	IF @ISONLYLOGOUTDATA=1
-	  Begin
-		SET @sqlStr+=' AND LoginLogout=0 '
-	  End
-	--End of Rev work 2.0
+	-- Rev 3.0
+	----Rev work 2.0
+	--IF @ISONLYLOGOUTDATA=1
+	--  Begin
+	--	SET @sqlStr+=' AND LoginLogout=0 '
+	--  End
+	----End of Rev work 2.0
+	-- End of Rev 3.0
 
 	SET @sqlStr+=' ) T GROUP BY T.User_Id,T.SDate '
+	-- Rev 3.0
+	IF @ISONLYLOGINDATA=1
+	  Begin
+		SET @sqlStr+=' ,T.loginloation '
+	  End
+	-- End of Rev 3.0
 	--Rev work 2.0
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
@@ -387,6 +551,12 @@ BEGIN
 	SET @sqlStr+=' WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) AND CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
 	SET @sqlStr+=' AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
 	SET @sqlStr+=' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105),ATTEN.Isonleave,Ordervalue,IMAGE_NAME,IDEAL_TIME,DISTNC.distance_covered '
+	-- Rev 3.0
+	IF @ISONLYLOGINDATA=1
+	  Begin
+		SET @sqlStr+=' ,loginloation '
+	  End
+	-- End of Rev 3.0
 	--Rev work 2.0
 	IF @ISONLYLOGOUTDATA=1
 	 Begin
@@ -426,5 +596,15 @@ BEGIN
 	If @ShowFullday=1
 		DROP TABLE #TEMPCTCCONTACT
 	--End of rev 2.0
+	-- Rev 3.0
+	IF OBJECT_ID('tempdb..#TMPLOGINOUTLOC') IS NOT NULL		
+		DROP TABLE #TMPLOGINOUTLOC
+
+	IF OBJECT_ID('tempdb..#TMPLOGOUTLOC') IS NOT NULL
+		DROP TABLE #TMPLOGOUTLOC
+
+	IF OBJECT_ID('tempdb..#TMPLOGINLOC') IS NOT NULL	
+		DROP TABLE #TMPLOGINLOC
+	-- End of Rev 3.0
 END
 GO

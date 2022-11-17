@@ -29,7 +29,9 @@ AS
 /****************************************************************************************************************************************************************************
 1.0					Tanmoy		26-11-2020		CREATE PROCEDURE
 2.0  v2.0.32		Swatilekha  16.08.2022		Attendance register report enhancement required refer:0025111
-
+3.0		v2.0.37		Sanchita	16-11-2022		Attendance Register Report- Multiple rows generating against a singular User ID if the user logs out multiple times.
+												Also the distance travelled is showing zero though the total distance travelled showing data.
+												Refer: 25444
 ****************************************************************************************************************************************************************************/
 BEGIN
 
@@ -122,11 +124,17 @@ BEGIN
 		--Rev work 2.0
 		IF @ISONLYLOGINDATA=1
 		  Begin
-			ALTER TABLE #TMPATTENDACE ADD loginloation NVARCHAR(200)
+			-- Rev 3.0
+			--ALTER TABLE #TMPATTENDACE ADD loginloation NVARCHAR(200)
+			ALTER TABLE #TMPATTENDACE ADD loginloation NVARCHAR(max)
+			-- End of Rev 3.0
 		  End
 		IF @ISONLYLOGOUTDATA=1
 		  Begin
-			ALTER TABLE #TMPATTENDACE ADD logoutloation NVARCHAR(200)
+			-- Rev 3.0
+			--ALTER TABLE #TMPATTENDACE ADD logoutloation NVARCHAR(200)
+			ALTER TABLE #TMPATTENDACE ADD logoutloation NVARCHAR(max)
+			-- End of Rev 3.0
 		  End
 		IF @ShowFullday =1
 		  Begin
@@ -161,7 +169,7 @@ BEGIN
 				--Rev work 2.0
 				IF @ISONLYLOGINDATA=1
 				Begin
-				SET @sqlStrTable += '[Login_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(200) NULL, '
+				SET @sqlStrTable += '[Login_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(max) NULL, '
 				End
 				--End of rev work 2.0
 
@@ -169,7 +177,7 @@ BEGIN
 				--Rev work 2.0
 				IF @ISONLYLOGOUTDATA=1
 				Begin
-				SET @sqlStrTable += '[Logout_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(200) NULL, '
+				SET @sqlStrTable += '[Logout_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(max) NULL, '
 				End
 				--End of rev work 2.0			
 				SET @sqlStrTable += '[Duration_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL, '
