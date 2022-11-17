@@ -29,6 +29,8 @@ Module	   : MONTHLY PERFORMANCE REPORT OF SALES PERSONNEL
 3.0		v2.0.18		Debashis	06/10/2020		Date check has been implemented.Refer: 0023233
 4.0		v2.0.31		Debashis	15/07/2022		Opening Stock is not matching while generating Daily Performance report for sales personnel.Now it has been solved.
 												Refer: 0025042
+5.0		v2.0.36		Debashis	17/11/2022		Product ID will be consider as unique whether it is tagged with multiple order or single order to generate the Monthly Sales Report.
+												Refer: 0025457
 **********************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -833,7 +835,11 @@ BEGIN
 	--Rev 4.0
 	--SET @Strsql+='INNER JOIN (SELECT User_Id,Stock_ID,Product_Id,Shop_code,SUM(ISNULL(Product_Qty,0)) AS Product_Qty,SUM(ISNULL(Product_Price,0)) AS ORDVALUE_OS FROM FTS_StockdetailsProduct '
 	--SET @Strsql+='GROUP BY User_Id,Stock_ID,Product_Id,Shop_code '
-	SET @Strsql+='INNER JOIN (SELECT STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,SUM(ISNULL(STKDOP.Product_Qty,0)) AS Product_Qty,SUM(ISNULL(STKDOP.Product_Price,0)) AS ORDVALUE_OS,'
+	--Rev 5.0
+	--SET @Strsql+='INNER JOIN (SELECT STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,SUM(ISNULL(STKDOP.Product_Qty,0)) AS Product_Qty,SUM(ISNULL(STKDOP.Product_Price,0)) AS ORDVALUE_OS,'
+	SET @Strsql+='INNER JOIN (SELECT STKDOP.User_Id,STKDOP.Stock_ID,STKDOP.Product_Id,STKDOP.Shop_code,SUM(DISTINCT ISNULL(STKDOP.Product_Qty,0)) AS Product_Qty,'
+	SET @Strsql+='SUM(DISTINCT ISNULL(STKDOP.Product_Price,0)) AS ORDVALUE_OS,'
+	--End of Rev 5.0
 	SET @Strsql+='CONVERT(NVARCHAR(10),STKORDH.Orderdate,105) AS ORDERDATE '
 	SET @Strsql+='FROM FTS_StockdetailsProduct STKDOP '
 	SET @Strsql+='INNER JOIN tbl_FTs_OrderdetailsProduct STKD ON STKDOP.User_Id=STKD.User_Id AND STKDOP.Product_Id=STKD.Product_Id '
