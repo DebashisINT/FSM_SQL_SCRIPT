@@ -152,6 +152,7 @@ BEGIN
 	134.0		Debashis	02-11-2022	ADD SETTINGS @Action=GlobalCheck' IsAllowNearbyshopWithBeat & IsGSTINPANEnableInShop.Row 751 & 752
 	135.0		Debashis	09-11-2022	ADD SETTINGS @Action=GlobalCheck' IsMultipleImagesRequired.Row 760
 	136.0		Debashis	17-11-2022	ADD SETTINGS @Action=GlobalCheck' IsALLDDRequiredforAttendance.Row 766
+	137.0		Debashis	18-11-2022	ADD SETTINGS @Action='UserCheck' IsShowTypeInRegistrationForSpecificUser & IsFeedbackMandatoryforNewShop.Row 767 & 768
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -1581,6 +1582,14 @@ BEGIN
 		SELECT 'GPSNetworkIntervalMins' AS [Key],CONVERT(NVARCHAR(15),USR.GPSNetworkIntervalMins) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 133.0
+		--Rev 137.0
+		UNION ALL
+		SELECT 'IsShowTypeInRegistrationForSpecificUser' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowTypeInRegistrationForSpecificUser) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsFeedbackMandatoryforNewShop' AS [Key],CONVERT(NVARCHAR(15),USR.IsFeedbackMandatoryforNewShop) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 137.0
 	END
 
 	SET NOCOUNT OFF
