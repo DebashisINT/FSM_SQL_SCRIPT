@@ -47,6 +47,8 @@ AS
 9.0		v2.0.31		Debashis	08/07/2022		While trying to generate the "Shops" report by selecting the type as "Dealer" in the National Plastic, 
 												the system is getting logged out.Now it has been taken care of.Refer: 0025031
 10.0	v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
+11.0	V2.0.36		Sanchita	04/11/2022		Beat column required in various FSM reports. refer: 25421
+12.0	V2.0.37		Pallab	    15/11/2022		Multiple photo attachments columns are required in the Shops report refer: 25448
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -141,6 +143,9 @@ BEGIN
 					--Rev 6.0
 					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
 					--End of Rev 6.0
+					-- Rev 11.0
+					SET @sql+=', isnull(BEAT.NAME,'''') as Beat '
+					-- End of Rev 11.0
 					SET @sql+='from tbl_Master_shop as shop
 					INNER JOIN  tbl_master_user usr on shop.Shop_CreateUser=usr.user_id '
 					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Create_UserId)=1)
@@ -157,6 +162,9 @@ BEGIN
 					--Rev 4.0
 					SET @sql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 					--End of Rev 4.0
+					-- Rev 11.0
+					SET @sql +='LEFT OUTER JOIN FSM_GROUPBEAT BEAT on shop.beat_id=BEAT.ID '
+					-- End of Rev 11.0
 					--and user_id='''+@user_id+''' '
 					if(isnull(@StateId,'')<>'')
 						BEGIN
@@ -486,6 +494,12 @@ BEGIN
 			--Rev work 8.0 start 30.06.2022
 			SET @sql+=',shop.gstn_number,shop.trade_licence_number '
 			--Rev work 8.0 start 30.06.2022
+			-- Rev 11.0
+			SET @sql+=', isnull(BEAT.NAME,'''') as Beat '
+			-- End of Rev 11.0
+			-- Rev 12.0
+			SET @sql+=', (case when AttachmentImage1<>'''' then '''+@Weburl+'''+ AttachmentImage1 else '''' end ) as AttachmentImage1, (case when AttachmentImage2<>'''' then '''+@Weburl+'''+ AttachmentImage2 else '''' end ) as AttachmentImage2, (case when AttachmentImage3<>'''' then '''+@Weburl+'''+ AttachmentImage3 else '''' end ) AttachmentImage3, (case when AttachmentImage4<>'''' then '''+@Weburl+'''+ AttachmentImage4 else '''' end ) AttachmentImage4 '
+			-- End of Rev 12.0
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
@@ -544,6 +558,9 @@ BEGIN
 			SET @sql +=' SELECT DISTINCT A.Shop_Code,A.assigned_to_dd_id,A.Shop_Name FROM tbl_Master_shop A '
 			SET @sql +=' ) SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
 			--End of Rev 9.0
+			-- Rev 11.0
+			SET @sql +='LEFT OUTER JOIN FSM_GROUPBEAT BEAT on shop.beat_id=BEAT.ID '
+			-- End of Rev 11.0
 			--set @sql +=' 
 			--group by shop.Shop_ID,Shop_Code,Shop_Name,shop.Address,shop.Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_CreateUser,Shop_CreateTime,
 			--usr.user_name,
