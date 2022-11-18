@@ -33,6 +33,7 @@ Purpose : For API/FaceRegistration/UserList & API/FaceRegistration/FaceMatch API
 12.0	v2.0.27		Debashis	23-02-2022		A new fields has been added.Row No: 657
 13.0	v2.0.27		Debashis	02-03-2022		A new fields has been added.Row No: 664
 14.0	v2.0.27		Debashis	08-03-2022		Some new fields has been added.Row No: 665
+15.0	v2.0.36		Debashis	18-11-2022		A new field has been added.Row No: 767
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 1.0
@@ -76,8 +77,11 @@ BEGIN
 			CASE WHEN USR.user_inactive='N' THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsActiveUser,
 			--End of Rev 13.0
 			--Rev 14.0
-			USR.UpdateOtherID,USR.UpdateUserID,EMP.cnt_OtherID AS OtherID
+			USR.UpdateOtherID,USR.UpdateUserID,EMP.cnt_OtherID AS OtherID,
 			--End of Rev 14.0
+			--Rev 15.0
+			USR.IsShowTypeInRegistrationForSpecificUser
+			--End of Rev 15.0
 			FROM FTS_EmployeeShopMap MAP WITH(NOLOCK)
 			INNER JOIN TBL_MASTER_USER USR WITH(NOLOCK) ON MAP.USER_ID=USR.USER_ID
 			--Rev 4.0
