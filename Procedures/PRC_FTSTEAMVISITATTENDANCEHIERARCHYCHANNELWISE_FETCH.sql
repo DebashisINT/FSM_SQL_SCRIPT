@@ -73,7 +73,7 @@ BEGIN
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
-			DECLARE @empcodes NVARCHAR(50)=(SELECT user_contactId FROM Tbl_master_user WITH(NOLOCK) WHERE user_id=@Userid)		
+			DECLARE @empcodes NVARCHAR(50)=(SELECT user_contactId FROM Tbl_master_user WITH(NOLOCK) WHERE user_id=@Userid)
 			CREATE TABLE #EMPHRS
 			(
 			EMPCODE NVARCHAR(50),
