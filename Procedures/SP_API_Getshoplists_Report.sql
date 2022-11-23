@@ -49,6 +49,7 @@ AS
 10.0	v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 11.0	V2.0.36		Sanchita	04/11/2022		Beat column required in various FSM reports. refer: 25421
 12.0	V2.0.37		Pallab	    15/11/2022		Multiple photo attachments columns are required in the Shops report refer: 25448
+13.0	V2.0.37		Pallab	    23/11/2022		It is showing Show image in the Shoplist report if there is no image refer: 25464  
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -133,10 +134,16 @@ BEGIN
 					SET @sql+='SHOP.EntityCode,SHOP.Entity_Location,CASE WHEN SHOP.Entity_Status=1 THEN ''Active'' ELSE ''Inactive'' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,'
 					SET @sql+='SHOP.ShopOwner_Aadhar,'
 					--End of Rev 2.0
+					-- Rev 13.0
+					--SET @sql+='Address as [address],Pincode as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name,
+					--Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no,Shop_CreateUser,Shop_CreateTime,
+					--FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+'''+ Shop_Image as Shop_Image,dob,date_aniversary,typs.Name as Shoptype,shop.type,
+					--b.Shop_Name as PP,c.Shop_Name as DD,'
 					SET @sql+='Address as [address],Pincode as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name,
 					Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no,Shop_CreateUser,Shop_CreateTime,
-					FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+'''+ Shop_Image as Shop_Image,dob,date_aniversary,typs.Name as Shoptype,shop.type,
+					FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,(case when isnull(shop.Shop_Image,'''')<>'''' then '''+@Weburl+'''+ shop.Shop_Image else '''' end ) as Shop_Image,dob,date_aniversary,typs.Name as Shoptype,shop.type,
 					b.Shop_Name as PP,c.Shop_Name as DD,'
+					-- Rev end 13.0
 					--Rev 4.0
 					SET @sql+='CITY.CITY_NAME AS District,shop.CLUSTER AS Cluster,'
 					--End of Rev 4.0
@@ -183,13 +190,22 @@ BEGIN
 					SET @sql+='SHOP.EntityCode,SHOP.Entity_Location,CASE WHEN SHOP.Entity_Status=1 THEN ''Active'' ELSE ''Inactive'' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,'
 					SET @sql+='SHOP.ShopOwner_Aadhar,'
 					--End of Rev 2.0
+					-- Rev 13.0
+					--SET @sql+='shop.Address as [address],shop.Pincode as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name,
+					--Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no,
+					--Shop_CreateUser,Shop_CreateTime,FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+''' + Shop_Image as Shop_Image,dob,
+					--date_aniversary,typs.Name as Shoptype,shop.type,CNT.cnt_firstName + '' ''+ CNT.cnt_middleName +'' ''+CNT.cnt_lastName as UserName,
+					--isnull(count(Act.ActivityId),0) as countactivity,
+					--Lastactivitydate=(select top 1 convert(varchar(50),visited_time,103) + '' '' + FORMAT(visited_time,''hh:mm tt'') as SDate1 
+					--from tbl_trans_shopActivitysubmit as shpusr  where  shpusr.user_id=usr.user_id and shpusr.Shop_Id=shop.Shop_Code order by visited_time desc),'
 					SET @sql+='shop.Address as [address],shop.Pincode as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name,
 					Shop_WebSite,Shop_Owner_Email as owner_email,Shop_Owner_Contact as owner_contact_no,
-					Shop_CreateUser,Shop_CreateTime,FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,'''+@Weburl+''' + Shop_Image as Shop_Image,dob,
+					Shop_CreateUser,Shop_CreateTime,FORMAT(Shop_CreateTime,''hh:mm tt'') as time_shop,Shop_ModifyUser,Shop_ModifyTime,(case when isnull(shop.Shop_Image,'''')<>'''' then '''+@Weburl+'''+ shop.Shop_Image else '''' end ) as Shop_Image,dob,
 					date_aniversary,typs.Name as Shoptype,shop.type,CNT.cnt_firstName + '' ''+ CNT.cnt_middleName +'' ''+CNT.cnt_lastName as UserName,
 					isnull(count(Act.ActivityId),0) as countactivity,
 					Lastactivitydate=(select top 1 convert(varchar(50),visited_time,103) + '' '' + FORMAT(visited_time,''hh:mm tt'') as SDate1 
 					from tbl_trans_shopActivitysubmit as shpusr  where  shpusr.user_id=usr.user_id and shpusr.Shop_Id=shop.Shop_Code order by visited_time desc),'
+					-- Rev End 13.0
 					--Rev 4.0
 					SET @sql+='CITY.CITY_NAME AS District,shop.CLUSTER AS Cluster,'
 					--End of Rev 4.0
@@ -258,14 +274,24 @@ BEGIN
 					SET @sql='SELECT distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,shop.Shop_Code as shop_id,shop.Shop_Name as shop_name,SHOP.EntityCode,SHOP.Entity_Location,'
 					SET @sql+='CASE WHEN SHOP.Entity_Status=1 THEN ''Active'' ELSE ''Inactive'' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,SHOP.ShopOwner_Aadhar,'
 					--End of Rev 2.0
+					-- Rev 13.0
+					--SET @sql+='shop.Address as [address],shop.Pincode as pin_code,shop.Shop_Lat as shop_lat,shop.Shop_Long as shop_long,shop.Shop_City,shop.Shop_Owner as owner_name
+					--,shop.Shop_WebSite,shop.Shop_Owner_Email as owner_email,shop.Shop_Owner_Contact as owner_contact_no,shop.Shop_CreateUser,shop.Shop_CreateTime,
+					--FORMAT(shop.Shop_CreateTime,''hh:mm tt'') as time_shop,shop.Shop_ModifyUser,shop.Shop_ModifyTime,'''+@Weburl+''' +shop.Shop_Image as Shop_Image
+					--,shop.dob,shop.date_aniversary,typs.Name as Shoptype,EMP.emp_uniqueCode as EMPCODE,CNT.cnt_firstName+'' '' +CNT.cnt_middleName+'' ''+CNT.cnt_lastName as EMPNAME
+					--,usr.user_loginId,shop.type,STAT.state as STATE,RPTTO.REPORTTO
+					--,PP=(select Shop_Name  from tbl_Master_shop as b where  b.Shop_Code=shop.assigned_to_pp_id )
+					--,DD=(select Shop_Name  from tbl_Master_shop as c where  c.Shop_Code=shop.assigned_to_dd_id )
+					--,CNT.cnt_firstName + '' ''+ CNT.cnt_middleName +'' ''+CNT.cnt_lastName as UserName,'
 					SET @sql+='shop.Address as [address],shop.Pincode as pin_code,shop.Shop_Lat as shop_lat,shop.Shop_Long as shop_long,shop.Shop_City,shop.Shop_Owner as owner_name
 					,shop.Shop_WebSite,shop.Shop_Owner_Email as owner_email,shop.Shop_Owner_Contact as owner_contact_no,shop.Shop_CreateUser,shop.Shop_CreateTime,
-					FORMAT(shop.Shop_CreateTime,''hh:mm tt'') as time_shop,shop.Shop_ModifyUser,shop.Shop_ModifyTime,'''+@Weburl+''' +shop.Shop_Image as Shop_Image
+					FORMAT(shop.Shop_CreateTime,''hh:mm tt'') as time_shop,shop.Shop_ModifyUser,shop.Shop_ModifyTime,(case when isnull(shop.Shop_Image,'''')<>'''' then '''+@Weburl+'''+ shop.Shop_Image else '''' end ) as Shop_Image
 					,shop.dob,shop.date_aniversary,typs.Name as Shoptype,EMP.emp_uniqueCode as EMPCODE,CNT.cnt_firstName+'' '' +CNT.cnt_middleName+'' ''+CNT.cnt_lastName as EMPNAME
 					,usr.user_loginId,shop.type,STAT.state as STATE,RPTTO.REPORTTO
 					,PP=(select Shop_Name  from tbl_Master_shop as b where  b.Shop_Code=shop.assigned_to_pp_id )
 					,DD=(select Shop_Name  from tbl_Master_shop as c where  c.Shop_Code=shop.assigned_to_dd_id )
 					,CNT.cnt_firstName + '' ''+ CNT.cnt_middleName +'' ''+CNT.cnt_lastName as UserName,'
+					-- Rev End 13.0
 					--Rev 4.0
 					SET @sql+='CITY.CITY_NAME AS District,shop.CLUSTER AS Cluster,'
 					--End of Rev 4.0
