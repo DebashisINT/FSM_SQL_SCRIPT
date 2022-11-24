@@ -86,10 +86,15 @@ BEGIN
 			)
 			
 			INSERT INTO #EMPHRS
-			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 			
-			FROM tbl_trans_employeeCTC CTC WITH (NOLOCK) 
-			LEFT JOIN tbl_master_employee TME WITH (NOLOCK) ON TME.emp_id= CTC.emp_reportTO 
-			WHERE emp_effectiveuntil IS NULL
+			SELECT DISTINCT EMPCODE,RPTTOEMPCODE FROM(
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id=CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			UNION ALL
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_deputy WHERE emp_effectiveuntil IS NULL
+			) EMPHRS
 		
 			;with cte as(SELECT	EMPCODE,RPTTOEMPCODE FROM #EMPHRS WHERE EMPCODE IS NULL OR EMPCODE=@empcodes  
 			UNION ALL
