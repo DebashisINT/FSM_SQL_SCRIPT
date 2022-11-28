@@ -1,4 +1,4 @@
---EXEC PRC_FTSAPI_USERLISTSHOPMAP 'FaceMatch',11986
+--EXEC PRC_FTSAPI_USERLISTSHOPMAP 'UserList',11986
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSAPI_USERLISTSHOPMAP]') AND type in (N'P', N'PC'))
 BEGIN
@@ -34,6 +34,7 @@ Purpose : For API/FaceRegistration/UserList & API/FaceRegistration/FaceMatch API
 13.0	v2.0.27		Debashis	02-03-2022		A new fields has been added.Row No: 664
 14.0	v2.0.27		Debashis	08-03-2022		Some new fields has been added.Row No: 665
 15.0	v2.0.36		Debashis	18-11-2022		A new field has been added.Row No: 767
+16.0	v2.0.36		Debashis	28-11-2022		A new field has been added.Row No: 771
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 1.0
@@ -80,8 +81,11 @@ BEGIN
 			USR.UpdateOtherID,USR.UpdateUserID,EMP.cnt_OtherID AS OtherID,
 			--End of Rev 14.0
 			--Rev 15.0
-			USR.IsShowTypeInRegistrationForSpecificUser
+			USR.IsShowTypeInRegistrationForSpecificUser,
 			--End of Rev 15.0
+			--Rev 16.0
+			DESG.deg_designation AS Employee_Designation
+			--End of Rev 16.0
 			FROM FTS_EmployeeShopMap MAP WITH(NOLOCK)
 			INNER JOIN TBL_MASTER_USER USR WITH(NOLOCK) ON MAP.USER_ID=USR.USER_ID
 			--Rev 4.0
@@ -93,6 +97,11 @@ BEGIN
 			--Rev 14.0
 			INNER JOIN tbl_master_employee EMP WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId
 			--End of Rev 14.0
+			--Rev 16.0
+			INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+			) DESG ON DESG.emp_cntId=EMP.emp_contactId
+					--End of Rev 16.0
 			--Rev 6.0
 			LEFT OUTER JOIN FSMEMPLOYEEAADHARINFORMATION AADHINFO WITH(NOLOCK) ON USR.USER_ID=AADHINFO.USER_ID
 			--End of Rev 6.0
