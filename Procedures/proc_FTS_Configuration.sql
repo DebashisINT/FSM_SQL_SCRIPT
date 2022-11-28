@@ -153,6 +153,8 @@ BEGIN
 	135.0		Debashis	09-11-2022	ADD SETTINGS @Action=GlobalCheck' IsMultipleImagesRequired.Row 760
 	136.0		Debashis	17-11-2022	ADD SETTINGS @Action=GlobalCheck' IsALLDDRequiredforAttendance.Row 766
 	137.0		Debashis	18-11-2022	ADD SETTINGS @Action='UserCheck' IsShowTypeInRegistrationForSpecificUser & IsFeedbackMandatoryforNewShop.Row 767 & 768
+	138.0		Debashis	28-11-2022	ADD SETTINGS @Action=GlobalCheck' IsShowNewOrderCart, IsmanualInOutTimeRequired & surveytext.Row 769
+	139.0		Debashis	28-11-2022	ADD SETTINGS @Action='UserCheck' IsLoginSelfieRequired.Row 770
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -303,6 +305,11 @@ BEGIN
 	--Rev 136.0
 	,@IsALLDDRequiredforAttendance BIT
 	--End of Rev 136.0
+	--Rev 138.0
+	,@IsShowNewOrderCart BIT
+	,@IsmanualInOutTimeRequired BIT
+	,@surveytext NVARCHAR(200)
+	--End of Rev 138.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -504,6 +511,11 @@ BEGIN
 		--Rev 136.0
 		SET @IsALLDDRequiredforAttendance =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsALLDDRequiredforAttendance' AND IsActive=1)
 		--End of Rev 136.0
+		--Rev 138.0
+		SET @IsShowNewOrderCart =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowNewOrderCart' AND IsActive=1)
+		SET @IsmanualInOutTimeRequired =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsmanualInOutTimeRequired' AND IsActive=1)
+		SET @surveytext =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='surveytext' AND IsActive=1)
+		--End of Rev 138.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -684,6 +696,11 @@ BEGIN
 			--Rev 136.0
 			,@IsALLDDRequiredforAttendance AS IsALLDDRequiredforAttendance
 			--End of Rev 136.0
+			--Rev 138.0
+			,@IsShowNewOrderCart AS IsShowNewOrderCart
+			,@IsmanualInOutTimeRequired AS IsmanualInOutTimeRequired
+			,@surveytext AS surveytext
+			--End of Rev 138.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1590,6 +1607,11 @@ BEGIN
 		SELECT 'IsFeedbackMandatoryforNewShop' AS [Key],CONVERT(NVARCHAR(15),USR.IsFeedbackMandatoryforNewShop) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 137.0
+		--Rev 139.0
+		UNION ALL
+		SELECT 'IsLoginSelfieRequired' AS [Key],CONVERT(NVARCHAR(15),USR.IsLoginSelfieRequired) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 139.0
 	END
 
 	SET NOCOUNT OFF
