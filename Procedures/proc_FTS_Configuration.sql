@@ -155,6 +155,7 @@ BEGIN
 	137.0		Debashis	18-11-2022	ADD SETTINGS @Action='UserCheck' IsShowTypeInRegistrationForSpecificUser & IsFeedbackMandatoryforNewShop.Row 767 & 768
 	138.0		Debashis	28-11-2022	ADD SETTINGS @Action=GlobalCheck' IsShowNewOrderCart, IsmanualInOutTimeRequired & surveytext.Row 769
 	139.0		Debashis	28-11-2022	ADD SETTINGS @Action='UserCheck' IsLoginSelfieRequired.Row 770
+	140.0		Debashis	07-12-2022	ADD SETTINGS @Action=GlobalCheck' IsDiscountInOrder & IsViewMRPInOrder.Row 772
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -310,6 +311,10 @@ BEGIN
 	,@IsmanualInOutTimeRequired BIT
 	,@surveytext NVARCHAR(200)
 	--End of Rev 138.0
+	--Rev 140.0
+	,@IsDiscountInOrder BIT
+	,@IsViewMRPInOrder BIT
+	--End of Rev 140.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -516,6 +521,10 @@ BEGIN
 		SET @IsmanualInOutTimeRequired =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsmanualInOutTimeRequired' AND IsActive=1)
 		SET @surveytext =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='surveytext' AND IsActive=1)
 		--End of Rev 138.0
+		--Rev 140.0
+		SET @IsDiscountInOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDiscountInOrder' AND IsActive=1)
+		SET @IsViewMRPInOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsViewMRPInOrder' AND IsActive=1)
+		--End of Rev 140.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -701,6 +710,10 @@ BEGIN
 			,@IsmanualInOutTimeRequired AS IsmanualInOutTimeRequired
 			,@surveytext AS surveytext
 			--End of Rev 138.0
+			--Rev 140.0
+			,@IsDiscountInOrder AS IsDiscountInOrder
+			,@IsViewMRPInOrder AS IsViewMRPInOrder
+			--End of Rev 140.0
 	END
 
 	else if(@Action='UserCheck')
