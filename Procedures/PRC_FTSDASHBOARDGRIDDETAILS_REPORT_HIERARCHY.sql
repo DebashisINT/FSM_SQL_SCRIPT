@@ -53,6 +53,7 @@ BEGIN
 	SET @EMPCODE= (select top 1 user_contactId FROM tbl_master_user WHERE user_id=@USERID )
 	SET @CHCIRSECTYPE=(SELECT STRING_AGG(EP_CH_ID, ', ') AS List_Channel FROM Employee_ChannelMap where EP_EMP_CONTACTID=@EMPCODE GROUP BY EP_EMP_CONTACTID)
 
+	
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
 	BEGIN
 		--DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
@@ -75,16 +76,9 @@ BEGIN
 		
 		--Rev 14.0 && WITH (NOLOCK) has been added in all tables
 		INSERT INTO #EMPHR
-		SELECT DISTINCT EMPCODE,RPTTOEMPCODE FROM(
-		SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
-		FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
-		LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id=CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
-		UNION ALL
-		SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
-		FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
-		LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_deputy WHERE emp_effectiveuntil IS NULL
-		) EMPHRS
-	
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
 		;with cte as(select	
 		EMPCODE,RPTTOEMPCODE
 		from #EMPHR 
@@ -165,7 +159,10 @@ BEGIN
 	SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
 	SET @SqlStrTable+='SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
 	SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
-	SET @SqlStrTable+=' INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @SqlStrTable+=' INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
+	END
 
 	SET @SqlStrTable+='INNER JOIN ( '
 	SET @SqlStrTable+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
