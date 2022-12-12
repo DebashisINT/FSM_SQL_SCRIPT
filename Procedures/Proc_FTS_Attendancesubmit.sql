@@ -45,10 +45,15 @@ ALTER PROCEDURE [dbo].[Proc_FTS_Attendancesubmit]
 --Rev 11.0
 @beat_id BIGINT=NULL,
 --End of Rev 11.0
+--Rev 12.0
+@IsJointVisit BIT=NULL,
+@JointVisitTeam_MemberName NVARCHAR(300)=NULL,
+@JointVisitTeam_Member_User_ID BIGINT=NULL,
+--End of Rev 12.0
 @FUNDPLAN UDT_FUNDPLAN READONLY
 )--WITH ENCRYPTION
 AS
-/************************************************************************************************
+/************************************************************************************************************************************************************************************************
 1.0					Tanmoy		30-10-2019		ADD TWO COLUMEN tbl_fts_UserAttendanceLoginlogout
 2.0					Tanmoy		23-12-2019		INSERT AND UPDATE FUND PLAN
 3.0					Tanmoy		06-01-2019		No Plan Insert
@@ -60,7 +65,9 @@ AS
 9.0					Tanmoy      04-12-2020      add new column from_Areaid,to_Areaid,distance
 10.0				Tanmoy      08-12-2020      add new column STATICDISTANCE
 11.0	v2.0.32		Debashis	09-08-2022		New column has been added.Row: 725
-************************************************************************************************/ 
+12.0	v2.0.37		Debashis	12-12-2022		New columns have been added.Row: 776
+13.0	v2.0.37		Debashis	12-12-2022		An App Config setting :'IsDatatableUpdateForDashboardAttendanceTab' Default Value shall be '1'.Refer: 0025427
+************************************************************************************************************************************************************************************************/ 
 BEGIN
 	SET NOCOUNT ON
 
@@ -105,10 +112,10 @@ BEGIN
 	SET @STATICDISTANCE=null
 	--REV 9.0 end
 
-	--Rev Debashis
+	--Rev 13.0
 	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
 	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
-	--End of Rev Debashis
+	--End of Rev 13.0
 
 	---REV 5.0
 	DECLARE @VALIDATION_LEAVE BIT=1
@@ -145,6 +152,7 @@ BEGIN
 				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
 				BEGIN
 					--Rev 11.0 &&Added a new column as Beat_ID
+					--Rev 12.0 &&Added some new columns as IsJointVisit,JointVisitTeam_MemberName & JointVisitTeam_Member_User_ID
 					insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 					Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 					--REV 9.0 START
@@ -153,7 +161,7 @@ BEGIN
 					--REV 10.0 START
 					,StaticDistance
 					--REV 10.0 END	
-					,Beat_ID				
+					,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID
 					) 
 					values(@user_id,null,null,@wlatitude,@wlongitude,@wtype,@wdesc,@Waddress,@datefetch,@Isonleave,@add_attendence_time,@leave_type,@leave_from_date,@leave_to_date,
 					@Distributor_Name,@Market_Worked,
@@ -166,7 +174,7 @@ BEGIN
 					--REV 10.0 START
 					,@STATICDISTANCE
 					--REV 10.0 END	
-					,@beat_id
+					,@beat_id,@IsJointVisit,@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
 					)	
 					SET @identity=SCOPE_IDENTITY()
 
@@ -193,10 +201,10 @@ BEGIN
 					-----------------------Sub Ordinate tables---------------
 
 					--------------------------Attendane Main table Synchronization------------------------------------------
-					--Rev Debashis
+					--Rev 13.0
 					IF @IsDatatableUpdateForDashboardAttendanceTab='1'
 						BEGIN
-					--End of Rev Debashis
+					--End of Rev 13.0
 							INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@datefetch)
 
 							IF NOT EXISTS(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
@@ -229,9 +237,9 @@ BEGIN
 									set @SQL ='update tbl_EmpWiseAttendanceStatus WITH(TABLOCK) set Day'+cast(DATEPART(dd,@datefetch) as varchar(50))+'='''+@val +''' where Emp_InternalId='''+@InternalID+''' AND YYMM='''+@sqlyyMM+''''
 									EXEC sp_ExecuteSql @SQL
 								END
-					--Rev Debashis
+					--Rev 13.0
 						END
-					--End of Rev Debashis
+					--End of Rev 13.0
 					--------------------------End  Attendane Main table Synchronization------------------------------------------
 
 
@@ -317,6 +325,7 @@ BEGIN
 				IF NOT EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@user_id and  cast(Login_datetime as date)=cast(@datefetch as date))
 					BEGIN
 						--Rev 11.0 &&Added a new column as Beat_ID
+						--Rev 12.0 &&Added some new columns as IsJointVisit,JointVisitTeam_MemberName & JointVisitTeam_Member_User_ID
 						insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 						Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 						--REV 9.0 START
@@ -325,7 +334,7 @@ BEGIN
 						--REV 10.0 START
 						,StaticDistance
 						--REV 10.0 END
-						,Beat_ID
+						,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID
 						) 
 						values(@user_id,@Wdatetime,null,@wlatitude,@wlongitude,@wtype,@wdesc,@Waddress,@Wdatetime,@Isonleave,@add_attendence_time,@leave_type,@leave_from_date,@leave_to_date,
 						@Distributor_Name,@Market_Worked,
@@ -338,7 +347,7 @@ BEGIN
 						--REV 10.0 START
 						,@STATICDISTANCE
 						--REV 10.0 END
-						,@beat_id
+						,@beat_id,@IsJointVisit,@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
 						)
 						SET @identity=SCOPE_IDENTITY()
 
@@ -379,10 +388,10 @@ BEGIN
 						END
 
 						--------------------------Attendane Main table Synchronization------------------------------------------
-						--Rev Debashis
+						--Rev 13.0
 					IF @IsDatatableUpdateForDashboardAttendanceTab='1'
 						BEGIN
-					--End of Rev Debashis
+					--End of Rev 13.0
 							INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK) (Emp_InternalId,LogTime)values(@InternalID,@Wdatetime)
 
 							IF NOT EXISTS(select Emp_InternalId from tbl_Employee_Attendance WITH(NOLOCK) where convert(date,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID)
@@ -423,9 +432,9 @@ BEGIN
 									--select @SQL
 									EXEC sp_ExecuteSql @SQL
 								END
-					--Rev Debashis
+					--Rev 13.0
 						END
-					--End of Rev Debashis
+					--End of Rev 13.0
 						--------------------------End  Attendane Main table Synchronization------------------------------------------
 
 						----REV 2.0 START
