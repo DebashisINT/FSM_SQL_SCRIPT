@@ -156,6 +156,8 @@ BEGIN
 	138.0		Debashis	28-11-2022	ADD SETTINGS @Action=GlobalCheck' IsShowNewOrderCart, IsmanualInOutTimeRequired & surveytext.Row 769
 	139.0		Debashis	28-11-2022	ADD SETTINGS @Action='UserCheck' IsLoginSelfieRequired.Row 770
 	140.0		Debashis	07-12-2022	ADD SETTINGS @Action=GlobalCheck' IsDiscountInOrder & IsViewMRPInOrder.Row 772
+	141.0		Debashis	12-12-2022	ADD SETTINGS @Action=UserCheck' IsJointVisitEnable & IsShowAllEmployeeforJointVisit.Row 775
+	142.0		Debashis	12-12-2022	ADD SETTINGS @Action=GlobalCheck' IsShowStateInTeam,IsShowBranchInTeam,IsShowDesignationInTeam & IsAllowZeroRateOrder.Row 778
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -315,6 +317,12 @@ BEGIN
 	,@IsDiscountInOrder BIT
 	,@IsViewMRPInOrder BIT
 	--End of Rev 140.0
+	--Rev 142.0
+	,@IsShowStateInTeam BIT
+	,@IsShowBranchInTeam BIT
+	,@IsShowDesignationInTeam BIT
+	,@IsAllowZeroRateOrder BIT
+	--End of Rev 142.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -525,6 +533,12 @@ BEGIN
 		SET @IsDiscountInOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDiscountInOrder' AND IsActive=1)
 		SET @IsViewMRPInOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsViewMRPInOrder' AND IsActive=1)
 		--End of Rev 140.0
+		--Rev 142.0
+		SET @IsShowStateInTeam =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowStateInTeam' AND IsActive=1)
+		SET @IsShowBranchInTeam =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowBranchInTeam' AND IsActive=1)
+		SET @IsShowDesignationInTeam =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowDesignationInTeam' AND IsActive=1)
+		SET @IsAllowZeroRateOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowZeroRateOrder' AND IsActive=1)
+		--End of Rev 142.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -714,6 +728,12 @@ BEGIN
 			,@IsDiscountInOrder AS IsDiscountInOrder
 			,@IsViewMRPInOrder AS IsViewMRPInOrder
 			--End of Rev 140.0
+			--Rev 142.0
+			,@IsShowStateInTeam AS IsShowStateInTeam
+			,@IsShowBranchInTeam AS IsShowBranchInTeam
+			,@IsShowDesignationInTeam AS IsShowDesignationInTeam
+			,@IsAllowZeroRateOrder AS IsAllowZeroRateOrder
+			--End of Rev 142.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1625,6 +1645,14 @@ BEGIN
 		SELECT 'IsLoginSelfieRequired' AS [Key],CONVERT(NVARCHAR(15),USR.IsLoginSelfieRequired) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 139.0
+		--Rev 141.0
+		UNION ALL
+		SELECT 'IsJointVisitEnable' AS [Key],CONVERT(NVARCHAR(15),USR.IsJointVisitEnable) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowAllEmployeeforJointVisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowAllEmployeeforJointVisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 141.0
 	END
 
 	SET NOCOUNT OFF

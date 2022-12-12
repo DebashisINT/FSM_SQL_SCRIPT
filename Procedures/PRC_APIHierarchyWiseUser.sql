@@ -31,6 +31,7 @@ AS
 13.0	28-01-2022		Debashis	@ACTION='MEMBER' API to get report to of user.Row 629
 14.0	30-09-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 744
 15.0	07-10-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 746
+16.0	12-12-2022		Debashis	@ACTION='MEMBER' add some extra columns.Row 774
 ****************************************************************************************************************************************************************************/
 BEGIN
 	 DECLARE @SQL NVARCHAR(MAX)
@@ -78,42 +79,64 @@ BEGIN
 
 						SELECT CAST(usr.user_id AS NVARCHAR(10)) AS user_id,
 						--Rev 3.0 Start
-						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'')+' ( Me )' AS user_name,cnt_internalId emp_cntId
+						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'')+' ( Me )' AS user_name,cnt_internalId AS emp_cntId
 						--5.0 start
 						,user_loginId contact_no,
 						--5.0 End
 						--Rev 12.0
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING' 
 						AND usr.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied 
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied, 
 						--End of Rev 12.0
-						from tbl_master_user usr
-						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=usr.user_contactId
+						--Rev 16.0
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						--End of Rev 16.0
+						from tbl_master_user usr WITH(NOLOCK)
+						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=usr.user_contactId
 						--Rev 3.0 end
+						--Rev 16.0
+						INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+						LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+						LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+						LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+						LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+						) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+						--End of Rev 16.0
 						where usr.user_id =@user_id
 
 						UNION ALL
 						select CAST(View_Userhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 						--Rev 3.0 Start
-						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,emp_cntId
+						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,View_Userhiarchy.emp_cntId
 						--5.0 start
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
 						AND CURRENT_STATUS='PENDING' AND View_Userhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 						--End of Rev 12.0
+						--Rev 16.0
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						--End of Rev 16.0
 						from View_Userhiarchy
-						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
+						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_Userhiarchy.emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
 						LEFT OUTER JOIN (
-						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 						GROUP BY A.USER_ID
 						) LVA ON View_Userhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
+						--Rev 16.0
+						INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+						LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+						LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+						LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+						LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+						) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+						--End of Rev 16.0
 						where reprtuserid =@user_id
 					END
 				ELSE
@@ -124,25 +147,36 @@ BEGIN
 						--End of Rev 12.0
 						SELECT CAST(View_Userhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 						--Rev 3.0 Start
-						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,emp_cntId
+						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,View_Userhiarchy.emp_cntId
 						--5.0 start
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
 						AND CURRENT_STATUS='PENDING' AND View_Userhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 						--End of Rev 12.0
+						--Rev 16.0
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						--End of Rev 16.0
 						from View_Userhiarchy
-						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
+						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_Userhiarchy.emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
 						LEFT OUTER JOIN (
-						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 						GROUP BY A.USER_ID
 						) LVA ON View_Userhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
+						--Rev 16.0
+						INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+						LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+						LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+						LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+						LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+						) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+						--End of Rev 16.0
 						WHERE reprtuserid =@user_id
 					END
 			END
@@ -157,12 +191,13 @@ BEGIN
 								INSERT INTO #TMPMAPUSER(USERID)
 								SELECT USER_ID FROM View_ALLUserhiarchy WHERE reprtuserid=@user_id
 
-								SELECT user_id,emp_cntId,user_name,contact_no from (
+								--Rev 16.0 &&Added three fields
+								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation from (
 								--End of Rev 12.0
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
 								--ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,
-								emp_cntId
+								View_ALLUserhiarchy.emp_cntId
 								--5.0 start
 								,RTRIM(LTRIM(
 										CONCAT(
@@ -176,23 +211,34 @@ BEGIN
 								--Rev 12.0
 								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING' 
 								AND View_ALLUserhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
+								--Rev 16.0
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								--End of Rev 16.0
 								from View_ALLUserhiarchy
-								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId  
+								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId  
 								--Rev 12.0
 								LEFT OUTER JOIN (
-								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
+								--Rev 16.0
+								INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+								LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+								LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+								LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+								LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+								) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+								--End of Rev 16.0
 								where View_ALLUserhiarchy.user_id=@user_id
 								UNION ALL						
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
 								--ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,
-								emp_cntId
+								View_ALLUserhiarchy.emp_cntId
 								--5.0 start
 								,RTRIM(LTRIM(
 										CONCAT(
@@ -206,17 +252,28 @@ BEGIN
 								--Rev 12.0
 								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
 								AND CURRENT_STATUS='PENDING' AND View_ALLUserhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
+								--Rev 16.0
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								--End of Rev 16.0
 								from View_ALLUserhiarchy
-								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId 
+								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId 
 								--Rev 12.0
 								LEFT OUTER JOIN (
-								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
+								--Rev 16.0
+								INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+								LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+								LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+								LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+								LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+								) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+								--End of Rev 16.0
 								where View_ALLUserhiarchy.user_id<>@user_id
 								--Rev 3.0 end
 								--where isnull(reprtuserid,0)=0
@@ -229,12 +286,13 @@ BEGIN
 								INSERT INTO #TMPMAPUSER(USERID)
 								SELECT USER_ID FROM View_ALLUserhiarchy WHERE reprtuserid=@user_id
 
-								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied from (
+								--Rev 16.0 &&Added three fields
+								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation from (
 								--End of Rev 12.0
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
 								--ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,
-								emp_cntId
+								View_ALLUserhiarchy.emp_cntId
 								--5.0 start
 								,RTRIM(LTRIM(
 										CONCAT(
@@ -248,23 +306,34 @@ BEGIN
 								--Rev 12.0
 								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING' 
 								AND View_ALLUserhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
+								--Rev 16.0
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								--End of Rev 16.0
 								FROM View_ALLUserhiarchy
-								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId  
+								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId  
 								--Rev 12.0
 								LEFT OUTER JOIN (
-								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
+								--Rev 16.0
+								INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+								LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+								LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+								LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+								LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+								) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+								--End of Rev 16.0
 								where View_ALLUserhiarchy.user_id=@user_id
 								UNION ALL						
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
 								--ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,
-								emp_cntId
+								View_ALLUserhiarchy.emp_cntId
 								--5.0 start
 								,RTRIM(LTRIM(
 										CONCAT(
@@ -278,17 +347,28 @@ BEGIN
 								--Rev 12.0
 								CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE EXISTS(SELECT USERID FROM #TMPMAPUSER WHERE USER_ID=USERID)
 								AND CURRENT_STATUS='PENDING' AND View_ALLUserhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied  
+								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
+								--Rev 16.0
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								--End of Rev 16.0
 								from View_ALLUserhiarchy
-								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId 
+								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId 
 								--Rev 12.0
 								LEFT OUTER JOIN (
-								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+								SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 								INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 								GROUP BY A.USER_ID
 								) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 								--End of Rev 12.0
+								--Rev 16.0
+								INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+								LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+								LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+								LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+								LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+								) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+								--End of Rev 16.0
 								where View_ALLUserhiarchy.user_id<>@user_id
 								--Rev 3.0 end
 								--where isnull(reprtuserid,0)=0
@@ -304,25 +384,36 @@ BEGIN
 						--End of Rev 12.0
 						SELECT CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 						--Rev 3.0 Start
-						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,emp_cntId
+						ISNULL(CNT.cnt_firstName,'')+' '+ISNULL(CNT.cnt_middleName,'')+' '+ISNULL(CNT.cnt_lastName,'') AS user_name,View_ALLUserhiarchy.emp_cntId
 						--5.0 start
 						,contact_no,
 						--5.0 End
 						--Rev 12.0
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id AND CURRENT_STATUS='PENDING' 
 						AND View_ALLUserhiarchy.user_id=FTS_USER_LEAVEAPPLICATION.USER_ID)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeavePending, 
-						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied 
+						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied, 
 						--End of Rev 12.0
+						--Rev 16.0
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						--End of Rev 16.0
 						from View_ALLUserhiarchy
-						LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=emp_cntId
+						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId
 						--Rev 3.0 end
 						--Rev 12.0
 						LEFT OUTER JOIN (
-						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A
+						SELECT A.USER_ID FROM FTS_USER_LEAVEAPPLICATION A WITH(NOLOCK)
 						INNER JOIN #TMPMAPUSER B ON A.user_id=B.USERID
 						GROUP BY A.USER_ID
 						) LVA ON View_ALLUserhiarchy.user_id=LVA.user_id
 						--End of Rev 12.0
+						--Rev 16.0
+						INNER JOIN tbl_master_branch B WITH(NOLOCK) ON CNT.cnt_branchid=B.branch_id
+						LEFT OUTER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType='Office'
+						LEFT OUTER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id 
+						LEFT OUTER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
+						LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+						) DESG ON DESG.emp_cntId=CNT.cnt_internalid
+						--End of Rev 16.0
 						where reprtuserid =@user_id
 					END
 			END

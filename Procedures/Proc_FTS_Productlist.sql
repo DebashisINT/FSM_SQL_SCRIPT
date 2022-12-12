@@ -15,6 +15,7 @@ AS
 /***************************************************************************************************************
 1.0					20-11-2020		Tanmoy		null value check in watt
 2.0		v2.0.37		07-12-2022		Debashis	A new field added.Row: 773
+3.0		v2.0.37		12-12-2022		Debashis	A new field added.Row: 777
 ***************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -37,8 +38,10 @@ BEGIN
 	EXEC sp_ExecuteSQL @sql 
 
 	--Rev 2.0 &&A new field sProduct_MRP is added
+	--Rev 3.0 &&A new field sProduct_MRP is added
 	SET @sql='SELECT sProducts_ID AS id,sProducts_Brand AS brand_id,masprod.ProductClass_Code AS category_id,sProducts_Size AS watt_id,brnd.Brand_Name AS brand,cls.ProductClass_Name AS category,
-	ISNULL(msize.Size_Name,''Not Applicable'') AS watt,masprod.sProducts_Name AS product_name,CAST(ISNULL(masprod.sProduct_MRP,0.00) AS DECIMAL(18,2)) AS product_mrp_show
+	ISNULL(msize.Size_Name,''Not Applicable'') AS watt,masprod.sProducts_Name AS product_name,CAST(ISNULL(masprod.sProduct_MRP,0.00) AS DECIMAL(18,2)) AS product_mrp_show,
+	CAST(ISNULL(masprod.sProducts_Discount,0.00) AS DECIMAL(18,2)) AS product_discount_show
 	FROM Master_sProducts AS masprod
 	INNER JOIN tbl_master_brand brnd ON masprod.sProducts_Brand=brnd.Brand_Id 
 	INNER JOIN Master_ProductClass AS cls ON masprod.ProductClass_Code=cls.ProductClass_ID

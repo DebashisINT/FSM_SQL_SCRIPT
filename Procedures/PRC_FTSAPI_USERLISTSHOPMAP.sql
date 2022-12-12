@@ -101,7 +101,7 @@ BEGIN
 			INNER JOIN (SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) AS emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH(NOLOCK) 
 			LEFT OUTER JOIN tbl_master_designation desg WITH(NOLOCK) ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
 			) DESG ON DESG.emp_cntId=EMP.emp_contactId
-					--End of Rev 16.0
+			--End of Rev 16.0
 			--Rev 6.0
 			LEFT OUTER JOIN FSMEMPLOYEEAADHARINFORMATION AADHINFO WITH(NOLOCK) ON USR.USER_ID=AADHINFO.USER_ID
 			--End of Rev 6.0
