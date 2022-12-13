@@ -174,7 +174,7 @@ BEGIN
 					--REV 10.0 START
 					,@STATICDISTANCE
 					--REV 10.0 END	
-					,@beat_id,@IsJointVisit,@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
+					,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
 					)	
 					SET @identity=SCOPE_IDENTITY()
 
@@ -347,7 +347,7 @@ BEGIN
 						--REV 10.0 START
 						,@STATICDISTANCE
 						--REV 10.0 END
-						,@beat_id,@IsJointVisit,@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
+						,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID
 						)
 						SET @identity=SCOPE_IDENTITY()
 
