@@ -202,33 +202,111 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 --Rev 20.0
 ,@ShowAttednaceClearmenu INT=0
 --End of Rev 20.0
--- Rev Sanchita
+-- Rev 21.0
 ,@CalledFromUserAccount int = 0, @ChType_CFP int = 0
--- End of Rev sanchita
-) 
+-- End of Rev 21.0
+-- Rev 23.0
+,@ShowAllowProfileUpdate INT=0
+,@ShowAutoDDSelect INT=0
+,@ShowBatterySetting INT=0
+,@ShowCommonAINotification INT=0
+,@ShowCustom_Configuration INT=0
+,@ShowGPSAlertwithVibration INT=0
+,@ShowHierarchywiseLoginInPortal INT=0
+,@ShowIgnoreNumberCheckwhileShopCreation INT=0
+,@ShowInAppUpdateApplicable INT=0
+,@ShowisAadharRegistered INT=0
+,@ShowIsActivateNewOrderScreenwithSize INT=0
+,@ShowIsAllowBreakageTracking INT=0
+,@ShowIsAllowBreakageTrackingunderTeam INT=0
+,@ShowIsAllowClickForPhotoRegister INT=0
+,@ShowIsAllowClickForVisit INT=0
+,@ShowIsAllowClickForVisitForSpecificUser INT=0
+,@ShowIsAllowShopStatusUpdate INT=0
+,@ShowIsAlternateNoForCustomer INT=0
+,@ShowIsAttendVisitShowInDashboard INT=0
+,@ShowIsAutoLeadActivityDateTime INT=0
+,@ShowIsBeatRouteReportAvailableinTeam INT=0
+,@ShowIsCollectionOrderWise INT=0
+,@ShowIsFaceRecognitionOnEyeblink INT=0
+,@ShowisFaceRegistered INT=0
+,@ShowIsFeedbackAvailableInShop INT=0
+,@ShowIsFeedbackHistoryActivated INT=0
+,@ShowIsFromPortal INT=0
+,@ShowIsIMEICheck INT=0
+,@ShowIslandlineforCustomer INT=0
+,@ShowIsNewQuotationfeatureOn INT=0
+,@ShowIsNewQuotationNumberManual INT=0
+,@ShowIsPendingCollectionRequiredUnderTeam INT=0
+,@ShowIsprojectforCustomer INT=0
+,@ShowIsRateEnabledforNewOrderScreenwithSize INT=0
+,@ShowIsRestrictNearbyGeofence INT=0
+,@ShowIsReturnEnableforParty INT=0
+,@ShowIsShowHomeLocationMap INT=0
+,@ShowIsShowManualPhotoRegnInApp INT=0
+,@ShowIsShowMyDetails INT=0
+,@ShowIsShowNearByTeam INT=0
+,@ShowIsShowRepeatOrderinNotification INT=0
+,@ShowIsShowRepeatOrdersNotificationinTeam INT=0
+,@ShowIsShowRevisitRemarksPopup INT=0
+,@ShowIsShowTypeInRegistration INT=0
+,@ShowIsTeamAttendance INT=0
+,@ShowIsTeamAttenWithoutPhoto INT=0
+,@ShowIsWhatsappNoForCustomer INT=0
+,@ShowLeaveapprovalfromsupervisor INT=0
+,@ShowLeaveapprovalfromsupervisorinteam INT=0
+,@ShowLogoutWithLogFile INT=0
+,@ShowMarkAttendNotification INT=0
+,@ShowPartyUpdateAddrMandatory INT=0
+,@ShowPowerSaverSetting INT=0
+,@ShowShopScreenAftVisitRevisit INT=0
+,@Show_App_Logout_Notification INT=0
+,@ShowAmountNewQuotation INT=0
+,@ShowAutoRevisitInAppMenu INT=0
+,@ShowAutoRevisitInDashboard INT=0
+,@ShowCollectionAlert INT=0
+,@ShowCollectionOnlywithInvoiceDetails INT=0
+,@ShowPurposeInShopVisit INT=0
+,@ShowQuantityNewQuotation INT=0
+,@ShowTotalVisitAppMenu INT=0
+,@ShowUserwiseLeadMenu INT=0
+,@ShowZeroCollectioninAlert INT=0
+,@ShowUpdateOtherID INT=0
+,@ShowUpdateUserID INT=0
+,@ShowUpdateUserName INT=0
+,@ShowWillRoomDBShareinLogin INT=0
+-- End of Rev 23.0
+) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
-1.0		20-05-2020		Tanmoy		inactive user IMEI and password update
-2.0		25-05-2020		Tanmoy		Insert update extra column
-3.0		11-06-2020		Tanmoy		Insert update extra column
-4.0		17-08-2020		Tanmoy		Insert update extra column
-5.0		18-08-2020		Tanmoy		Insert update extra column
-6.0		11-11-2020		Tanmoy		Insert update extra column
-7.0		30-11-2020		Tanmoy		Insert update extra column
-8.0		12-05-2021		Tanmoy		Insert update extra column
-9.0		27-07-2021		Tanmoy		Insert update extra column
-10.0	06-08-2021		Tanmoy		Insert update extra column
-11.0	13-08-2021		Tanmoy		Insert update extra column
-13.0	20-10-2021		Pratik		Insert update extra column
-14.0	07-01-2022		Sanchita	Add two checkboxes "Face Registration - Open Front camera" and "MRP in Order". Refer: 24596,24597
-15.0	11-05-2022		Swati	    Add one checkboxes "Show Horizontal Performance Report"  Refer: 0024880
-16.0	14-07-2022		Pratik	    Fetch settings "IsShowUserType","IsUserTypeMandatory" from ShowSettings Action. Refer: 25015,25016
-17.0	15-07-2022		Pratik	    Add one checkboxe "DistributerwisePartyOrderReport" . Refer: 25035
-18.0	01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
-19.0	11-08-2022		Pratik		Channel DS Type Map should be updated as per DS Type Selection. Refer: 25018
-20.0	16-08-2022		Pratik		Attendance Clear Option is needed in FSM. Refer: 25116
-21.0	05-09-2022		Sanchita	New module in FSM - User - Account. Refer: 
-22.0	09-06-2022		Sanchita	At the time of creation of User, the Branch will get updated in table FTS_EmployeeBranchMap. Refer: 25189
+1.0					20-05-2020		Tanmoy		inactive user IMEI and password update
+2.0					25-05-2020		Tanmoy		Insert update extra column
+3.0					11-06-2020		Tanmoy		Insert update extra column
+4.0					17-08-2020		Tanmoy		Insert update extra column
+5.0					18-08-2020		Tanmoy		Insert update extra column
+6.0					11-11-2020		Tanmoy		Insert update extra column
+7.0					30-11-2020		Tanmoy		Insert update extra column
+8.0					12-05-2021		Tanmoy		Insert update extra column
+9.0					27-07-2021		Tanmoy		Insert update extra column
+10.0				06-08-2021		Tanmoy		Insert update extra column
+11.0				13-08-2021		Tanmoy		Insert update extra column
+13.0				20-10-2021		Pratik		Insert update extra column
+14.0				07-01-2022		Sanchita	Add two checkboxes "Face Registration - Open Front camera" and "MRP in Order". Refer: 24596,24597
+15.0				11-05-2022		Swati	    Add one checkboxes "Show Horizontal Performance Report"  Refer: 0024880
+16.0				14-07-2022		Pratik	    Fetch settings "IsShowUserType","IsUserTypeMandatory" from ShowSettings Action. Refer: 25015,25016
+17.0				15-07-2022		Pratik	    Add one checkboxe "DistributerwisePartyOrderReport" . Refer: 25035
+18.0				01-08-2022		Sanchita	FSM: A setting required in App Config "IsActivateEmployeeBranchHierarchy". Refer: 25001
+19.0				11-08-2022		Pratik		Channel DS Type Map should be updated as per DS Type Selection. Refer: 25018
+20.0				16-08-2022		Pratik		Attendance Clear Option is needed in FSM. Refer: 25116
+21.0				05-09-2022		Sanchita	New module in FSM - User - Account. Refer: 
+22.0				09-06-2022		Sanchita	At the time of creation of User, the Branch will get updated in table FTS_EmployeeBranchMap. Refer: 25189
+23.0				12-10-2022		Sanchita	In User Master, all the Settings shall be available from table " tbl_master_user " . Refer: 25207
+24.0	v2.0.37		13-12-2022		Debashis	While make any FSM - user 'Make Inactive' then the following action is happening:
+												1) Update user table for Inactive flag update
+												2) Paswword is changed
+												3) USER IMEIS : IMEI is updated as 'NOT IN USE'
+												====> now the above point 2) and 3) are not required while
+												any user 'Make Inactive'.Refer: 0025508
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -315,6 +393,77 @@ BEGIN
 			--Rev 20.0
 			,ShowAttednaceClearmenu
 			--End of Rev 20.0
+			-- Rev 23.0
+			,AllowProfileUpdate
+			,AutoDDSelect
+			,BatterySetting
+			,CommonAINotification
+			,Custom_Configuration
+			,GPSAlertwithVibration
+			,HierarchywiseLoginInPortal
+			,IgnoreNumberCheckwhileShopCreation
+			,InAppUpdateApplicable
+			,isAadharRegistered
+			,IsActivateNewOrderScreenwithSize
+			,IsAllowBreakageTracking
+			,IsAllowBreakageTrackingunderTeam
+			,IsAllowClickForPhotoRegister
+			,IsAllowClickForVisit
+			,IsAllowClickForVisitForSpecificUser
+			,IsAllowShopStatusUpdate
+			,IsAlternateNoForCustomer
+			,IsAttendVisitShowInDashboard
+			,IsAutoLeadActivityDateTime
+			,IsBeatRouteReportAvailableinTeam
+			,IsCollectionOrderWise
+			,IsFaceRecognitionOnEyeblink
+			,isFaceRegistered
+			,IsFeedbackAvailableInShop
+			,IsFeedbackHistoryActivated
+			,IsFromPortal
+			,IsIMEICheck
+			,IslandlineforCustomer
+			,IsNewQuotationfeatureOn
+			,IsNewQuotationNumberManual
+			,IsPendingCollectionRequiredUnderTeam
+			,IsprojectforCustomer
+			,IsRateEnabledforNewOrderScreenwithSize
+			,IsRestrictNearbyGeofence
+			,IsReturnEnableforParty
+			,IsShowHomeLocationMap
+			,IsShowManualPhotoRegnInApp
+			,IsShowMyDetails
+			,IsShowNearByTeam
+			,IsShowRepeatOrderinNotification
+			,IsShowRepeatOrdersNotificationinTeam
+			,IsShowRevisitRemarksPopup
+			,IsShowTypeInRegistration
+			,IsTeamAttendance
+			,IsTeamAttenWithoutPhoto
+			,IsWhatsappNoForCustomer
+			,Leaveapprovalfromsupervisor
+			,Leaveapprovalfromsupervisorinteam
+			,LogoutWithLogFile
+			,MarkAttendNotification
+			,PartyUpdateAddrMandatory
+			,PowerSaverSetting
+			,ShopScreenAftVisitRevisit
+			,Show_App_Logout_Notification
+			,ShowAmountNewQuotation
+			,ShowAutoRevisitInAppMenu
+			,ShowAutoRevisitInDashboard
+			,ShowCollectionAlert
+			,ShowCollectionOnlywithInvoiceDetails
+			,ShowPurposeInShopVisit
+			,ShowQuantityNewQuotation
+			,ShowTotalVisitAppMenu
+			,ShowUserwiseLeadMenu
+			,ShowZeroCollectioninAlert
+			,UpdateOtherID
+			,UpdateUserID
+			,UpdateUserName
+			,WillRoomDBShareinLogin
+			-- End of Rev 23.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -384,6 +533,77 @@ BEGIN
 			--Rev 20.0
 			,@ShowAttednaceClearmenu
 			--End of Rev 20.0
+			-- Rev 23.0
+			,isnull(@ShowAllowProfileUpdate,0)
+			,isnull(@ShowAutoDDSelect,0)
+			,isnull(@ShowBatterySetting,0)
+			,isnull(@ShowCommonAINotification,0)
+			,isnull(@ShowCustom_Configuration,0)
+			,isnull(@ShowGPSAlertwithVibration,0)
+			,isnull(@ShowHierarchywiseLoginInPortal,0)
+			,isnull(@ShowIgnoreNumberCheckwhileShopCreation,0)
+			,isnull(@ShowInAppUpdateApplicable,0)
+			,isnull(@ShowisAadharRegistered,0)
+			,isnull(@ShowIsActivateNewOrderScreenwithSize,0)
+			,isnull(@ShowIsAllowBreakageTracking,0)
+			,isnull(@ShowIsAllowBreakageTrackingunderTeam,0)
+			,isnull(@ShowIsAllowClickForPhotoRegister,0)
+			,isnull(@ShowIsAllowClickForVisit,0)
+			,isnull(@ShowIsAllowClickForVisitForSpecificUser,0)
+			,isnull(@ShowIsAllowShopStatusUpdate,0)
+			,isnull(@ShowIsAlternateNoForCustomer,0)
+			,isnull(@ShowIsAttendVisitShowInDashboard,0)
+			,isnull(@ShowIsAutoLeadActivityDateTime,0)
+			,isnull(@ShowIsBeatRouteReportAvailableinTeam,0)
+			,isnull(@ShowIsCollectionOrderWise,0)
+			,isnull(@ShowIsFaceRecognitionOnEyeblink,0)
+			,isnull(@ShowisFaceRegistered,0)
+			,isnull(@ShowIsFeedbackAvailableInShop,0)
+			,isnull(@ShowIsFeedbackHistoryActivated,0)
+			,isnull(@ShowIsFromPortal,0)
+			,isnull(@ShowIsIMEICheck,0)
+			,isnull(@ShowIslandlineforCustomer,0)
+			,isnull(@ShowIsNewQuotationfeatureOn,0)
+			,isnull(@ShowIsNewQuotationNumberManual,0)
+			,isnull(@ShowIsPendingCollectionRequiredUnderTeam,0)
+			,isnull(@ShowIsprojectforCustomer,0)
+			,isnull(@ShowIsRateEnabledforNewOrderScreenwithSize,0)
+			,isnull(@ShowIsRestrictNearbyGeofence,0)
+			,isnull(@ShowIsReturnEnableforParty,0)
+			,isnull(@ShowIsShowHomeLocationMap,0)
+			,isnull(@ShowIsShowManualPhotoRegnInApp,0)
+			,isnull(@ShowIsShowMyDetails,0)
+			,isnull(@ShowIsShowNearByTeam,0)
+			,isnull(@ShowIsShowRepeatOrderinNotification,0)
+			,isnull(@ShowIsShowRepeatOrdersNotificationinTeam,0)
+			,isnull(@ShowIsShowRevisitRemarksPopup,0)
+			,isnull(@ShowIsShowTypeInRegistration,0)
+			,isnull(@ShowIsTeamAttendance,0)
+			,isnull(@ShowIsTeamAttenWithoutPhoto,0)
+			,isnull(@ShowIsWhatsappNoForCustomer,0)
+			,isnull(@ShowLeaveapprovalfromsupervisor,0)
+			,isnull(@ShowLeaveapprovalfromsupervisorinteam,0)
+			,isnull(@ShowLogoutWithLogFile,0)
+			,isnull(@ShowMarkAttendNotification,0)
+			,isnull(@ShowPartyUpdateAddrMandatory,0)
+			,isnull(@ShowPowerSaverSetting,0)
+			,isnull(@ShowShopScreenAftVisitRevisit,0)
+			,isnull(@Show_App_Logout_Notification,0)
+			,isnull(@ShowAmountNewQuotation,0)
+			,isnull(@ShowAutoRevisitInAppMenu,0)
+			,isnull(@ShowAutoRevisitInDashboard,0)
+			,isnull(@ShowCollectionAlert,0)
+			,isnull(@ShowCollectionOnlywithInvoiceDetails,0)
+			,isnull(@ShowPurposeInShopVisit,0)
+			,isnull(@ShowQuantityNewQuotation,0)
+			,isnull(@ShowTotalVisitAppMenu,0)
+			,isnull(@ShowUserwiseLeadMenu,0)
+			,isnull(@ShowZeroCollectioninAlert,0)
+			,isnull(@ShowUpdateOtherID,0)
+			,isnull(@ShowUpdateUserID,0)
+			,isnull(@ShowUpdateUserName,0)
+			,isnull(@ShowWillRoomDBShareinLogin,0)
+			-- End of Rev 23.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -647,14 +867,98 @@ BEGIN
 			--Rev 20.0
 			,ShowAttednaceClearmenu=@ShowAttednaceClearmenu
 			--End of Rev 20.0
+			-- Rev 23.0
+			,AllowProfileUpdate=@ShowAllowProfileUpdate
+            ,AutoDDSelect=@ShowAutoDDSelect
+            ,BatterySetting=@ShowBatterySetting
+            ,CommonAINotification=@ShowCommonAINotification
+            ,Custom_Configuration=@ShowCustom_Configuration
+            ,GPSAlertwithVibration=@ShowGPSAlertwithVibration
+            --,GPSNetworkIntervalMins=@ShowGPSNetworkIntervalMins
+            ,HierarchywiseLoginInPortal=@ShowHierarchywiseLoginInPortal
+            --,homeLocReasonCheckMins=@ShowhomeLocReasonCheckMins
+            ,IgnoreNumberCheckwhileShopCreation=@ShowIgnoreNumberCheckwhileShopCreation
+            ,InAppUpdateApplicable=@ShowInAppUpdateApplicable
+            ,isAadharRegistered=@ShowisAadharRegistered
+            ,IsActivateNewOrderScreenwithSize=@ShowIsActivateNewOrderScreenwithSize
+            ,IsAllowBreakageTracking=@ShowIsAllowBreakageTracking
+            ,IsAllowBreakageTrackingunderTeam=@ShowIsAllowBreakageTrackingunderTeam
+            ,IsAllowClickForPhotoRegister=@ShowIsAllowClickForPhotoRegister
+            ,IsAllowClickForVisit=@ShowIsAllowClickForVisit
+            ,IsAllowClickForVisitForSpecificUser=@ShowIsAllowClickForVisitForSpecificUser
+            ,IsAllowShopStatusUpdate=@ShowIsAllowShopStatusUpdate
+            ,IsAlternateNoForCustomer=@ShowIsAlternateNoForCustomer
+            ,IsAttendVisitShowInDashboard=@ShowIsAttendVisitShowInDashboard
+            ,IsAutoLeadActivityDateTime=@ShowIsAutoLeadActivityDateTime
+            ,IsBeatRouteReportAvailableinTeam=@ShowIsBeatRouteReportAvailableinTeam
+            ,IsCollectionOrderWise=@ShowIsCollectionOrderWise
+            ,IsFaceRecognitionOnEyeblink=@ShowIsFaceRecognitionOnEyeblink
+            ,isFaceRegistered=@ShowisFaceRegistered
+            ,IsFeedbackAvailableInShop=@ShowIsFeedbackAvailableInShop
+            ,IsFeedbackHistoryActivated=@ShowIsFeedbackHistoryActivated
+            ,IsFromPortal=@ShowIsFromPortal
+            ,IsIMEICheck=@ShowIsIMEICheck
+            ,IslandlineforCustomer=@ShowIslandlineforCustomer
+            ,IsNewQuotationfeatureOn=@ShowIsNewQuotationfeatureOn
+            ,IsNewQuotationNumberManual=@ShowIsNewQuotationNumberManual
+            ,IsPendingCollectionRequiredUnderTeam=@ShowIsPendingCollectionRequiredUnderTeam
+            ,IsprojectforCustomer=@ShowIsprojectforCustomer
+            ,IsRateEnabledforNewOrderScreenwithSize=@ShowIsRateEnabledforNewOrderScreenwithSize
+            ,IsRestrictNearbyGeofence=@ShowIsRestrictNearbyGeofence
+            ,IsReturnEnableforParty=@ShowIsReturnEnableforParty
+            ,IsShowHomeLocationMap=@ShowIsShowHomeLocationMap
+            ,IsShowManualPhotoRegnInApp=@ShowIsShowManualPhotoRegnInApp
+            ,IsShowMyDetails=@ShowIsShowMyDetails
+            ,IsShowNearByTeam=@ShowIsShowNearByTeam
+            ,IsShowRepeatOrderinNotification=@ShowIsShowRepeatOrderinNotification
+            ,IsShowRepeatOrdersNotificationinTeam=@ShowIsShowRepeatOrdersNotificationinTeam
+            ,IsShowRevisitRemarksPopup=@ShowIsShowRevisitRemarksPopup
+            ,IsShowTypeInRegistration=@ShowIsShowTypeInRegistration
+            ,IsTeamAttendance=@ShowIsTeamAttendance
+            ,IsTeamAttenWithoutPhoto=@ShowIsTeamAttenWithoutPhoto
+            ,IsWhatsappNoForCustomer=@ShowIsWhatsappNoForCustomer
+            ,Leaveapprovalfromsupervisorinteam=@ShowLeaveapprovalfromsupervisorinteam
+            ,LogoutWithLogFile=@ShowLogoutWithLogFile
+            ,MarkAttendNotification=@ShowMarkAttendNotification
+            ,PartyUpdateAddrMandatory=@ShowPartyUpdateAddrMandatory
+            ,PowerSaverSetting=@ShowPowerSaverSetting
+            ,ShopScreenAftVisitRevisit=@ShowShopScreenAftVisitRevisit
+            ,Show_App_Logout_Notification=@Show_App_Logout_Notification
+            ,ShowAmountNewQuotation=@ShowAmountNewQuotation
+            ,ShowAutoRevisitInAppMenu=@ShowAutoRevisitInAppMenu
+            ,ShowAutoRevisitInDashboard=@ShowAutoRevisitInDashboard
+            ,ShowCollectionAlert=@ShowCollectionAlert
+            ,ShowCollectionOnlywithInvoiceDetails=@ShowCollectionOnlywithInvoiceDetails
+            ,ShowPurposeInShopVisit=@ShowPurposeInShopVisit
+            ,ShowQuantityNewQuotation=@ShowQuantityNewQuotation
+            ,ShowTotalVisitAppMenu=@ShowTotalVisitAppMenu
+            ,ShowUserwiseLeadMenu=@ShowUserwiseLeadMenu
+            ,ShowZeroCollectioninAlert=@ShowZeroCollectioninAlert
+            ,UpdateOtherID=@ShowUpdateOtherID
+            ,UpdateUserID=@ShowUpdateUserID
+            ,UpdateUserName=@ShowUpdateUserName
+            --,user_activity=@Showuser_activity
+            --,user_imei_no=@Showuser_imei_no
+            --,user_LastBatch=@Showuser_LastBatch
+            --,user_LastFinYear=@Showuser_LastFinYear
+            --,user_lastIP=@Showuser_lastIP
+            --,user_LastStno=@Showuser_LastStno
+            --,user_LastStType=@Showuser_LastStType
+            --,user_leavedate=@Showuser_leavedate
+            --,user_status=@Showuser_status
+            --,user_type=@Showuser_type
+            ,WillRoomDBShareinLogin=@ShowWillRoomDBShareinLogin
+			-- End of Rev 23.0
 			 Where  user_id =@user_id
 
-			 --Rev 1.0 Start
-			IF ISNULL(@isactive,'N')='Y'
-			BEGIN
-				UPDATE tbl_User_IMEI SET Imei_No='NOT IN USE' WHERE UserId=@user_id
-				Update tbl_master_user SET user_password=@Encryptpass WHERE  user_id =@user_id
-			END
+			--Rev 1.0 Start
+			--Rev 24.0
+			--IF ISNULL(@isactive,'N')='Y'
+			--BEGIN
+			--	UPDATE tbl_User_IMEI SET Imei_No='NOT IN USE' WHERE UserId=@user_id
+			--	Update tbl_master_user SET user_password=@Encryptpass WHERE  user_id =@user_id
+			--END
+			--End of Rev 24.0
 			--Rev 1.0 End
 
 			if exists (Select * from #Shoptype_List)
@@ -764,6 +1068,77 @@ BEGIN
 			--Rev 20.0
 			,ShowAttednaceClearmenu
 			--End of Rev 20.0
+			-- Rev 23.0
+			,ISNULL(AllowProfileUpdate,0) AS AllowProfileUpdate
+			,ISNULL(AutoDDSelect,0) as AutoDDSelect
+			,ISNULL(BatterySetting,0) as BatterySetting
+			,ISNULL(CommonAINotification,0) as CommonAINotification
+			,ISNULL(Custom_Configuration,0) as Custom_Configuration
+			,ISNULL(GPSAlertwithVibration,0) as GPSAlertwithVibration
+			,ISNULL(HierarchywiseLoginInPortal,0) as HierarchywiseLoginInPortal
+			,ISNULL(IgnoreNumberCheckwhileShopCreation,0) as IgnoreNumberCheckwhileShopCreation
+			,ISNULL(InAppUpdateApplicable,0) as InAppUpdateApplicable
+			,ISNULL(isAadharRegistered,0) as isAadharRegistered
+			,ISNULL(IsActivateNewOrderScreenwithSize,0) as IsActivateNewOrderScreenwithSize
+			,ISNULL(IsAllowBreakageTracking,0) as IsAllowBreakageTracking
+			,ISNULL(IsAllowBreakageTrackingunderTeam,0) as IsAllowBreakageTrackingunderTeam
+			,ISNULL(IsAllowClickForPhotoRegister,0) as IsAllowClickForPhotoRegister
+			,ISNULL(IsAllowClickForVisit,0) as IsAllowClickForVisit
+			,ISNULL(IsAllowClickForVisitForSpecificUser,0) as IsAllowClickForVisitForSpecificUser
+			,ISNULL(IsAllowShopStatusUpdate,0) as IsAllowShopStatusUpdate
+			,ISNULL(IsAlternateNoForCustomer,0) as IsAlternateNoForCustomer
+			,ISNULL(IsAttendVisitShowInDashboard,0) as IsAttendVisitShowInDashboard
+			,ISNULL(IsAutoLeadActivityDateTime,0) as IsAutoLeadActivityDateTime
+			,ISNULL(IsBeatRouteReportAvailableinTeam,0) as IsBeatRouteReportAvailableinTeam
+			,ISNULL(IsCollectionOrderWise,0) as IsCollectionOrderWise
+			,ISNULL(IsFaceRecognitionOnEyeblink,0) as IsFaceRecognitionOnEyeblink
+			,ISNULL(isFaceRegistered,0) as isFaceRegistered
+			,ISNULL(IsFeedbackAvailableInShop,0) as IsFeedbackAvailableInShop
+			,ISNULL(IsFeedbackHistoryActivated,0) as IsFeedbackHistoryActivated
+			,ISNULL(IsFromPortal,0) as IsFromPortal
+			,ISNULL(IsIMEICheck,0) as IsIMEICheck
+			,ISNULL(IslandlineforCustomer,0) as IslandlineforCustomer
+			,ISNULL(IsNewQuotationfeatureOn,0) as IsNewQuotationfeatureOn
+			,ISNULL(IsNewQuotationNumberManual,0) as IsNewQuotationNumberManual
+			,ISNULL(IsPendingCollectionRequiredUnderTeam,0) as IsPendingCollectionRequiredUnderTeam
+			,ISNULL(IsprojectforCustomer,0) as IsprojectforCustomer
+			,ISNULL(IsRateEnabledforNewOrderScreenwithSize,0) as IsRateEnabledforNewOrderScreenwithSize
+			,ISNULL(IsRestrictNearbyGeofence,0) as IsRestrictNearbyGeofence
+			,ISNULL(IsReturnEnableforParty,0) as IsReturnEnableforParty
+			,ISNULL(IsShowHomeLocationMap,0) as IsShowHomeLocationMap
+			,ISNULL(IsShowManualPhotoRegnInApp,0) as IsShowManualPhotoRegnInApp
+			,ISNULL(IsShowMyDetails,0) as IsShowMyDetails
+			,ISNULL(IsShowNearByTeam,0) as IsShowNearByTeam
+			,ISNULL(IsShowRepeatOrderinNotification,0) as IsShowRepeatOrderinNotification
+			,ISNULL(IsShowRepeatOrdersNotificationinTeam,0) as IsShowRepeatOrdersNotificationinTeam
+			,ISNULL(IsShowRevisitRemarksPopup,0) as IsShowRevisitRemarksPopup
+			,ISNULL(IsShowTypeInRegistration,0) as IsShowTypeInRegistration
+			,ISNULL(IsTeamAttendance,0) as IsTeamAttendance
+			,ISNULL(IsTeamAttenWithoutPhoto,0) as IsTeamAttenWithoutPhoto
+			,ISNULL(IsWhatsappNoForCustomer,0) as IsWhatsappNoForCustomer
+			,ISNULL(Leaveapprovalfromsupervisor,0) as Leaveapprovalfromsupervisor
+			,ISNULL(Leaveapprovalfromsupervisorinteam,0) as Leaveapprovalfromsupervisorinteam
+			,ISNULL(LogoutWithLogFile,0) as LogoutWithLogFile
+			,ISNULL(MarkAttendNotification,0) as MarkAttendNotification
+			,ISNULL(PartyUpdateAddrMandatory,0) as PartyUpdateAddrMandatory
+			,ISNULL(PowerSaverSetting,0) as PowerSaverSetting
+			,ISNULL(ShopScreenAftVisitRevisit,0) as ShopScreenAftVisitRevisit
+			,ISNULL(Show_App_Logout_Notification,0) as Show_App_Logout_Notification
+			,ISNULL(ShowAmountNewQuotation,0) as ShowAmountNewQuotation
+			,ISNULL(ShowAutoRevisitInAppMenu,0) as ShowAutoRevisitInAppMenu
+			,ISNULL(ShowAutoRevisitInDashboard,0) as ShowAutoRevisitInDashboard
+			,ISNULL(ShowCollectionAlert,0) as ShowCollectionAlert
+			,ISNULL(ShowCollectionOnlywithInvoiceDetails,0) as ShowCollectionOnlywithInvoiceDetails
+			,ISNULL(ShowPurposeInShopVisit,0) as ShowPurposeInShopVisit
+			,ISNULL(ShowQuantityNewQuotation,0) as ShowQuantityNewQuotation
+			,ISNULL(ShowTotalVisitAppMenu,0) as ShowTotalVisitAppMenu
+			,ISNULL(ShowUserwiseLeadMenu,0) as ShowUserwiseLeadMenu
+			,ISNULL(ShowZeroCollectioninAlert,0) as ShowZeroCollectioninAlert
+			,ISNULL(UpdateOtherID,0) as UpdateOtherID
+			,ISNULL(UpdateUserID,0) as UpdateUserID
+			,ISNULL(UpdateUserName,0) as UpdateUserName
+			,ISNULL(WillRoomDBShareinLogin,0) as WillRoomDBShareinLogin
+			-- End of Rev 23.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -832,6 +1207,77 @@ BEGIN
 			--Rev 20.0
 			,'ShowAttednaceClearmenu'
 			--End of Rev 20.0
+			-- Rev 23.0
+			,'AllowProfileUpdate'
+			,'AutoDDSelect'
+			,'BatterySetting'
+			,'CommonAINotification'
+			,'Custom_Configuration'
+			,'GPSAlertwithVibration'
+			,'HierarchywiseLoginInPortal'
+			,'IgnoreNumberCheckwhileShopCreation'
+			,'InAppUpdateApplicable'
+			,'isAadharRegistered'
+			,'IsActivateNewOrderScreenwithSize'
+			,'IsAllowBreakageTracking'
+			,'IsAllowBreakageTrackingunderTeam'
+			,'IsAllowClickForPhotoRegister'
+			,'IsAllowClickForVisit'
+			,'IsAllowClickForVisitForSpecificUser'
+			,'IsAllowShopStatusUpdate'
+			,'IsAlternateNoForCustomer'
+			,'IsAttendVisitShowInDashboard'
+			,'IsAutoLeadActivityDateTime'
+			,'IsBeatRouteReportAvailableinTeam'
+			,'IsCollectionOrderWise'
+			,'IsFaceRecognitionOnEyeblink'
+			,'isFaceRegistered'
+			,'IsFeedbackAvailableInShop'
+			,'IsFeedbackHistoryActivated'
+			,'IsFromPortal'
+			,'IsIMEICheck'
+			,'IslandlineforCustomer'
+			,'IsNewQuotationfeatureOn'
+			,'IsNewQuotationNumberManual'
+			,'IsPendingCollectionRequiredUnderTeam'
+			,'IsprojectforCustomer'
+			,'IsRateEnabledforNewOrderScreenwithSize'
+			,'IsRestrictNearbyGeofence'
+			,'IsReturnEnableforParty'
+			,'IsShowHomeLocationMap'
+			,'IsShowManualPhotoRegnInApp'
+			,'IsShowMyDetails'
+			,'IsShowNearByTeam'
+			,'IsShowRepeatOrderinNotification'
+			,'IsShowRepeatOrdersNotificationinTeam'
+			,'IsShowRevisitRemarksPopup'
+			,'IsShowTypeInRegistration'
+			,'IsTeamAttendance'
+			,'IsTeamAttenWithoutPhoto'
+			,'IsWhatsappNoForCustomer'
+			,'Leaveapprovalfromsupervisor'
+			,'Leaveapprovalfromsupervisorinteam'
+			,'LogoutWithLogFile'
+			,'MarkAttendNotification'
+			,'PartyUpdateAddrMandatory'
+			,'PowerSaverSetting'
+			,'ShopScreenAftVisitRevisit'
+			,'Show_App_Logout_Notification'
+			,'ShowAmountNewQuotation'
+			,'ShowAutoRevisitInAppMenu'
+			,'ShowAutoRevisitInDashboard'
+			,'ShowCollectionAlert'
+			,'ShowCollectionOnlywithInvoiceDetails'
+			,'ShowPurposeInShopVisit'
+			,'ShowQuantityNewQuotation'
+			,'ShowTotalVisitAppMenu'
+			,'ShowUserwiseLeadMenu'
+			,'ShowZeroCollectioninAlert'
+			,'UpdateOtherID'
+			,'UpdateUserID'
+			,'UpdateUserName'
+			,'WillRoomDBShareinLogin'
+			-- End of Rev 23.0
 			)
 		END
 	-- Rev 18.0
