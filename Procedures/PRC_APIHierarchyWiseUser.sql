@@ -32,6 +32,7 @@ AS
 14.0	30-09-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 744
 15.0	07-10-2022		Debashis	@ACTION='SHOPLIST' add extra column.Row 746
 16.0	12-12-2022		Debashis	@ACTION='MEMBER' add some extra columns.Row 774
+17.0	22-12-2022		Debashis	@ACTION='MEMBER' add one extra column.Row 780
 ****************************************************************************************************************************************************************************/
 BEGIN
 	 DECLARE @SQL NVARCHAR(MAX)
@@ -89,8 +90,11 @@ BEGIN
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied, 
 						--End of Rev 12.0
 						--Rev 16.0
-						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 						--End of Rev 16.0
+						--Rev 17.0
+						ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+						--End of Rev 17.0
 						from tbl_master_user usr WITH(NOLOCK)
 						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=usr.user_contactId
 						--Rev 3.0 end
@@ -117,8 +121,11 @@ BEGIN
 						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 						--End of Rev 12.0
 						--Rev 16.0
-						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 						--End of Rev 16.0
+						--Rev 17.0
+						ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+						--End of Rev 17.0
 						from View_Userhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_Userhiarchy.emp_cntId
 						--Rev 3.0 end
@@ -157,8 +164,11 @@ BEGIN
 						CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 						--End of Rev 12.0
 						--Rev 16.0
-						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 						--End of Rev 16.0
+						--Rev 17.0
+						ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+						--End of Rev 17.0
 						from View_Userhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_Userhiarchy.emp_cntId
 						--Rev 3.0 end
@@ -192,7 +202,8 @@ BEGIN
 								SELECT USER_ID FROM View_ALLUserhiarchy WHERE reprtuserid=@user_id
 
 								--Rev 16.0 &&Added three fields
-								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation from (
+								--Rev 17.0 &&Added one field as Employee_Code
+								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation,Employee_Code from (
 								--End of Rev 12.0
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
@@ -214,8 +225,11 @@ BEGIN
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
 								--Rev 16.0
-								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 								--End of Rev 16.0
+								--Rev 17.0
+								ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+								--End of Rev 17.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId  
 								--Rev 12.0
@@ -255,8 +269,11 @@ BEGIN
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
 								--Rev 16.0
-								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 								--End of Rev 16.0
+								--Rev 17.0
+								ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+								--End of Rev 17.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId 
 								--Rev 12.0
@@ -287,7 +304,8 @@ BEGIN
 								SELECT USER_ID FROM View_ALLUserhiarchy WHERE reprtuserid=@user_id
 
 								--Rev 16.0 &&Added three fields
-								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation from (
+								--Rev 17.0 &&Added one field as Employee_Code
+								SELECT user_id,emp_cntId,user_name,contact_no,isLeavePending,isLeaveApplied,State,Branch,Designation,Employee_Code from (
 								--End of Rev 12.0
 								select CAST(View_ALLUserhiarchy.user_id AS NVARCHAR(10)) AS user_id,
 								--Rev 3.0 Start
@@ -309,8 +327,11 @@ BEGIN
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
 								--Rev 16.0
-								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 								--End of Rev 16.0
+								--Rev 17.0
+								ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+								--End of Rev 17.0
 								FROM View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId  
 								--Rev 12.0
@@ -350,8 +371,11 @@ BEGIN
 								CASE WHEN LVA.USER_ID IS NOT NULL THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied,  
 								--End of Rev 12.0
 								--Rev 16.0
-								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+								ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 								--End of Rev 16.0
+								--Rev 17.0
+								ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+								--End of Rev 17.0
 								from View_ALLUserhiarchy
 								LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId 
 								--Rev 12.0
@@ -394,8 +418,11 @@ BEGIN
 						CASE WHEN (SELECT COUNT(USER_ID) FROM FTS_USER_LEAVEAPPLICATION WHERE USER_ID=@user_id)>0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isLeaveApplied, 
 						--End of Rev 12.0
 						--Rev 16.0
-						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation
+						ST.state AS State,B.branch_description AS Branch,DESG.deg_designation AS Designation,
 						--End of Rev 16.0
+						--Rev 17.0
+						ISNULL(CNT.cnt_UCC,'') AS Employee_Code
+						--End of Rev 17.0
 						from View_ALLUserhiarchy
 						LEFT OUTER JOIN tbl_master_contact CNT WITH(NOLOCK) ON CNT.cnt_internalId=View_ALLUserhiarchy.emp_cntId
 						--Rev 3.0 end

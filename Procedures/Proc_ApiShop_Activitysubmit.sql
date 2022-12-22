@@ -8,6 +8,9 @@ ALTER PROCEDURE [dbo].[Proc_ApiShop_Activitysubmit]
 (
 @session_token NVARCHAR(MAX)=NULL,
 @user_id NVARCHAR(50)=NULL,
+--Rev 7.0
+@isnewShop INT=NULL,
+--End of Rev 7.0
 @JsonXML XML=NULL
 ) --WITH ENCRYPTION
 AS
@@ -22,6 +25,8 @@ AS
 									- And In case of Revisit, the last visit date shall be updated for the shop.
 									Now it has been taken care off.Refer: 0024614
 6.0		Debashis	07-12-2022		One global settings should be inttrodued for Multivisit module.Refer: 0025493
+7.0		Debashis	22-12-2022		When user create a shop, From user-end we send extra input 1 or 0.Added New Shop =1.
+									Refer: 0025529 & Row: 781
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -128,68 +133,80 @@ BEGIN
 				END
 			ELSE IF @MultipleVisitEnable='1'
 				BEGIN
-					 INSERT INTO tbl_trans_shopActivitysubmit ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled
-					 ,REMARKS,IsFirstVisit,IsOutStation,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,CheckIn_Time,CheckOut_Time
-					 ,start_timestamp,CheckIn_Address,CheckOut_Address,Revisit_Code,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
-					 )
+					--Rev 7.0
+					IF @isnewShop=0
+						BEGIN
+					--End of Rev 7.0
+							INSERT INTO tbl_trans_shopActivitysubmit ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled
+							,REMARKS,IsFirstVisit,IsOutStation,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,CheckIn_Time,CheckOut_Time
+							,start_timestamp,CheckIn_Address,CheckOut_Address,Revisit_Code,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
+							)
 	
-					SELECT DISTINCT @user_id,
-					XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	,
-					XMLproduct.value('(visited_date/text())[1]','date')	,
-					XMLproduct.value('(visited_time/text())[1]','datetime'),
-					XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)')	,
-					XMLproduct.value('(total_visit_count/text())[1]','int')	
-					,@datenew,0
-					,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)')	
-					,XMLproduct.value('(feedback/text())[1]','varchar(100)'),
-					case when XMLproduct.value('(isFirstShopVisited/text())[1]','varchar(40)')='true' then  1 else 0 end	,
-					case when XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')>=@OUTSTATION_DISTANCE	 then  1 else 0 end,
-					XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')	,
-					XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
-					,XMLproduct.value('(device_model/text())[1]','varchar(100)')
-					,XMLproduct.value('(android_version/text())[1]','varchar(100)')
-					,XMLproduct.value('(battery/text())[1]','varchar(100)')
-					,XMLproduct.value('(net_status/text())[1]','varchar(100)')
-					,XMLproduct.value('(net_type/text())[1]','varchar(100)')
-					,XMLproduct.value('(in_time/text())[1]','varchar(100)')
-					,XMLproduct.value('(out_time/text())[1]','varchar(100)')
-					,XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
-					,XMLproduct.value('(in_location/text())[1]','varchar(100)')
-					,XMLproduct.value('(out_location/text())[1]','varchar(100)')
-					,XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
-					,XMLproduct.value('(pros_id/text())[1]','bigint')
-					,XMLproduct.value('(updated_by/text())[1]','bigint')
-					,XMLproduct.value('(updated_on/text())[1]','datetime')
-					,XMLproduct.value('(agency_name/text())[1]','varchar(500)')
-					,XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
-					from
-					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
-					INNER JOIN tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
-
-					UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
-					distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
-					,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
-					,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
-					,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
-					,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
-					,battery=XMLproduct.value('(battery/text())[1]','varchar(100)')
-					,net_status=XMLproduct.value('(net_type/text())[1]','varchar(100)')
-					,net_type=XMLproduct.value('(net_type/text())[1]','varchar(100)')
-					,CheckIn_Time=XMLproduct.value('(in_time/text())[1]','varchar(100)')
-					,CheckOut_Time=XMLproduct.value('(out_time/text())[1]','varchar(100)')
-					,start_timestamp=XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
-					,CheckIn_Address=XMLproduct.value('(in_location/text())[1]','varchar(100)')
-					,CheckOut_Address=XMLproduct.value('(out_location/text())[1]','varchar(100)')
-					,Revisit_Code=XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
-					,Pros_Id=XMLproduct.value('(pros_id/text())[1]','bigint')
-					,Updated_by=XMLproduct.value('(updated_by/text())[1]','bigint')
-					,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
-					,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
-					,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
-					from tbl_trans_shopActivitysubmit TTSAS
-					INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
-					ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
-					and spent_duration='00:00:00'
+							SELECT DISTINCT @user_id,
+							XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	,
+							XMLproduct.value('(visited_date/text())[1]','date')	,
+							XMLproduct.value('(visited_time/text())[1]','datetime'),
+							XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)')	,
+							XMLproduct.value('(total_visit_count/text())[1]','int')	
+							,@datenew,0
+							,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)')	
+							,XMLproduct.value('(feedback/text())[1]','varchar(100)'),
+							case when XMLproduct.value('(isFirstShopVisited/text())[1]','varchar(40)')='true' then  1 else 0 end	,
+							case when XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')>=@OUTSTATION_DISTANCE	 then  1 else 0 end,
+							XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')	,
+							XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
+							,XMLproduct.value('(device_model/text())[1]','varchar(100)')
+							,XMLproduct.value('(android_version/text())[1]','varchar(100)')
+							,XMLproduct.value('(battery/text())[1]','varchar(100)')
+							,XMLproduct.value('(net_status/text())[1]','varchar(100)')
+							,XMLproduct.value('(net_type/text())[1]','varchar(100)')
+							,XMLproduct.value('(in_time/text())[1]','varchar(100)')
+							,XMLproduct.value('(out_time/text())[1]','varchar(100)')
+							,XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
+							,XMLproduct.value('(in_location/text())[1]','varchar(100)')
+							,XMLproduct.value('(out_location/text())[1]','varchar(100)')
+							,XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
+							,XMLproduct.value('(pros_id/text())[1]','bigint')
+							,XMLproduct.value('(updated_by/text())[1]','bigint')
+							,XMLproduct.value('(updated_on/text())[1]','datetime')
+							,XMLproduct.value('(agency_name/text())[1]','varchar(500)')
+							,XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+							from
+							@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+							INNER JOIN tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
+					--Rev 7.0
+						END
+					ELSE IF @isnewShop=1
+						BEGIN
+					--End of Rev 7.0
+							UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
+							distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
+							,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+							,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
+							,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
+							,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
+							,battery=XMLproduct.value('(battery/text())[1]','varchar(100)')
+							,net_status=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+							,net_type=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+							,CheckIn_Time=XMLproduct.value('(in_time/text())[1]','varchar(100)')
+							,CheckOut_Time=XMLproduct.value('(out_time/text())[1]','varchar(100)')
+							,start_timestamp=XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
+							,CheckIn_Address=XMLproduct.value('(in_location/text())[1]','varchar(100)')
+							,CheckOut_Address=XMLproduct.value('(out_location/text())[1]','varchar(100)')
+							,Revisit_Code=XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
+							,Pros_Id=XMLproduct.value('(pros_id/text())[1]','bigint')
+							,Updated_by=XMLproduct.value('(updated_by/text())[1]','bigint')
+							,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
+							,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
+							,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+							from tbl_trans_shopActivitysubmit TTSAS
+							INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
+							ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND visited_date=XMLproduct.value('(visited_date/text())[1]','date')
+					--Rev 7.0
+							--and spent_duration='00:00:00'
+							AND USER_ID=@user_id
+						END
+					--End of Rev 7.0
 				END
 			--End of Rev 6.0
 
