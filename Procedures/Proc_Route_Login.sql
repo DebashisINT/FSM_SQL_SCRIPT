@@ -1,4 +1,4 @@
---exec [Proc_Route_Login] 1655
+--exec [Proc_Route_Login] 11986
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Proc_Route_Login]') AND type in (N'P', N'PC'))
 BEGIN
@@ -11,6 +11,9 @@ ALTER PROCEDURE [dbo].[Proc_Route_Login]
 @UserID varchar(50)=NULL
 ) --WITH ENCRYPTION
 AS
+/****************************************************************************************************************************************************************************
+1.0		v2.0.37		22-12-2022		Debashis	A new table introduced.Row: 781
+****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
@@ -52,6 +55,15 @@ BEGIN
 	INNER JOIN tbl_master_user MU WITH(NOLOCK) ON MU.user_loginId=CONVERT(varchar(50),SR.LOGIN_ID)
 	INNER JOIN tbl_Master_shop MS WITH(NOLOCK) ON MS.Shop_ID=SR.SHOP_ID
 	WHERE MU.user_id=@UserId and cast(SR.REVISITDATE as date)=cast(getdate() as date)
+
+	--Rev 1.0
+	SELECT ISNULL(loginlogout.JointVisitTeam_MemberName,'') AS JointVisitSelectedUserName,JointVisitTeam_Member_User_ID,ISNULL(MEMP.emp_uniqueCode,'') AS JointVisit_Employee_Code,
+	MEMP.emp_contactId FROM tbl_fts_UserAttendanceLoginlogout loginlogout
+	LEFT OUTER JOIN tbl_master_user JUSR ON loginlogout.JointVisitTeam_Member_User_ID=JUSR.user_id
+	INNER JOIN tbl_master_employee MEMP ON JUSR.user_contactId=MEMP.emp_contactId
+	WHERE loginlogout.User_Id=@UserID and cast(Work_datetime as date)=convert(date,GETDATE())
+	AND Logout_datetime IS NULL
+	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END
