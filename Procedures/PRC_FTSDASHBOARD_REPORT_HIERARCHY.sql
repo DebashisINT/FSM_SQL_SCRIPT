@@ -190,9 +190,33 @@ BEGIN
 			RPTTOEMPCODE VARCHAR(50)
 			)
 		
+			--INSERT INTO #EMPHR
+			--SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			--FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+
+			-- Consider Report To, Additional Report To, Colleague, Colleague1, Colleague2
 			INSERT INTO #EMPHR
-			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
-			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			SELECT DISTINCT EMPCODE,RPTTOEMPCODE FROM(
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id=CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			UNION ALL
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_deputy WHERE emp_effectiveuntil IS NULL
+			UNION ALL
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_colleague WHERE emp_effectiveuntil IS NULL
+			UNION ALL
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_colleague1 WHERE emp_effectiveuntil IS NULL
+			UNION ALL
+			SELECT emp_cntId AS EMPCODE,ISNULL(TME.emp_contactId,'') AS RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
+			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_colleague2 WHERE emp_effectiveuntil IS NULL
+			) EMPHRS where RPTTOEMPCODE<>''
 		
 			;with cte as(select	
 			EMPCODE,RPTTOEMPCODE
@@ -206,7 +230,7 @@ BEGIN
 			on a.RPTTOEMPCODE = b.EMPCODE
 			) 
 			INSERT INTO #EMPHR_EDIT
-			select EMPCODE,RPTTOEMPCODE  from cte 
+			select distinct EMPCODE,RPTTOEMPCODE  from cte 
 
 	END
 	--End of Rev 6.0
