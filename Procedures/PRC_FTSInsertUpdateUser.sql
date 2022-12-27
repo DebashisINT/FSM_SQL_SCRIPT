@@ -276,7 +276,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@ShowUpdateUserName INT=0
 ,@ShowWillRoomDBShareinLogin INT=0
 -- End of Rev 23.0
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
 1.0					20-05-2020		Tanmoy		inactive user IMEI and password update
@@ -307,12 +307,18 @@ AS
 												3) USER IMEIS : IMEI is updated as 'NOT IN USE'
 												====> now the above point 2) and 3) are not required while
 												any user 'Make Inactive'.Refer: 0025508
+25.0	v2.0.36		27-12-2022		Sanchita	During Employee Creation the Office Address State will be mapped by default as State Mapping of that Employee.
+												Refer: 25532
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
 	--Rev 19.0
 	Declare @user_contactId nvarchar(100)='', @ChannelId bigint=0
 	--End of Rev 19.0
+	-- Rev 25.0
+	DECLARE @branch_state int
+	-- End of Rev 25.0
+
 	IF OBJECT_ID('tempdb..#Shoptype_List') IS NOT NULL
 	DROP TABLE #Shoptype_List
 	CREATE TABLE #Shoptype_List (TypeId BIGINT)	
@@ -777,6 +783,16 @@ BEGIN
 				END
 			end
 			--End of Rev 19.0
+
+			-- Rev 25.0
+			select @branch_state=isnull(branch_state,0) from tbl_master_branch	where branch_id=@b_id
+
+			if not exists(select * from FTS_EMPSTATEMAPPING where user_id=@user_id and state_id=@branch_state)
+			begin
+				insert into FTS_EMPSTATEMAPPING (USER_ID,STATE_ID,SYS_DATE_TIME ,AUTHOR )
+				values(@user_id,@branch_state,GETDATE(),@CreateUser)
+			end
+			-- End of Rev 25.0
 		END
 
 	ELSE IF @ACTION='UPDATE'
