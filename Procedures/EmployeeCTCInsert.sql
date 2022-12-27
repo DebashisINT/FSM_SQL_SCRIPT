@@ -50,9 +50,18 @@ ALTER PROCEDURE [dbo].[EmployeeCTCInsert]
 AS
 /****************************************************************************************************************************************************
 1.0		Sanchita		V2.0.26		29-01-2022		CTC Tab - "Colleague1" and "Colleague2", refer: 24655
+2.0		Sanchita		V2.0.36		27-12-2022		After saving an Employee through Employee Master 
+													The 'Office Type' Address of the respective employee to be updated as Branch Ad
+													Employee Master Branch Selection will be the same Branch to be mapped for this employee Branch Mapping
+													Refer: 25531, 25533
 ****************************************************************************************************************************************************/
 begin
 	declare @rowEffected int,@oldLeaveScheme int, @oldEffectiveDate datetime
+
+	-- Rev 2.0
+	DECLARE @branch_address1 VARCHAR(500), @branch_address2 VARCHAR(500), @branch_address3 VARCHAR(500),
+		@branch_country INT, @branch_state int, @branch_pin varchar(50), @branch_city int, @branch_area int, @emp_userid bigint
+	-- End of Rev 2.0
 
 	select @oldLeaveScheme=isnull(emp_totalLeavePA,'0'),@oldEffectiveDate=emp_LeaveSchemeAppliedFrom from tbl_trans_employeeCTC where ( emp_effectiveuntil is null or emp_effectiveuntil = '1/1/1900 12:00:00 AM' or emp_effectiveuntil = '1/1/1900')  and emp_cntId = @emp_cntId
 
@@ -89,7 +98,42 @@ begin
 						where [cnt_internalId]=@emp_cntId
 						
   -- Code Added by  Sandip on 20032017 to update Branchid in tbl_master_user if User of this employee exists.	
-  
+	-- Rev 2.0
+	select @branch_address1=isnull(branch_address1,''), @branch_address2=isnull(branch_address2,''), @branch_address3=isnull(branch_address3,''),
+	@branch_country=isnull(branch_country,0), @branch_state=isnull(branch_state,0), @branch_pin=isnull(branch_pin,''), 
+	@branch_city=isnull(branch_city,0), @branch_area=branch_area from tbl_master_branch
+	where branch_id=@emp_branch
+
+	select top 1 @emp_userid=user_id from tbl_master_user where user_contactid=@emp_cntId
+
+	if not exists(select * from tbl_master_address where add_cntId=@emp_cntId and add_entity='employee' and add_addressType='Office')
+	begin
+		insert into tbl_master_address(Isdefault,contactperson,add_cntId,add_entity,add_addressType,add_address1,add_address2,
+		add_address3,add_city,add_landMark,add_country,add_state,add_area,add_pin,CreateDate,CreateUser,add_Phone,add_Email,add_Website,
+		add_Designation,add_address4) 
+		values(0,'',@emp_cntId,'employee','Office',@branch_address1,@branch_address2,
+		@branch_address3,@branch_city,'',@branch_country,@branch_state,@branch_area,@branch_pin,getdate(),@userid,'','',''
+		,'','')
+	end
+
+	-- To be updated at the time of user add
+	--if not exists(select * from FTS_EMPSTATEMAPPING where user_id=@emp_userid and state_id=@branch_state)
+	--begin
+	--	insert into FTS_EMPSTATEMAPPING (USER_ID,STATE_ID,SYS_DATE_TIME ,AUTHOR )
+	--	values(@emp_userid,@branch_state,GETDATE(),@userid)
+	--end
+
+	if (select top 1 [Value] from FTS_APP_CONFIG_SETTINGS where [key]='IsActivateEmployeeBranchHierarchy')=0
+	begin
+		select top 1 @emp_userid=cnt_id from tbl_master_contact where cnt_internalId=@emp_cntId
+
+		if not exists(select * from FTS_EmployeeBranchMap where Emp_Contactid=@emp_cntId and BranchId=@emp_branch )
+		begin
+			insert into FTS_EmployeeBranchMap(EmployeeId, BranchId, CreatedBy, CreatedOn, Emp_Contactid)
+			values(@emp_userid,@emp_branch,@userid,getdate(),@emp_cntId)
+		end
+	end
+	-- End of Rev 2.0
   
 	--Sudip Pal 05-02-2019 Grade
 
