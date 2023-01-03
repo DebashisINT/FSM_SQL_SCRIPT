@@ -24,6 +24,7 @@ Module	   : FTS Order Register
 4.0			v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
 5.0			v2.0.26		Pratik		05/01/2022		Scheme Qty, Scheme Rate, Scheme Value columns required in Order Register report.Refer: 	0024593
 6.0			v2.0.26		Debashis	10/01/2022		DD name column is showing PP name in Order Register report.Refer: 0024607
+7.0			v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -174,7 +175,10 @@ BEGIN
 		  ORDID BIGINT,
 		  ORDRNO NVARCHAR(60) NULL,
 		  PRODUCT NVARCHAR(500) NULL,
-		  QUANTITY DECIMAL(10,0),
+		  --Rev 7.0
+		  --QUANTITY DECIMAL(10,0),
+		  QUANTITY DECIMAL(18,3),
+		  --End of Rev 7.0
 		  RATE DECIMAL(18,2),
 		  ORDVALUE DECIMAL(18,2),
 		  PPName NVARCHAR(100) NULL,
