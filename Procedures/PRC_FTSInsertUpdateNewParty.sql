@@ -82,6 +82,7 @@ AS
 8.0			Pratik		06-01-2022			@ACTION='InsertShop,UpdateShop,EditShop' add extra columns
 9.0			Sanchita	13-01-2022			Auto Code for Party Code in Shop Master. refer : Mantis Issue 24603
 10.0		Pratik		19-08-2022			Code for get all group Beat. refer : Mantis Issue 25133
+11.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. refer: 25545
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -127,6 +128,14 @@ BEGIN
 		--Rev 10.0
 		EXEC Prc_SubType @action='BeatListAll'--13
 		--End of Rev 10.0
+		-- Rev 11.0
+		--SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user u WHERE user_inactive='N'
+		--and exists(select user_id from FSM_GROUPBEAT_USERMAP where user_id =u.user_id) order by username
+
+		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user order by username
+
+		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user WHERE user_inactive='N' order by username
+		-- End of Rev 11.0
 	END
 
 	IF @ACTION='InsertShop'
