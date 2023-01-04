@@ -65,6 +65,7 @@ Module	   : Dashboard Summary & Detail
 16.0	V2.0.37		Sanchita	01-12-2022		FSM Dashboard : NEW tab shall be implemented "Team Visit - Hierarchy & Channel Wise" after the 'Team Visit' Tab
 												Refer: 25468
 												NEW SP WRITTEN
+17.0	v2.0.38		Sanchita	04-01-2023		Dashboard showing wrong data when clicked on Employee Strength in Visit tab. refer: 25567
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -171,8 +172,8 @@ BEGIN
 	-- End of Rev 16.0
 
 	--Rev 6.0
-	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-		BEGIN
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	--	BEGIN
 			DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
 			IF OBJECT_ID('tempdb..#EMPHR') IS NOT NULL
 				DROP TABLE #EMPHR
@@ -217,7 +218,10 @@ BEGIN
 			FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
 			LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_colleague2 WHERE emp_effectiveuntil IS NULL
 			) EMPHRS where RPTTOEMPCODE<>''
-		
+			-- Rev 17.0
+			AND EMPCODE<>RPTTOEMPCODE  -- THIS LINE IS TO TAKE CARE OF CORRUPTION WHERE EMPLOYEE CODE AND REPORT TO CODE ARE SAME. NEED TO IGNORE THEM TO AVOID INFINITE LOOP.
+			-- End of Rev 17.0
+
 			;with cte as(select	
 			EMPCODE,RPTTOEMPCODE
 			from #EMPHR 
@@ -232,7 +236,7 @@ BEGIN
 			INSERT INTO #EMPHR_EDIT
 			select distinct EMPCODE,RPTTOEMPCODE  from cte 
 
-	END
+	--END
 	--End of Rev 6.0
 
 	--Rev 5.0
@@ -271,8 +275,8 @@ BEGIN
 	--Rev 6.0
 	--INSERT INTO #TEMPCONTACT
 	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-		BEGIN
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	--	BEGIN
 			--Rev 9.0
 			--INSERT INTO #TEMPCONTACT
 			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
@@ -290,10 +294,10 @@ BEGIN
 					SET @Strsql=''
 					SET @Strsql+=' INSERT INTO #TEMPCONTACT '
 					SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)  '
-					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-					BEGIN
+					--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+					--BEGIN
 						SET @Strsql+=' INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
-					END
+					--END
 					SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
 					SET @Strsql+=' AND EXISTS (SELECT LC.EP_CH_ID FROM Employee_ChannelMap LC WITH (NOLOCK) WHERE EP_CH_ID in ('+@List_Channel+') and CNT.cnt_internalId=LC.EP_EMP_CONTACTID)  '
 					EXEC SP_EXECUTESQL @Strsql
@@ -306,10 +310,10 @@ BEGIN
 					SET @Strsql=''
 					SET @Strsql+=' INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC) '
 					SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
-					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-					BEGIN
+					--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+					--BEGIN
 						SET @Strsql+=' INNER JOIN #EMPHR_EDIT ON CNT.cnt_internalId=EMPCODE '
-					END
+					--END
 					SET @Strsql+=' INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
 					SET @Strsql+=' INNER JOIN ( '
 					SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
@@ -336,10 +340,10 @@ BEGIN
 					SET @Strsql=''
 					SET @Strsql+=' INSERT INTO #TEMPCONTACT '
 					SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
-					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-					BEGIN
+					--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+					--BEGIN
 						SET @Strsql+=' INNER JOIN #EMPHR_EDIT ON CNT.cnt_internalId=EMPCODE '
-					END
+					--END
 					SET @Strsql+=' INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
 					SET @Strsql+=' INNER JOIN ( '
 					SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
@@ -353,73 +357,73 @@ BEGIN
 					-- End of Rev 16.0
 				END
 			--End of Rev 9.0
-		END
-	ELSE
-		BEGIN
-			--Rev 9.0
-			--INSERT INTO #TEMPCONTACT
-			--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-			IF @IsShowOnlyDSTLInDashboard='0'
-				BEGIN
-					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
-					-- Rev 16.0
-					--INSERT INTO #TEMPCONTACT
-					--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK) 
-					--WHERE cnt_contactType IN('EM')
+		--END
+	--ELSE
+	--	BEGIN
+	--		--Rev 9.0
+	--		--INSERT INTO #TEMPCONTACT
+	--		--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	--		IF @IsShowOnlyDSTLInDashboard='0'
+	--			BEGIN
+	--				--Rev 14.0 && WITH (NOLOCK) has been added in all tables
+	--				-- Rev 16.0
+	--				--INSERT INTO #TEMPCONTACT
+	--				--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK) 
+	--				--WHERE cnt_contactType IN('EM')
 
-					SET @Strsql=''
-					SET @Strsql+=' INSERT INTO #TEMPCONTACT '
-					SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
-					SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
-					SET @Strsql+=' AND EXISTS (SELECT LC.EP_CH_ID FROM Employee_ChannelMap LC WITH (NOLOCK) WHERE EP_CH_ID in ('+@List_Channel+') and CNT.cnt_internalId=LC.EP_EMP_CONTACTID)  '
-					EXEC SP_EXECUTESQL @Strsql
-					-- End of Rev 16.0
-				END
-			ELSE
-				BEGIN
-					--Rev 11.0
-					--Rev 14.0 && WITH (NOLOCK) has been added in all tables
-					INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
-					INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
-					INNER JOIN (
-					SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
-					LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
-					WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation NOT IN('DS','TL') 
-					GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
-					) DESG ON DESG.emp_cntId=EMP.emp_contactId
-					WHERE CNT.cnt_contactType IN('EM')
-					--End of Rev 11.0
+	--				SET @Strsql=''
+	--				SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	--				SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
+	--				SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+	--				SET @Strsql+=' AND EXISTS (SELECT LC.EP_CH_ID FROM Employee_ChannelMap LC WITH (NOLOCK) WHERE EP_CH_ID in ('+@List_Channel+') and CNT.cnt_internalId=LC.EP_EMP_CONTACTID)  '
+	--				EXEC SP_EXECUTESQL @Strsql
+	--				-- End of Rev 16.0
+	--			END
+	--		ELSE
+	--			BEGIN
+	--				--Rev 11.0
+	--				--Rev 14.0 && WITH (NOLOCK) has been added in all tables
+	--				INSERT INTO #TEMPCONTACTREPORTTO(cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC)
+	--				SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
+	--				INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
+	--				INNER JOIN (
+	--				SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
+	--				LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
+	--				WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation NOT IN('DS','TL') 
+	--				GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+	--				) DESG ON DESG.emp_cntId=EMP.emp_contactId
+	--				WHERE CNT.cnt_contactType IN('EM')
+	--				--End of Rev 11.0
 
-					-- Rev 16.0
-					--INSERT INTO #TEMPCONTACT
-					--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
-					--INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
-					--INNER JOIN (
-					--SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
-					--LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
-					--WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
-					--GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
-					--) DESG ON DESG.emp_cntId=EMP.emp_contactId
-					--WHERE CNT.cnt_contactType IN('EM')
+	--				-- Rev 16.0
+	--				--INSERT INTO #TEMPCONTACT
+	--				--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK)
+	--				--INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
+	--				--INNER JOIN (
+	--				--SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK)
+	--				--LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation 
+	--				--WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN('DS','TL') 
+	--				--GROUP BY emp_cntId,desg.deg_designation,desg.deg_id 
+	--				--) DESG ON DESG.emp_cntId=EMP.emp_contactId
+	--				--WHERE CNT.cnt_contactType IN('EM')
 
-					SET @Strsql=''
-					SET @Strsql+=' INSERT INTO #TEMPCONTACT '
-					SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
-					SET @Strsql+=' INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
-					SET @Strsql+=' INNER JOIN ( '
-					SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
-					SET @Strsql+=' LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation '
-					SET @Strsql+=' WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN(''DS'',''TL'') '
-					SET @Strsql+=' GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
-					SET @Strsql+=' ) DESG ON DESG.emp_cntId=EMP.emp_contactId '
-					SET @Strsql+=' WHERE CNT.cnt_contactType IN(''EM'') '
-					SET @Strsql+=' AND EXISTS (SELECT LC.EP_CH_ID FROM Employee_ChannelMap LC WITH (NOLOCK) WHERE EP_CH_ID in ('+@List_Channel+') and CNT.cnt_internalId=LC.EP_EMP_CONTACTID)  '
-					EXEC SP_EXECUTESQL @Strsql
-					-- End of Rev 16.0
-				END
-			--End of Rev 9.0
-		END
+	--				SET @Strsql=''
+	--				SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	--				SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
+	--				SET @Strsql+=' INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
+	--				SET @Strsql+=' INNER JOIN ( '
+	--				SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '
+	--				SET @Strsql+=' LEFT OUTER JOIN tbl_master_designation desg WITH (NOLOCK) ON desg.deg_id=cnt.emp_Designation '
+	--				SET @Strsql+=' WHERE cnt.emp_effectiveuntil IS NULL AND desg.deg_designation IN(''DS'',''TL'') '
+	--				SET @Strsql+=' GROUP BY emp_cntId,desg.deg_designation,desg.deg_id '
+	--				SET @Strsql+=' ) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+	--				SET @Strsql+=' WHERE CNT.cnt_contactType IN(''EM'') '
+	--				SET @Strsql+=' AND EXISTS (SELECT LC.EP_CH_ID FROM Employee_ChannelMap LC WITH (NOLOCK) WHERE EP_CH_ID in ('+@List_Channel+') and CNT.cnt_internalId=LC.EP_EMP_CONTACTID)  '
+	--				EXEC SP_EXECUTESQL @Strsql
+	--				-- End of Rev 16.0
+	--			END
+	--		--End of Rev 9.0
+	--	END
 	--End of Rev 6.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSDASHBOARD_REPORT_HIERARCHY') AND TYPE IN (N'U'))
@@ -2100,11 +2104,11 @@ BEGIN
 	DROP TABLE #TEMPNOTLOGIN
 	DROP TABLE #TEMPSHOPUSER
 
-	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-		BEGIN
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	--	BEGIN
 			DROP TABLE #EMPHR
 			DROP TABLE #EMPHR_EDIT
-		END
+		--END
 
 	--Rev 11.0
 	IF @IsShowOnlyDSTLInDashboard='1'
