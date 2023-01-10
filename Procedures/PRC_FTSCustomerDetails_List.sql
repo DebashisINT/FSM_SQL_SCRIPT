@@ -15,17 +15,56 @@ ALTER PROCEDURE [dbo].[PRC_FTSCustomerDetails_List]
 @USERID INT =NULL,
 @DesigId NVARCHAR(MAX)=NULL,
 @DeptId NVARCHAR(MAX)=NULL
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0		Tanmoy		11-06-2020			Create sp
 2.0		Tanmoy		05-03-2021			Add extra column
 3.0		Debashis	30-09-2021		Master - Contact - Parties and Master - Contact - Customer Details.Refer: 0024384
+4.0		Sanchita	v2.0.36			10-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" then data in portal shall be populated based on Hierarchy Only.
+													Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @Strsql NVARCHAR(MAX), @sqlStrTable NVARCHAR(MAX)
+
+	-- Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
+			CREATE TABLE #EMPHR
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHR
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+		-- End of Rev 4.0
 
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
 		DROP TABLE #STATEID_LIST
@@ -88,9 +127,25 @@ BEGIN
 			USER_ID BIGINT
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,CNT.cnt_UCC,USR.user_id FROM TBL_MASTER_CONTACT CNT
-	INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId WHERE cnt_contactType IN('EM')
+	-- Rev 4.0
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,CNT.cnt_UCC,USR.user_id FROM TBL_MASTER_CONTACT CNT
+	--INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId WHERE cnt_contactType IN('EM')
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,CNT.cnt_UCC,USR.user_id FROM TBL_MASTER_CONTACT CNT '
+	SET @Strsql+=' INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE    '
+	END
+	SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+
+	--select @Strsql
+
+	EXEC SP_EXECUTESQL @Strsql
+	-- end of Rev 4.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTS_CustomerDetailsReport') AND TYPE IN (N'U'))
 	BEGIN
@@ -181,7 +236,19 @@ BEGIN
 	SET @Strsql+=' LEFT OUTER JOIN FSM_PARTYSTATUS PARTYSTATUS ON PARTYSTATUS.Id=shop.Party_Status_id	  '
 	SET @Strsql+=' LEFT OUTER JOIN FSM_GROUPBEAT GROUPBEAT ON GROUPBEAT.Id=shop.beat_id	  '
 	SET @Strsql+=' LEFT OUTER JOIN tbl_shoptype shoptype ON shoptype.shop_typeId=shop.type AND shoptype.IsActive=1    '
-	SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=shop.Shop_CreateUser    '
+	-- Rev 4.0
+	--SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=shop.Shop_CreateUser    '
+	
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=shop.Shop_CreateUser    '
+	end
+	else
+	begin
+		SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=shop.Shop_CreateUser    '
+	end
+
+	-- End of Rev 4.0
 	SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC CTC ON CTC.emp_cntId=CNT.cnt_internalId    '
 	SET @Strsql+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON DEPT.cost_id=CTC.emp_Department AND DEPT.cost_costCenterType = ''department''   '
 	SET @Strsql+=' LEFT OUTER JOIN FTS_LeadType LEAD ON LEAD.LeadTypeID=shop.Lead_id     '
@@ -204,7 +271,17 @@ BEGIN
 	SET @Strsql+=' CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,    '
 	SET @Strsql+=' DESG.deg_designation AS RPTTODESG,CNT.cnt_ucc AS REPORTTO_ID FROM tbl_master_employee EMP	  '
 	SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo		'
-	SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId	  '
+	-- Rev 4.0
+	--SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId	  '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId    '
+	end
+	else
+	begin
+		SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId    '
+	end
+	-- End of Rev 4.0
 	SET @Strsql+=' LEFT OUTER JOIN (	    '
 	SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt		'
 	SET @Strsql+=' LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL	  '
@@ -232,6 +309,13 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #DESIGNATION_LIST
 	DROP TABLE #DEPARTMENT_LIST
+	-- Rev 4.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR_EDIT
+		DROP TABLE #EMPHR
+	END
+	-- End of Rev 4.0
 
 	SET NOCOUNT OFF
 END
