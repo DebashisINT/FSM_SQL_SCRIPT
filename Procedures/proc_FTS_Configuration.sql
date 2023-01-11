@@ -158,6 +158,8 @@ BEGIN
 	140.0		Debashis	07-12-2022	ADD SETTINGS @Action=GlobalCheck' IsDiscountInOrder & IsViewMRPInOrder.Row 772
 	141.0		Debashis	12-12-2022	ADD SETTINGS @Action=UserCheck' IsJointVisitEnable & IsShowAllEmployeeforJointVisit.Row 775
 	142.0		Debashis	12-12-2022	ADD SETTINGS @Action=GlobalCheck' IsShowStateInTeam,IsShowBranchInTeam,IsShowDesignationInTeam & IsAllowZeroRateOrder.Row 778
+	143.0		Debashis	09-01-2023	ADD SETTINGS @Action=UserCheck' IsMultipleContactEnableforShop & IsContactPersonSelectionRequiredinRevisit.Row 782
+	144.0		Debashis	10-01-2023	ADD SETTINGS @Action=UserCheck' IsContactPersonRequiredinQuotation.Row 789
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -1653,6 +1655,19 @@ BEGIN
 		SELECT 'IsShowAllEmployeeforJointVisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowAllEmployeeforJointVisit) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 141.0
+		--Rev 143.0
+		UNION ALL
+		SELECT 'IsMultipleContactEnableforShop' AS [Key],CONVERT(NVARCHAR(15),USR.IsMultipleContactEnableforShop) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsContactPersonSelectionRequiredinRevisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsContactPersonSelectionRequiredinRevisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 143.0
+		--Rev 144.0
+		UNION ALL
+		SELECT 'IsContactPersonRequiredinQuotation' AS [Key],CONVERT(NVARCHAR(15),USR.IsContactPersonRequiredinQuotation) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 144.0
 	END
 
 	SET NOCOUNT OFF

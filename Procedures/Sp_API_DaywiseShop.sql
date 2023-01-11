@@ -20,6 +20,7 @@ AS
 2.0					TANMOY		24-06-2021		add new parameter
 3.0					TANMOY		30-07-2021		Parameter name change
 4.0		v2.0.26		Debashis	13-12-2021		Some new fields has been added.
+5.0		v2.0.37		Debashis	10-01-2023		Some new fields have been added.Row: 787
 ****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -55,6 +56,9 @@ BEGIN
 					ISNULL(CAST(lastactivty.Updated_on AS date),'') AS updated_on,ISNULL(lastactivty.Agency_Name,'') AS agency_name,
 					ISNULL(lastactivty.Approximate_1st_Billing_Value,0.00) AS approximate_1st_billing_value
 					--End of Rev 4.0
+					--Rev 5.0
+					,Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number
+					--End of Rev 5.0
 					 from  [tbl_trans_shopActivitysubmit]  as lastactivty WITH(NOLOCK) 
 					 INNER JOIN tbl_Master_shop as shop WITH(NOLOCK) on shop.Shop_Code=lastactivty.Shop_Id
 					where visited_date between @from_date and @to_date
@@ -92,6 +96,9 @@ BEGIN
 					ISNULL(CAST(lastactivty.Updated_on AS date),'') AS updated_on,ISNULL(lastactivty.Agency_Name,'') AS agency_name,
 					ISNULL(lastactivty.Approximate_1st_Billing_Value,0.00) AS approximate_1st_billing_value
 					--End of Rev 4.0
+					--Rev 5.0
+					,Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number
+					--End of Rev 5.0
 					 from  [tbl_trans_shopActivitysubmit]  as lastactivty WITH(NOLOCK) 
 					 INNER JOIN tbl_Master_shop as shop WITH(NOLOCK) on shop.Shop_Code=lastactivty.Shop_Id
 					where visited_date between  DateAdd(DAY,-30,convert(date,GETDATE())) and convert(date,GETDATE())

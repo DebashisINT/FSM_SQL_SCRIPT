@@ -16,6 +16,7 @@ AS
 /***************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 31/03/2022
 Purpose : For APP Log Files Detection API.Row: 675
+1.0		v2.0.37		Debashis	10/01/2023		Some new fields have been added.Row: 788
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -45,14 +46,23 @@ BEGIN
 			--SELECT @SqlStr
 			EXEC(@SqlStr)
 
-			SET @SqlStr='SELECT User_Id,Shop_Id,feedback,date_time FROM('
-			SET @SqlStr+='SELECT User_Id,Shop_Id,REMARKS AS feedback,CONVERT(NVARCHAR(10),visited_time,120)+'' ''+CONVERT(NVARCHAR(10),visited_time,108) AS date_time '
+			--Rev 1.0
+			--SET @SqlStr='SELECT User_Id,Shop_Id,feedback,date_time FROM('
+			SET @SqlStr='SELECT User_Id,Shop_Id,feedback,date_time,multi_contact_name,multi_contact_number FROM('
+			--End of Rev 1.0
+			SET @SqlStr+='SELECT User_Id,Shop_Id,REMARKS AS feedback,CONVERT(NVARCHAR(10),visited_time,120)+'' ''+CONVERT(NVARCHAR(10),visited_time,108) AS date_time,'
+			--Rev 1.0
+			SET @SqlStr+='Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number '
+			--End of Rev 1.0
 			SET @SqlStr+='FROM tbl_trans_shopActivitysubmit WITH(NOLOCK) '
 			SET @SqlStr+='WHERE User_Id='+LTRIM(RTRIM(STR(@USER_ID)))+' '
 			IF @FROMDATE<>'' AND @TODATE<>''
 				SET @SqlStr+='AND CONVERT(NVARCHAR(10),visited_time,120) BETWEEN '''+@FROMDATE+''' AND '''+@TODATE+''' '
 			SET @SqlStr+='UNION ALL '
-			SET @SqlStr+='SELECT User_Id,Shop_Id,REMARKS AS feedback,CONVERT(NVARCHAR(10),visited_time,120)+'' ''+CONVERT(NVARCHAR(10),visited_time,108) AS date_time '
+			SET @SqlStr+='SELECT User_Id,Shop_Id,REMARKS AS feedback,CONVERT(NVARCHAR(10),visited_time,120)+'' ''+CONVERT(NVARCHAR(10),visited_time,108) AS date_time,'
+			--Rev 1.0
+			SET @SqlStr+='Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number '
+			--End of Rev 1.0
 			SET @SqlStr+='FROM tbl_trans_shopActivitysubmit_ARCHIVE WITH(NOLOCK) '
 			SET @SqlStr+='WHERE User_Id='+LTRIM(RTRIM(STR(@USER_ID)))+' '
 			IF @FROMDATE<>'' AND @TODATE<>''

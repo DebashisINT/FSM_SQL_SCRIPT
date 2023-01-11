@@ -15,18 +15,19 @@ ALTER PROCEDURE [dbo].[Proc_ApiShop_Activitysubmit]
 ) --WITH ENCRYPTION
 AS
 /*****************************************************************************************************************************************
-1.0		Tanmoy		14-02-2020		add visit remarks 
-2.0     Indranil                    Distance ,IsFirstShop,IsOutside column added
-3.0     Indranil				    Same day visit allowed for different user
-4.0		Debashis	06-12-2021		Added Five fields as "Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value"
-									for RowNo: 576(From "FTS App API doc v1.0" Google sheet)
-5.0		Debashis	12-01-2022		Last Visit Date is not getting updated in shop list.
-									- It should be updated in case of New Visit then visit date will be updated.
-									- And In case of Revisit, the last visit date shall be updated for the shop.
-									Now it has been taken care off.Refer: 0024614
-6.0		Debashis	07-12-2022		One global settings should be inttrodued for Multivisit module.Refer: 0025493
-7.0		Debashis	22-12-2022		When user create a shop, From user-end we send extra input 1 or 0.Added New Shop =1.
-									Refer: 0025529 & Row: 781
+1.0					Tanmoy		14-02-2020		add visit remarks 
+2.0					Indranil	                Distance ,IsFirstShop,IsOutside column added
+3.0					Indranil				    Same day visit allowed for different user
+4.0					Debashis	06-12-2021		Added Five fields as "Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value"
+												for RowNo: 576(From "FTS App API doc v1.0" Google sheet)
+5.0					Debashis	12-01-2022		Last Visit Date is not getting updated in shop list.
+												- It should be updated in case of New Visit then visit date will be updated.
+												- And In case of Revisit, the last visit date shall be updated for the shop.
+												Now it has been taken care off.Refer: 0024614
+6.0					Debashis	07-12-2022		One global settings should be inttrodued for Multivisit module.Refer: 0025493
+7.0					Debashis	22-12-2022		When user create a shop, From user-end we send extra input 1 or 0.Added New Shop =1.
+												Refer: 0025529 & Row: 781
+8.0		v2.0.37		Debashis	10/01/2023		Some new fields have been added.Row: 786
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -57,6 +58,9 @@ BEGIN
 					 --Rev 4.0
 					 ,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
 					 --End of Rev 4.0
+					 --Rev 8.0
+					 ,Multi_Contact_Name,Multi_Contact_Number
+					 --End of Rev 8.0
 					 )
 	
 					SELECT DISTINCT @user_id,
@@ -97,6 +101,10 @@ BEGIN
 					,XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 					,XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
 					--End of Rev 4.0
+					--Rev 8.0
+					,XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
+					,XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
+					--End of Rev 8.0
 
 					from
 					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
@@ -125,6 +133,10 @@ BEGIN
 					,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 					,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
 					--End of Rev 4.0
+					--Rev 8.0
+					,Multi_Contact_Name=XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
+					,Multi_Contact_Number=XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
+					--End of Rev 8.0
 					from tbl_trans_shopActivitysubmit TTSAS
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	 and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
@@ -140,6 +152,9 @@ BEGIN
 							INSERT INTO tbl_trans_shopActivitysubmit ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled
 							,REMARKS,IsFirstVisit,IsOutStation,Outstation_Distance,early_revisit_reason,device_model,android_version,battery,net_status,net_type,CheckIn_Time,CheckOut_Time
 							,start_timestamp,CheckIn_Address,CheckOut_Address,Revisit_Code,Pros_Id,Updated_by,Updated_on,Agency_Name,Approximate_1st_Billing_Value
+							--Rev 8.0
+							,Multi_Contact_Name,Multi_Contact_Number
+							--End of Rev 8.0
 							)
 	
 							SELECT DISTINCT @user_id,
@@ -171,6 +186,10 @@ BEGIN
 							,XMLproduct.value('(updated_on/text())[1]','datetime')
 							,XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 							,XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+							--Rev 8.0
+							,XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
+							,XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
+							--End of Rev 8.0
 							from
 							@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 							INNER JOIN tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
@@ -199,6 +218,10 @@ BEGIN
 							,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
 							,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 							,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+							--Rev 8.0
+							,Multi_Contact_Name=XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
+							,Multi_Contact_Number=XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
+							--End of Rev 8.0
 							from tbl_trans_shopActivitysubmit TTSAS
 							INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
 							ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND visited_date=XMLproduct.value('(visited_date/text())[1]','date')
