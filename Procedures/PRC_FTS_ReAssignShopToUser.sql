@@ -21,6 +21,7 @@ AS
 3.0			Tanmoy		26-08-2020			Re-assign shop update modifytime
 4.0			Sanchita	08-11-2022			Beat Column is required while Reassign the Party List. Refer: 25431
 5.0			Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. refer: 25545
+6.0			Sanchita	13-01-2023			A new feature required as "Re-assigned Area/Route/Beat - Resolve reported issue. Refer: 25545
 ******************************************************************************************************************************/
 BEGIN
 	IF @ACTION='ShopReAssignUser'
@@ -127,8 +128,8 @@ BEGIN
 		INNER JOIN tbl_shoptype TYP ON TYP.TypeId=SHOP.type
 		INNER JOIN tbl_master_user USR ON USR.user_id=SHOP.Shop_CreateUser
 		left outer join FSM_GROUPBEAT BEAT on SHOP.beat_id=BEAT.ID
-		left outer join FSM_GROUPBEAT BEAT_AREA on BEAT.AREA_CODE=BEAT_AREA.ID
-		left outer join FSM_GROUPBEAT BEAT_ROUTE on beat.ROUTE_CODE=BEAT_ROUTE.ID
+		left outer join FSM_GROUPBEAT BEAT_AREA on BEAT.AREA_CODE=BEAT_AREA.ID AND BEAT_AREA.CODE_TYPE='AREA'
+		left outer join FSM_GROUPBEAT BEAT_ROUTE on beat.ROUTE_CODE=BEAT_ROUTE.ID AND BEAT_ROUTE.CODE_TYPE='ROUTE'
 		DROP TABLE #TEMP_SHOPCODEList_AreaRouteBeat
 	END
 
@@ -171,10 +172,13 @@ BEGIN
 		BEGIN
 			set @BEAD_ID = (SELECT TOP 1 BEAT_ID FROM TBL_MASTER_SHOP WHERE SHOP_CODE=@SHOP_CODE )
 
-			IF EXISTS (SELECT * FROM FSM_GROUPBEAT_USERMAP WHERE BEAT_ID=@BEAD_ID AND USER_ID=@OLD_USER)
-			BEGIN
-				DELETE FROM FSM_GROUPBEAT_USERMAP WHERE BEAT_ID=@BEAD_ID AND USER_ID=@OLD_USER
-			END
+			-- Rev 6.0
+			-- BEAT MAPPING WITH OLD PARTY WILL REMAIN 
+			--IF EXISTS (SELECT * FROM FSM_GROUPBEAT_USERMAP WHERE BEAT_ID=@BEAD_ID AND USER_ID=@OLD_USER)
+			--BEGIN
+			--	DELETE FROM FSM_GROUPBEAT_USERMAP WHERE BEAT_ID=@BEAD_ID AND USER_ID=@OLD_USER
+			--END
+			-- End of Rev 6.0
 
 			IF NOT EXISTS (SELECT * FROM FSM_GROUPBEAT_USERMAP WHERE BEAT_ID=@BEAD_ID AND USER_ID=@NEW_USER )
 			BEGIN
@@ -186,14 +190,31 @@ BEGIN
 		CLOSE db_cursorSHOP_PARTY_MAP   
 		DEALLOCATE db_cursorSHOP_PARTY_MAP
 
+		--SELECT tmp.SHOP_CODE,SHOP.Shop_Name,SHOP.Shop_Owner,SHOP.Shop_Owner_Contact,SHOP.Address,
+		--DD.Shop_Name AS DD_NAME,PP.Shop_Name AS PP_NAME,TYP.Name AS Type,
+		--GETDATE() AS UPDATED_ON,@OLDUSER_NAME AS OLD_UserName,@NEWUSER_NAME AS New_UserName
+		--FROM #TEMP_SHOPCODE_AreaRouteBeat tmp
+		--INNER JOIN tbl_Master_shop SHOP ON tmp.SHOP_CODE=SHOP.SHOP_CODE
+		--LEFT OUTER JOIN tbl_Master_shop DD ON SHOP.assigned_to_dd_id=DD.SHOP_CODE
+		--LEFT OUTER JOIN tbl_Master_shop PP ON SHOP.assigned_to_pp_id=PP.SHOP_CODE
+		--INNER JOIN tbl_shoptype TYP ON TYP.TypeId=SHOP.type	
+
 		SELECT tmp.SHOP_CODE,SHOP.Shop_Name,SHOP.Shop_Owner,SHOP.Shop_Owner_Contact,SHOP.Address,
-		DD.Shop_Name AS DD_NAME,PP.Shop_Name AS PP_NAME,TYP.Name AS Type,
-		GETDATE() AS UPDATED_ON,@OLDUSER_NAME AS OLD_UserName,@NEWUSER_NAME AS New_UserName
-		FROM #TEMP_SHOPCODE_AreaRouteBeat tmp
+		DD.Shop_Name AS DD_NAME,PP.Shop_Name AS PP_NAME,tmp.UPDATED_ON,OLDUSR.user_name AS OLD_UserName,
+		NEWUSR.user_name AS New_UserName,TYP.Name AS Type
+		,isnull(BEAT.Name,'') as Beat, isnull(BEAT_AREA.NAME,'') as Area, isnull(BEAT_ROUTE.NAME,'') as Route 
+		FROM FTS_ShopReassignUserLog tmp
 		INNER JOIN tbl_Master_shop SHOP ON tmp.SHOP_CODE=SHOP.SHOP_CODE
 		LEFT OUTER JOIN tbl_Master_shop DD ON SHOP.assigned_to_dd_id=DD.SHOP_CODE
 		LEFT OUTER JOIN tbl_Master_shop PP ON SHOP.assigned_to_pp_id=PP.SHOP_CODE
-		INNER JOIN tbl_shoptype TYP ON TYP.TypeId=SHOP.type	
+		INNER JOIN TBL_MASTER_USER OLDUSR ON OLDUSR.USER_ID=tmp.OLD_USER
+		INNER JOIN TBL_MASTER_USER NEWUSR ON NEWUSR.USER_ID=tmp.NEW_USER
+		INNER JOIN tbl_shoptype TYP ON TYP.TypeId=SHOP.type
+		left outer join FSM_GROUPBEAT BEAT on SHOP.beat_id=BEAT.ID
+		left outer join FSM_GROUPBEAT BEAT_AREA on BEAT.AREA_CODE=BEAT_AREA.ID AND BEAT_AREA.CODE_TYPE='AREA'
+		left outer join FSM_GROUPBEAT BEAT_ROUTE on beat.ROUTE_CODE=BEAT_ROUTE.ID AND BEAT_ROUTE.CODE_TYPE='ROUTE'
+		WHERE CAST(tmp.UPDATED_ON AS DATE) = convert(date,getdate())
+		ORDER BY tmp.UPDATED_ON DESC
 
 		
 		DROP TABLE #TEMP_SHOPCODE_AreaRouteBeat
@@ -214,8 +235,8 @@ BEGIN
 		INNER JOIN TBL_MASTER_USER NEWUSR ON NEWUSR.USER_ID=tmp.NEW_USER
 		INNER JOIN tbl_shoptype TYP ON TYP.TypeId=SHOP.type
 		left outer join FSM_GROUPBEAT BEAT on SHOP.beat_id=BEAT.ID
-		left outer join FSM_GROUPBEAT BEAT_AREA on BEAT.AREA_CODE=BEAT_AREA.ID
-		left outer join FSM_GROUPBEAT BEAT_ROUTE on beat.ROUTE_CODE=BEAT_ROUTE.ID
+		left outer join FSM_GROUPBEAT BEAT_AREA on BEAT.AREA_CODE=BEAT_AREA.ID AND BEAT_AREA.CODE_TYPE='AREA'
+		left outer join FSM_GROUPBEAT BEAT_ROUTE on beat.ROUTE_CODE=BEAT_ROUTE.ID AND BEAT_ROUTE.CODE_TYPE='ROUTE'
 		WHERE CAST(tmp.UPDATED_ON AS DATE) BETWEEN @FromDate AND @ToDate
 		ORDER BY tmp.UPDATED_ON DESC
 	END

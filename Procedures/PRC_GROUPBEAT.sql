@@ -24,12 +24,17 @@ Rev 1.0		V2.0.32		Sanchita		25-08-2022		Beat Master is retaining the previous us
 Rev 2.0		2.0.37		Sanchita		16-11-2022		Beat mapping is not deleting if we untag any user from the beat.
 Rev 3.0		V2.0.38		Sanchita		02-01-2022		Add Area, Add Route, Add Beat button required in the Beat/Group master module
 														Refer: 25536, 25535, 25542,25543, 25544
+Rev 4.0		v2.0.38		Sanchita		12-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+														then data in portal shall be populated based on Hierarchy Only. Refer: 25504
+Rev 5.0		V2.0.38		Sanchita		13-01-2023		Add Area, Add Route, Add Beat button required in the Beat/Group master module. Resolve reported issue.
+														Refer: 25536, 25535, 25542,25543, 25544
 ******************************************************************************************************************************/
 BEGIN
 
 	IF(@ACTION='ADD')
 	BEGIN
-		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='BEAT')
+		--IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='BEAT')
+		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE )
 		BEGIN
 			-- Rev 3.0
 			--INSERT INTO FSM_GROUPBEAT(CODE,NAME,ISACTIVE,CREATED_BY,CREATED_ON)
@@ -65,6 +70,8 @@ BEGIN
 		BEGIN
 			-- Rev 3.0
 			--UPDATE FSM_GROUPBEAT SET CODE=@BEAT_CODE,NAME=@BEAT_NAME,ISACTIVE=1,MODIFIED_BY=@USER_ID,MODIFIED_ON=GETDATE() WHERE ID=@ID
+
+			SET @AREA_CODE = (SELECT TOP 1 AREA_CODE FROM FSM_GROUPBEAT WHERE CODE_TYPE='ROUTE' AND ID=@ROUTE_CODE )
 
 			UPDATE FSM_GROUPBEAT SET CODE=@BEAT_CODE,NAME=@BEAT_NAME,AREA_CODE=@AREA_CODE,ROUTE_CODE=@ROUTE_CODE,ISACTIVE=1,MODIFIED_BY=@USER_ID,MODIFIED_ON=GETDATE() 
 			WHERE ID=@ID AND CODE_TYPE='BEAT'
@@ -120,7 +127,8 @@ BEGIN
 	IF(@ACTION='ADDAREA')
 	BEGIN
 
-		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='AREA')
+		--IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='AREA')
+		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE )
 		BEGIN
 			
 			INSERT INTO FSM_GROUPBEAT(CODE,NAME,ISACTIVE,CREATED_BY,CREATED_ON,CODE_TYPE)
@@ -164,7 +172,8 @@ BEGIN
 	END
 	IF(@ACTION='ADDROUTE')
 	BEGIN
-		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='ROUTE')
+		--IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE and CODE_TYPE='ROUTE')
+		IF NOT EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE )
 		BEGIN
 			INSERT INTO FSM_GROUPBEAT(CODE,NAME,ISACTIVE,CREATED_BY,CREATED_ON,CODE_TYPE,AREA_CODE)
 			VALUES (@BEAT_CODE,@BEAT_NAME,1,@USER_ID,GETDATE(),'ROUTE',@AREA_CODE)
@@ -175,6 +184,7 @@ BEGIN
 			SET @RETURN_VALUE=-1
 		END
 	END
+	-- Rev 5.0
 	ELSE IF(@ACTION='UPDATEROUTE')
 	BEGIN
 		IF EXISTS (SELECT 1 FROM FSM_GROUPBEAT WHERE CODE=@BEAT_CODE AND ID<>@ID AND CODE_TYPE='ROUTE')
@@ -183,9 +193,110 @@ BEGIN
 		END
 		ELSE
 		BEGIN
-			UPDATE FSM_GROUPBEAT SET CODE=@BEAT_CODE,NAME=@BEAT_NAME,AREA_CODE= @AREA_CODE,ISACTIVE=1,MODIFIED_BY=@USER_ID,MODIFIED_ON=GETDATE() WHERE ID=@ID AND CODE_TYPE='ROUTE'
+			UPDATE FSM_GROUPBEAT SET CODE=@BEAT_CODE,NAME=@BEAT_NAME,AREA_CODE=@AREA_CODE,ISACTIVE=1,MODIFIED_BY=@USER_ID,MODIFIED_ON=GETDATE() WHERE ID=@ID AND CODE_TYPE='ROUTE'
 			SET @RETURN_VALUE=1
 		END
 	END
-	-- End of Rev 3.0
+	-- End of Rev 5.0
+	-- Rev 4.0
+	ELSE IF(@ACTION='GETMAPUSERLISTDATA')
+	BEGIN
+		DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USER_ID)
+		DECLARE @Strsql NVARCHAR(MAX)
+
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			CREATE TABLE #EMPHR
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHR
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+		DROP TABLE #TEMPCONTACT
+		CREATE TABLE #TEMPCONTACT
+		(
+			cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			cnt_ucc NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			USER_ID BIGINT
+		)
+		CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+		
+		SET @Strsql=''
+		SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+		SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,CNT.cnt_UCC,USR.user_id FROM TBL_MASTER_CONTACT CNT '
+		SET @Strsql+=' INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId '
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE    '
+		END
+		SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+		EXEC SP_EXECUTESQL @Strsql
+
+
+		IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTS_MapUserList') AND TYPE IN (N'U'))
+		BEGIN
+			CREATE TABLE FTS_MapUserList
+			(
+				userid BIGINT,
+				seq	BIGINT,
+				user_id NUMERIC(10, 0) NOT NULL,
+				user_name VARCHAR(50) NOT NULL,
+				user_loginId VARCHAR(50) NOT NULL
+			)
+			CREATE NONCLUSTERED INDEX IX1 ON FTS_MapUserList (user_id asc)
+		END
+		
+
+		DELETE FROM FTS_MapUserList where USERID=@USER_ID
+
+		SET @Strsql=''
+		SET @Strsql+=' insert into FTS_MapUserList '
+		SET @Strsql+=' SELECT '+STR(@USER_ID)+',ROW_NUMBER() OVER(ORDER BY U.user_id) AS SEQ,U.user_id,U.user_name,U.user_loginId '
+		SET @Strsql+=' FROM TBL_MASTER_USER U '
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=U.USER_ID '
+		END
+		EXEC SP_EXECUTESQL @Strsql
+
+		DROP TABLE #TEMPCONTACT
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			DROP TABLE #EMPHR_EDIT
+			DROP TABLE #EMPHR
+		END
+
+	END
+	-- Rev 4.0
 END

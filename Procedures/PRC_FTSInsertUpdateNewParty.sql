@@ -1,6 +1,6 @@
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSInsertUpdateNewParty]') AND type in (N'P', N'PC'))
 BEGIN
-EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateNewParty] AS' 
+	EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateNewParty] AS' 
 END
 GO
 
@@ -66,6 +66,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
 @Alt_MobileNo1 NVARCHAR(50)=NULL,
 @Shop_Owner_Email2 NVARCHAR(250)=NULL
 --End of rev 8.0
+-- Rev 12.0
+,@SearchKey nvarchar(max) = NULL
+-- End of Rev 12.0
 -- Rev 9.0
 ,@RETURN_VALUE nvarchar(50)=NULL OUTPUT
 -- Ebd of Rev 9.0
@@ -83,6 +86,7 @@ AS
 9.0			Sanchita	13-01-2022			Auto Code for Party Code in Shop Master. refer : Mantis Issue 24603
 10.0		Pratik		19-08-2022			Code for get all group Beat. refer : Mantis Issue 25133
 11.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. refer: 25545
+12.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. Resolved reported issue. refer: 25545
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -362,10 +366,19 @@ BEGIN
 
 	IF @ACTION='GetddShopType'
 	BEGIN
-		IF @retailer_id='1'
-		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=3
-		IF @retailer_id='2'
-		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=4
+		-- Rev 12.0
+		--IF @retailer_id='1'
+		--select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=3
+		--IF @retailer_id='2'
+		--select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=4
+
+		DECLARE @PARENT_ID bigint
+
+		set @PARENT_ID = (select top 1 parent_id from tbl_shoptypeDetails where id=@retailer_id )
+
+		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and id=@PARENT_ID 
+
+		-- End of Rev 12.0
 	END
 
 	IF @ACTION='GetElectricianShopType'
@@ -373,4 +386,16 @@ BEGIN
 		
 		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=1 AND id=2
 	END
+
+	-- Rev 12.0
+	IF @ACTION='GetDDShop'
+	BEGIN
+		set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@dealer_id)
+
+		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
+			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
+				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
+				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' and dealer_id=@dealer_id)
+	END
+	-- End of Rev 12.0
 END
