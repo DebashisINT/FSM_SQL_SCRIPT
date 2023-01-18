@@ -25,6 +25,7 @@ AS
 												Refer: 0024743
 9.0		v2.0.30		Debashis	31-05-2022		Shop visited count will consider "tbl_trans_shopActivitysubmit" table to show the actual count while checking from team details.Refer: 0024918
 10.0	v2.0.33		Debashis	06-10-2022		Shop Duplicate in Case of Team Visit by Supervisor.Refer: 0025285
+11.0	v2.0.37		Debashis	17-01-2023		Some new fields added.Row: 798
 ************************************************************************************************************************************************************************************************/ 
 BEGIN
 	 DECLARE @SHOP_TYPE NVARCHAR(10)
@@ -152,8 +153,11 @@ BEGIN
 		set @SQL+=' ,convert(nvarchar(10),SHOP.Lead_id) as lead_id,convert(nvarchar(10),SHOP.FunnelStage_id) as funnel_stage_id,convert(nvarchar(10),SHOP.Stage_id) as stage_id,SHOP.Booking_amount  '
 		--Rev 6.0 End 
 		--Rev 7.0 Start
-		set @SQL+=' ,convert(nvarchar(10),SHOP.PartyType_id) as type_id,convert(nvarchar(10),SHOP.Area_id) as area_id   '
+		set @SQL+=' ,convert(nvarchar(10),SHOP.PartyType_id) as type_id,convert(nvarchar(10),SHOP.Area_id) as area_id,'
 		--Rev 7.0 End 
+		--Rev 11.0
+		SET @SQL+='SHOP.Shop_Owner_Email AS owner_email,CONVERT(NVARCHAR(10),SHOP.date_aniversary,120) AS owner_doa,SHOP.Shop_Owner AS owner_name,SHOPACT.total_visited AS total_visit_count '
+		--End of Rev 11.0
 		SET @SQL+='  FROM tbl_Master_shop SHOP  '
 		SET @SQL+=' LEFT OUTER JOIN tbl_Master_shop DD ON DD.Shop_Code=SHOP.assigned_to_dd_id  '
 		--Rev 9.0
