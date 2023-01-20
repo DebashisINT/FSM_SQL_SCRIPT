@@ -28,6 +28,8 @@ AS
 7.0					Debashis	22-12-2022		When user create a shop, From user-end we send extra input 1 or 0.Added New Shop =1.
 												Refer: 0025529 & Row: 781
 8.0		v2.0.37		Debashis	10/01/2023		Some new fields have been added.Row: 786
+9.0		v2.0.37		Debashis	20/01/2023		The feedback provided from the app is not showing fully in the Performance Summary report.
+												Refer: 0025605
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -73,7 +75,10 @@ BEGIN
 					,0
 					,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)')	
 					--Rev 1.0 Start
-					,XMLproduct.value('(feedback/text())[1]','varchar(100)')	
+					--Rev 9.0
+					--,XMLproduct.value('(feedback/text())[1]','varchar(100)')	
+					,XMLproduct.value('(feedback/text())[1]','varchar(500)')
+					--End of Rev 9.0
 					--Rev 1.0 End
 					--Rev 2.0 Start
 					,
@@ -113,7 +118,10 @@ BEGIN
 
 					UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
 					distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
-					,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+					--Rev 9.0
+					--,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+					,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(500)')
+					--End of Rev 9.0
 					,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
 					,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
 					,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
@@ -165,7 +173,10 @@ BEGIN
 							XMLproduct.value('(total_visit_count/text())[1]','int')	
 							,@datenew,0
 							,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)')	
-							,XMLproduct.value('(feedback/text())[1]','varchar(100)'),
+							--Rev 9.0
+							--,XMLproduct.value('(feedback/text())[1]','varchar(100)'),
+							,XMLproduct.value('(feedback/text())[1]','varchar(500)'),
+							--End of Rev 9.0
 							case when XMLproduct.value('(isFirstShopVisited/text())[1]','varchar(40)')='true' then  1 else 0 end	,
 							case when XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')>=@OUTSTATION_DISTANCE	 then  1 else 0 end,
 							XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')	,
@@ -200,7 +211,10 @@ BEGIN
 					--End of Rev 7.0
 							UPDATE TTSAS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
 							distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
-							,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+							--Rev 9.0
+							--,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(100)')
+							,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(500)')
+							--End of Rev 9.0
 							,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
 							,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
 							,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
