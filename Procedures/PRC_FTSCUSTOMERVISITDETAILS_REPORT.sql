@@ -14,11 +14,14 @@ ALTER PROCEDURE [dbo].[PRC_FTSCUSTOMERVISITDETAILS_REPORT]
 @DESIGNID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 31/03/2021
 Module	   : Employee Performance Details.Refer: 0023862
+1.0			TANMOY			22-04-2021			Electrician type and Electrician name  correction Ref:0023987
+2.0		v2.0.38		Sanchita	12-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -62,6 +65,45 @@ BEGIN
 			EXEC SP_EXECUTESQL @sqlStrTable
 		END
 
+	-- Rev 2.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 2.0
+
 	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
 		DROP TABLE #TEMPCONTACT
 	CREATE TABLE #TEMPCONTACT
@@ -74,8 +116,20 @@ BEGIN
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	-- Rev 2.0
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT CNT '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '
+	END
+	SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+	exec sp_executesql @Strsql
+	-- End of Rev 2.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSCUSTOMERVISITDETAILS_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -132,7 +186,10 @@ BEGIN
 	SET @Strsql+='ST.ID AS STATEID,ST.state AS STATE,BR.branch_description AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
 	SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTO,RPTTO.RPTTODESG,Login_datetimeORDBY,LOGIN_DATETIME,ATTEN.LOGGEDIN AS LOGGEDIN,ATTEN.LOGEDOUT AS LOGEDOUT,'
 	SET @Strsql+='ADDR.add_address1+'' ''+ISNULL(ADDR.add_address2,'''')+'' ''+ISNULL(ADDR.add_address3,'''') AS OFFICE_ADDRESS,EMP.emp_uniqueCode AS EMPID,ATTEN_STATUS,'	
-	SET @Strsql+='SHOP.CUSTTYPE,SHOP.Shop_Code AS CUSTCODE,SHOP.Shop_Name AS CUSTNAME,SHOP.Address AS SHOPADDRESS,SHOP.Shop_Owner_Contact AS CUSTMOB,SHOP.PCUSTOMER AS COMPNAME,'
+	--Rev 1.0 Start
+	--SET @Strsql+='SHOP.CUSTTYPE,SHOP.Shop_Code AS CUSTCODE,SHOP.Shop_Name AS CUSTNAME,SHOP.Address AS SHOPADDRESS,SHOP.Shop_Owner_Contact AS CUSTMOB,SHOPPP.Shop_Name AS COMPNAME, '
+	SET @Strsql+='SHOP.CUSTTYPE,SHOP.Shop_Code AS CUSTCODE,SHOP.Shop_Name AS CUSTNAME,SHOP.Address AS SHOPADDRESS,SHOP.Shop_Owner_Contact AS CUSTMOB,SHOPCUS.Shop_Name AS COMPNAME,'
+	--Rev 1.0 End
 	SET @Strsql+='SHOP.ELECTRICIANADD,SHOP.ELECTRICIANMOB,SHOPDD.Shop_Name AS GPTPLNAME,SHOPDD.Address AS GPTPLADD,SHOPDD.Shop_Owner_Contact AS GPTPLMOB,SHOP.ELECTRICIAN,'
 	SET @Strsql+='CASE WHEN SHOP.CUSTTYPE=''Entity'' THEN SHOP.ENTITY ELSE '''' END AS ENTITYTYPE,SHOPACT.VISITREMARKS,SHOPACT.MEETINGREMARKS,SHOPACT.CHECKIN_TIME,SHOPACT.CHECKIN_ADDRESS,SHOPACT.CHECKOUT_TIME,'	
 	SET @Strsql+='SHOPACT.CHECKOUT_ADDRESS,SHOPACT.TOTTIMESPENT FROM tbl_master_employee EMP '
@@ -207,11 +264,17 @@ BEGIN
 	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,Shop_Id,VISITED_TIME,SHPVISITTIME,VISITTYPE,VISITREMARKS,SPENT_DURATION,MEETINGREMARKS,MEETING_ADDRESS,CHECKIN_TIME,CHECKIN_ADDRESS,CHECKOUT_TIME,CHECKOUT_ADDRESS '
 	SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_TIME '
 	SET @Strsql+='LEFT OUTER JOIN ('
-	SET @Strsql+='SELECT DISTINCT MS.Shop_Code,MS.Shop_CreateUser,MS.Shop_Name,MS.Address,MS.Shop_Owner_Contact,MS.assigned_to_pp_id,MS.assigned_to_dd_id,MS.type,MS.EntityCode,'
+	--Rev 1.0 Start
+	--SET @Strsql+='SELECT DISTINCT MS.Shop_Code,MS.Shop_CreateUser,MS.Shop_Name,MS.Address,MS.Shop_Owner_Contact,MS.assigned_to_pp_id,MS.assigned_to_dd_id,MS.type,MS.EntityCode,'
+	SET @Strsql+='SELECT DISTINCT MS.Shop_Code,MS.Shop_CreateUser,MS.Shop_Name,MS.Address,MS.Shop_Owner_Contact,MS.assigned_to_pp_id,MS.assigned_to_dd_id,MS.assigned_to_shop_id,MS.type,MS.EntityCode,'
+	--Rev 1.0 END
 	SET @Strsql+='CASE WHEN TYPE=1 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.retailer_id) '
 	SET @Strsql+='WHEN TYPE=2 THEN ''Company Name'' '
-	SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id) END AS CUSTTYPE,'
-	SET @Strsql+='ENT.ENTITY,CASE WHEN MS.type=11 THEN MS.Shop_Name ELSE '''' END AS ELECTRICIAN,CASE WHEN MS.type=2 THEN MS.Shop_Name ELSE '''' END AS PCUSTOMER,'
+	--Rev 1.0 Start
+	--SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id)  END AS CUSTTYPE,'
+	SET @Strsql+='WHEN TYPE=4 THEN (SELECT STYPD.NAME FROM TBL_SHOPTYPEDETAILS STYPD WHERE STYPD.ID=MS.dealer_id) ELSE (SELECT STYPD.Name FROM TBL_SHOPTYPE STYPD WHERE STYPD.TypeId=MS.TYPE) END AS CUSTTYPE,'
+	--Rev 1.0 END
+	SET @Strsql+='ENT.ENTITY,CASE WHEN MS.type=11 THEN MS.Shop_Name ELSE '''' END AS ELECTRICIAN,'
 	SET @Strsql+='CASE WHEN MS.type=11 THEN MS.Address ELSE '''' END AS ELECTRICIANADD,'
 	SET @Strsql+='CASE WHEN MS.type=11 THEN MS.Shop_Owner_Contact ELSE '''' END AS ELECTRICIANMOB '
 	SET @Strsql+='FROM tbl_Master_shop MS '
@@ -223,6 +286,9 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN('
 	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_pp_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A ) SHOPPP ON SHOP.assigned_to_pp_id=SHOPPP.Shop_Code ' 
 	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A ) SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+	--Rev 1.0 Start
+	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_shop_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A ) SHOPCUS ON SHOP.assigned_to_shop_id=SHOPCUS.Shop_Code '
+	--Rev 1.0 End
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @Strsql+='ST.ID AS STATEID,ST.state AS STATE,BR.branch_description AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
@@ -302,6 +368,14 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATEID_LIST
 	DROP TABLE #TEMPCONTACT
+	-- Rev 2.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 2.0
+
 
 	SET NOCOUNT OFF
 END

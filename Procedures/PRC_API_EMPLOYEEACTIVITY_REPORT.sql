@@ -18,7 +18,7 @@ ALTER PROCEDURE [dbo].[PRC_API_EMPLOYEEACTIVITY_REPORT]
 @ISONLYLOGINDATA NCHAR(1)=NULL,
 @ISONLYLOGOUTDATA NCHAR(1)=NULL
 --End of Rev 9.0
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : TANMOY GHOSH  on 28/03/2019 CHANGE 07/05/19 ADD EMPLOYEE ID
@@ -33,6 +33,8 @@ Module	   : Employee Activity Report for Track
 7.0		v2.0.26		Debashis	24/01/2022		Reports > Employee Tracking > Employee Activity, Unable to generate report, system is getting logout.Refer: 0024636
 8.0		v2.0.30		Debashis	01/06/2022		While generating the Employee Activity Report for 7 days, system getting logged out.Now solved.Refer: 0024921
 9.0		V2.0.32		Debashis	11/08/2022		Only Login Data & Only Logout Data required under Employee Activity report.Refer: 0025104
+10.0	v2.0.38		Sanchita	12-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -82,6 +84,45 @@ BEGIN
 				SET @sqlStrTable=' INSERT INTO #DESIGNATION_LIST SELECT deg_id from tbl_master_designation where deg_id in('+@DESIGNID+')'
 				EXEC SP_EXECUTESQL @sqlStrTable
 			END
+
+	-- Rev 10.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@LOGIN_ID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 10.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSACTIVITY_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -179,6 +220,12 @@ BEGIN
 	SET @Strsql+='INNER JOIN tbl_master_address MA ON MA.add_cntId=MU.user_contactId and MA.add_addressType=''Office'' ' 
     SET @Strsql+='INNER JOIN tbl_master_state MS ON MS.ID=MA.add_state  '
     SET @Strsql+='INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId = MU.user_contactId '
+	-- Rev 10.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE    '
+	END
+	-- End of Rev 10.0
 	--Rev 3.0
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	--End of Rev 3.0
@@ -216,6 +263,12 @@ BEGIN
     SET @Strsql+='INNER JOIN tbl_master_address MA ON MA.add_cntId=MU.user_contactId  and MA.add_addressType=''Office'' '
     SET @Strsql+='INNER JOIN tbl_master_state MS ON MS.ID=MA.add_state '
 	SET @Strsql+='INNER JOIN tbl_master_contact CNT ON CNT.cnt_internalId = MU.user_contactId '
+	-- Rev 10.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE    '
+	END
+	-- End of Rev 10.0
 	--Rev 3.0
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	--End of Rev 3.0
@@ -245,6 +298,14 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATE_LIST
 	DROP TABLE #DESIGNATION_LIST
+
+	-- Rev 10.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
+	BEGIN
+		DROP TABLE #EMPHR
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 10.0
 
 	SET NOCOUNT OFF
  END

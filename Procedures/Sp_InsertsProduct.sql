@@ -8,7 +8,10 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Sp_Inser
 ALTER PROCEDURE [dbo].[Sp_InsertsProduct]
 	@ProductCode varchar(80) = null,
 	@ProductName varchar(100) = null,
-	@ProductDescription varchar(500) = null,
+	-- Rev 4.0
+	--@ProductDescription varchar(500) = null,
+	@ProductDescription nvarchar(max) = null,
+	-- End of Rev 4.0
 	@ProductType varchar(10) = null,
 	@ProductClassCode varchar(50) = null,
 	@ProductGlobalCode varchar(50) = null,
@@ -82,6 +85,7 @@ Written By : Jitendra on 10/01/2018
 2.0		Sanchita			v2.0.26			07/09/2021		Gender, Size, Colour drop down multi selection field required under Product Attribute in Product Master in FSM
 															Refer: 24299
 3.0		Sanchita			v2.0.37			02-12-2022		MRP' and Discount' entering facility required in Product Master. Refer: 25469, 25470
+4.0		Sanchita			V2.0.38			20-01-2023		Need to increase the length of the Description field of Product Master. Refer: 25603
 ***************************************************************************************************/ 
 BEGIN
 	INSERT INTO Master_sProducts(

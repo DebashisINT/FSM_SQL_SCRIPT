@@ -53,6 +53,7 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 12.0	V2.0.37		Sanchita	01-12-2022		FSM Dashboard : NEW tab shall be implemented "Team Visit - Hierarchy & Channel Wise" after the 'Team Visit' Tab
 												Refer: 25468
 												NEW SP WRITTEN
+13.0	v2.0.38		Sanchita	04-01-2023		Dashboard showing wrong data when clicked on Employee Strength in Visit tab. refer: 25567
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -191,8 +192,8 @@ BEGIN
 	SET @CHCIRSECTYPE=(SELECT STRING_AGG(EP_CH_ID, ', ') AS List_Channel FROM Employee_ChannelMap where EP_EMP_CONTACTID=@EMPCODE GROUP BY EP_EMP_CONTACTID)
 
 	
-	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-	BEGIN
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	--BEGIN
 		--DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USERID)		
 
 		IF OBJECT_ID('tempdb..#EMPHR') IS NOT NULL
@@ -239,7 +240,10 @@ BEGIN
 		FROM tbl_trans_employeeCTC CTC WITH(NOLOCK) 
 		LEFT OUTER JOIN tbl_master_employee TME WITH(NOLOCK) ON TME.emp_id= CTC.emp_colleague2 WHERE emp_effectiveuntil IS NULL
 		) EMPHRS where RPTTOEMPCODE<>''
-		
+		-- Rev 13.0
+		AND EMPCODE<>RPTTOEMPCODE  -- THIS LINE IS TO TAKE CARE OF CORRUPTION WHERE EMPLOYEE CODE AND REPORT TO CODE ARE SAME. NEED TO IGNORE THEM TO AVOID INFINITE LOOP.
+		-- End of Rev 13.0
+
 		;with cte as(select	
 		EMPCODE,RPTTOEMPCODE
 		from #EMPHR 
@@ -254,7 +258,7 @@ BEGIN
 		INSERT INTO #EMPHR_EDIT
 		select distinct EMPCODE,RPTTOEMPCODE  from cte 
 
-	END
+	--END
 	-- End of Rev 12.0
 	--End of Rev 3.0
 
@@ -364,10 +368,10 @@ BEGIN
 	SET @SqlStrTable='INSERT INTO #TEMPCONTACT '
 	SET @SqlStrTable+='SELECT CNT.cnt_internalId,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT WITH (NOLOCK) '
 	SET @SqlStrTable+='INNER JOIN tbl_master_employee EMP WITH (NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId '
-	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
-	BEGIN
+	--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	--BEGIN
 		SET @SqlStrTable+=' INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
-	END
+	--END
 
 	SET @SqlStrTable+='INNER JOIN ( '
 	SET @SqlStrTable+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC AS cnt WITH (NOLOCK) '

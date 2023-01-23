@@ -66,6 +66,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
 @Alt_MobileNo1 NVARCHAR(50)=NULL,
 @Shop_Owner_Email2 NVARCHAR(250)=NULL
 --End of rev 8.0
+-- Rev 12.0
+,@SearchKey nvarchar(max) = NULL
+-- End of Rev 12.0
 -- Rev 9.0
 ,@RETURN_VALUE nvarchar(50)=NULL OUTPUT
 -- Ebd of Rev 9.0
@@ -82,6 +85,10 @@ AS
 8.0			Pratik		06-01-2022			@ACTION='InsertShop,UpdateShop,EditShop' add extra columns
 9.0			Sanchita	13-01-2022			Auto Code for Party Code in Shop Master. refer : Mantis Issue 24603
 10.0		Pratik		19-08-2022			Code for get all group Beat. refer : Mantis Issue 25133
+11.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. refer: 25545
+12.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. Resolved reported issue. refer: 25545
+13.0		v2.0.38		Sanchita	19-01-2023		In shop Master Table, the field shall be updated 'dealer_id=0' if no dealer type is 
+													selected while creating/editing Shop. Refer: 25593
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -127,6 +134,14 @@ BEGIN
 		--Rev 10.0
 		EXEC Prc_SubType @action='BeatListAll'--13
 		--End of Rev 10.0
+		-- Rev 11.0
+		--SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user u WHERE user_inactive='N'
+		--and exists(select user_id from FSM_GROUPBEAT_USERMAP where user_id =u.user_id) order by username
+
+		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user order by username
+
+		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user WHERE user_inactive='N' order by username
+		-- End of Rev 11.0
 	END
 
 	IF @ACTION='InsertShop'
@@ -220,7 +235,10 @@ BEGIN
 			@ShopType,@user_id,GETDATE(),@Shop_Image,@total_visitcount,@Lastvisit_date,@isAddressUpdated,@assigned_to_pp_id,@assigned_to_dd_id,
 			@stateId,@OTPCode,@VerifiedOTP,@AssignTo,@Amount,@OLD_CreateUser,@EntityCode,@Entity_Location,@Alt_MobileNo,@Entity_Status,@Entity_Type,@ShopOwner_PAN,@ShopOwner_Aadhar,@Remarks,@Area_id,
 			@CraetedUser_id,GETDATE(),
-			@retailer_id,@dealer_id,@Entity,@PartyStatus,@GroupBeat,@AccountHolder,@BankName,@AccountNo,@IFSCCode,@UPIID,@assigned_to_shop_id
+			-- Rev 13.0
+			--@retailer_id,@dealer_id,@Entity,@PartyStatus,@GroupBeat,@AccountHolder,@BankName,@AccountNo,@IFSCCode,@UPIID,@assigned_to_shop_id
+			isnull(@retailer_id,0),isnull(@dealer_id,0),@Entity,@PartyStatus,@GroupBeat,@AccountHolder,@BankName,@AccountNo,@IFSCCode,@UPIID,@assigned_to_shop_id
+			-- End of Rev 13.0
 			--rev 8.0
 			,@GSTN_NUMBER,@Trade_Licence_Number,@Cluster,@Alt_MobileNo1,@Shop_Owner_Email2
 			--End of rev 8.0
@@ -252,7 +270,10 @@ BEGIN
 		Amount=@Amount,OLD_CreateUser=@OLD_CreateUser,EntityCode=@EntityCode,Entity_Location=@Entity_Location,Alt_MobileNo=@Alt_MobileNo,Entity_Status=@Entity_Status,
 		Entity_Type=@Entity_Type,ShopOwner_PAN=@ShopOwner_PAN,ShopOwner_Aadhar=@ShopOwner_Aadhar,Shop_ModifyUser=@user_id,Shop_ModifyTime=GETDATE(),
 		Remarks=@Remarks,Area_id=@Area_id,LastUpdated_By=@CraetedUser_id,LastUpdated_On=GETDATE()		
-		,retailer_id=@retailer_id,dealer_id=@dealer_id,Entity_Id=@Entity,Party_Status_id=@PartyStatus,beat_id=@GroupBeat,account_holder=@AccountHolder,bank_name=@BankName,
+		-- Rev 13.0
+		--,retailer_id=@retailer_id,dealer_id=@dealer_id,Entity_Id=@Entity,Party_Status_id=@PartyStatus,beat_id=@GroupBeat,account_holder=@AccountHolder,bank_name=@BankName,
+		,retailer_id=isnull(@retailer_id,0),dealer_id=isnull(@dealer_id,0),Entity_Id=@Entity,Party_Status_id=@PartyStatus,beat_id=@GroupBeat,account_holder=@AccountHolder,bank_name=@BankName,
+		-- End of Rev 13.0
 		account_no=@AccountNo,ifsc=@IFSCCode,upi_id=@UPIID,assigned_to_shop_id=@assigned_to_shop_id
 		--rev 8.0
 		,GSTN_NUMBER=@GSTN_NUMBER,Trade_Licence_Number=@Trade_Licence_Number,Cluster=@Cluster,Alt_MobileNo1=@Alt_MobileNo1,Shop_Owner_Email2=@Shop_Owner_Email2
@@ -353,10 +374,19 @@ BEGIN
 
 	IF @ACTION='GetddShopType'
 	BEGIN
-		IF @retailer_id='1'
-		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=3
-		IF @retailer_id='2'
-		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=4
+		-- Rev 12.0
+		--IF @retailer_id='1'
+		--select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=3
+		--IF @retailer_id='2'
+		--select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=4 AND id=4
+
+		DECLARE @PARENT_ID bigint
+
+		set @PARENT_ID = (select top 1 parent_id from tbl_shoptypeDetails where id=@retailer_id )
+
+		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and id=@PARENT_ID 
+
+		-- End of Rev 12.0
 	END
 
 	IF @ACTION='GetElectricianShopType'
@@ -364,4 +394,16 @@ BEGIN
 		
 		select cast(id as varchar(20)) id , name from tbl_shoptypeDetails where isactive=1 and TYPE_ID=1 AND id=2
 	END
+
+	-- Rev 12.0
+	IF @ACTION='GetDDShop'
+	BEGIN
+		set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@dealer_id)
+
+		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
+			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
+				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
+				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' and dealer_id=@dealer_id)
+	END
+	-- End of Rev 12.0
 END
