@@ -19,7 +19,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSQUOTATIONAPPROVALDETAILS_REPORT]
 @QUOTATION_NUMBER nvarchar(500)=null,
 @Remarks nvarchar(500)=null,
 @RETURN_VALUE NVARCHAR(50) =NULL OUTPUT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Sanchita Saha ON 31/08/2022
@@ -27,6 +27,8 @@ Module	   : Eurobond Customization - Approve/Reject Quotation. Refer: 25177
 1.0		Sanchita		V2.0.37		22-11-2022		A hiphen is required in the Suffix of Quotation number creation for Quotation Approval Module. refer: 25465
 2.0		Sanchita		V2.0.38		18-01-2022		New table "FSMAPIQUOTATIONMULTICONTACT" to be updated at the time of Approve or Reject. Refer: 
 3.0		Debashis		V2.0.38		23-01-2023		Multiple Contact person name to be shown in the Quotation report.Refer: 0025584
+4.0		Sanchita		V2.0.38		24-01-2023		For comma seperated Email Id, Contact Person and Contact No, a space added after comma 
+													so that wrapping can take place for logn strings. Refer:
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -181,6 +183,16 @@ BEGIN
 		---- Rev Sanchita
 		----SET @SqlStr+='MS.Shop_Owner_Contact AS CONTACTNO,QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME '
 		--SET @SqlStr+='MS.Shop_Owner_Contact AS CONTACTNO,QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME,QH.REMARKS,QH.QUOTATION_STATUS '
+		-- Rev 4.0 (SELECT '','' changed to SELECT '', '' )
+		SET @SqlStr+='CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,120) AS QUOTATIONDATEORDBY,MS.SHOP_CODE,MS.Shop_Name AS CUSTNAME,MS.Address AS CUSTADDRESS,'
+		SET @SqlStr+='(SELECT DISTINCT ISNULL(STUFF((SELECT '', '' + LTRIM(RTRIM(MQC.QUOTATION_CONTACT_EMAIL)) FROM FSMAPIQUOTATIONMULTICONTACT AS MQC '
+		SET @SqlStr+='WHERE MQC.USER_ID=USR.USER_ID AND MQC.USER_ID=QH.USER_ID AND QH.DOCUMENT_NUMBER=MQC.DOCUMENT_NUMBER FOR XML PATH('''')), 1, 1, ''''),'''')) AS CUSTEMAIL,'
+		SET @SqlStr+='(SELECT DISTINCT ISNULL(STUFF((SELECT '', '' + LTRIM(RTRIM(MQC.QUOTATION_CONTACT_PERSON)) FROM FSMAPIQUOTATIONMULTICONTACT AS MQC '
+		SET @SqlStr+='WHERE MQC.USER_ID=USR.USER_ID AND MQC.USER_ID=QH.USER_ID AND QH.DOCUMENT_NUMBER=MQC.DOCUMENT_NUMBER FOR XML PATH('''')), 1, 1, ''''),'''')) AS CONTACTPERSON,'
+		SET @SqlStr+='(SELECT DISTINCT ISNULL(STUFF((SELECT '', '' + LTRIM(RTRIM(MQC.QUOTATION_CONTACT_NUMBER)) FROM FSMAPIQUOTATIONMULTICONTACT AS MQC '
+		SET @SqlStr+='WHERE MQC.USER_ID=USR.USER_ID AND MQC.USER_ID=QH.USER_ID AND QH.DOCUMENT_NUMBER=MQC.DOCUMENT_NUMBER FOR XML PATH('''')), 1, 1, ''''),'''')) AS CONTACTNO,'
+		SET @SqlStr+='QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME,QH.REMARKS,QH.QUOTATION_STATUS '
+		--End of Rev 3.0
 		SET @SqlStr+='CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,120) AS QUOTATIONDATEORDBY,MS.SHOP_CODE,MS.Shop_Name AS CUSTNAME,MS.Address AS CUSTADDRESS,'
 		SET @SqlStr+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(MQC.QUOTATION_CONTACT_EMAIL)) FROM FSMAPIQUOTATIONMULTICONTACT AS MQC '
 		SET @SqlStr+='WHERE MQC.USER_ID=USR.USER_ID AND MQC.USER_ID=QH.USER_ID AND QH.DOCUMENT_NUMBER=MQC.DOCUMENT_NUMBER FOR XML PATH('''')), 1, 1, ''''),'''')) AS CUSTEMAIL,'
