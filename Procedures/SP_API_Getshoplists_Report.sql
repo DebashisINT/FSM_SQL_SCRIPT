@@ -1,6 +1,6 @@
 --exec SP_API_Getshoplists_Report @Shoptype='2,4',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Prime Partner,Distributor'
 --exec SP_API_Getshoplists_Report @Shoptype='5',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Show All'
---EXEC SP_API_Getshoplists_Report @Action='Counter',@Shoptype='1',@user_id=378,@Weburl=''
+--EXEC SP_API_Getshoplists_Report @Action='Counter',@Shoptype='1',@user_id=378,@Weburl='',@ISREVISITCONTACTDETAILS=1
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[SP_API_Getshoplists_Report]') AND type in (N'P', N'PC'))
 BEGIN
@@ -31,8 +31,11 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 @AssignTo varchar(100)=NULL,
 @Create_UserId int=NULL,
 --Rev 10.0
-@BRANCHID NVARCHAR(MAX)=NULL
+@BRANCHID NVARCHAR(MAX)=NULL,
 --End of Rev 10.0
+--Rev 14.0
+@ISREVISITCONTACTDETAILS INT=NULL
+--End of Rev 14.0
 ) --WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
@@ -49,7 +52,8 @@ AS
 10.0	v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
 11.0	V2.0.36		Sanchita	04/11/2022		Beat column required in various FSM reports. refer: 25421
 12.0	V2.0.37		Pallab	    15/11/2022		Multiple photo attachments columns are required in the Shops report refer: 25448
-13.0	V2.0.37		Pallab	    23/11/2022		It is showing Show image in the Shoplist report if there is no image refer: 25464  
+13.0	V2.0.37		Pallab	    23/11/2022		It is showing Show image in the Shoplist report if there is no image refer: 25464
+14.0	v2.0.38		Debashis	23/01/2023		Multiple contact information to be displayed in the Shops report.Refer: 0025585
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -524,8 +528,27 @@ BEGIN
 			SET @sql+=', isnull(BEAT.NAME,'''') as Beat '
 			-- End of Rev 11.0
 			-- Rev 12.0
-			SET @sql+=', (case when AttachmentImage1<>'''' then '''+@Weburl+'''+ AttachmentImage1 else '''' end ) as AttachmentImage1, (case when AttachmentImage2<>'''' then '''+@Weburl+'''+ AttachmentImage2 else '''' end ) as AttachmentImage2, (case when AttachmentImage3<>'''' then '''+@Weburl+'''+ AttachmentImage3 else '''' end ) AttachmentImage3, (case when AttachmentImage4<>'''' then '''+@Weburl+'''+ AttachmentImage4 else '''' end ) AttachmentImage4 '
+			SET @sql+=', (case when AttachmentImage1<>'''' then '''+@Weburl+'''+ AttachmentImage1 else '''' end ) as AttachmentImage1, '
+			SET @sql+='(case when AttachmentImage2<>'''' then '''+@Weburl+'''+ AttachmentImage2 else '''' end ) as AttachmentImage2, (case when AttachmentImage3<>'''' '
+			SET @sql+='then '''+@Weburl+'''+ AttachmentImage3 else '''' end ) AttachmentImage3, (case when AttachmentImage4<>'''' then '''+@Weburl+'''+ AttachmentImage4 else '''' end ) AttachmentImage4 '
 			-- End of Rev 12.0
+			--Rev 14.0
+			IF @ISREVISITCONTACTDETAILS=1
+				BEGIN
+					SET @sql+=',MSMC.CONTACT_NAME1,MSMC.CONTACT_NUMBER1,MSMC.CONTACT_EMAIL1,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA1,105) AS CONTACT_DOA1,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB1,105) AS CONTACT_DOB1,'
+					SET @sql+='MSMC.CONTACT_NAME2,MSMC.CONTACT_NUMBER2,MSMC.CONTACT_EMAIL2,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA2,105) AS CONTACT_DOA2,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB2,105) AS CONTACT_DOB2,'
+					SET @sql+='MSMC.CONTACT_NAME3,MSMC.CONTACT_NUMBER3,MSMC.CONTACT_EMAIL3,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA3,105) AS CONTACT_DOA3,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB3,105) AS CONTACT_DOB3,'
+					SET @sql+='MSMC.CONTACT_NAME4,MSMC.CONTACT_NUMBER4,MSMC.CONTACT_EMAIL4,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA4,105) AS CONTACT_DOA4,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB4,105) AS CONTACT_DOB4,'
+					SET @sql+='MSMC.CONTACT_NAME5,MSMC.CONTACT_NUMBER5,MSMC.CONTACT_EMAIL5,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA5,105) AS CONTACT_DOA5,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB5,105) AS CONTACT_DOB5,'
+					SET @sql+='MSMC.CONTACT_NAME6,MSMC.CONTACT_NUMBER6,MSMC.CONTACT_EMAIL6,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOA6,105) AS CONTACT_DOA6,CONVERT(NVARCHAR(10),MSMC.CONTACT_DOB6,105) AS CONTACT_DOB6 '
+				END
+			ELSE IF @ISREVISITCONTACTDETAILS=0
+				BEGIN
+					SET @sql+=',NULL AS CONTACT_NAME1,NULL AS CONTACT_NUMBER1,NULL AS CONTACT_EMAIL1,NULL AS CONTACT_DOA1,NULL AS CONTACT_DOB1,NULL AS CONTACT_NAME2,NULL AS CONTACT_NUMBER2,NULL AS CONTACT_EMAIL2,NULL AS CONTACT_DOA2,NULL AS CONTACT_DOB2,'
+					SET @sql+='NULL AS CONTACT_NAME3,NULL AS CONTACT_NUMBER3,NULL AS CONTACT_EMAIL3,NULL AS CONTACT_DOA3,NULL AS CONTACT_DOB3,NULL AS CONTACT_NAME4,NULL AS CONTACT_NUMBER4,NULL AS CONTACT_EMAIL4,NULL AS CONTACT_DOA4,NULL AS CONTACT_DOB4,'
+					SET @sql+='NULL AS CONTACT_NAME5,NULL AS CONTACT_NUMBER5,NULL AS CONTACT_EMAIL5,NULL AS CONTACT_DOA5,NULL AS CONTACT_DOB5,NULL AS CONTACT_NAME6,NULL AS CONTACT_NUMBER6,NULL AS CONTACT_EMAIL6,NULL AS CONTACT_DOA6,NULL AS CONTACT_DOB6 '
+				END
+			--End of Rev 14.0
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
@@ -587,6 +610,10 @@ BEGIN
 			-- Rev 11.0
 			SET @sql +='LEFT OUTER JOIN FSM_GROUPBEAT BEAT on shop.beat_id=BEAT.ID '
 			-- End of Rev 11.0
+			--Rev 14.0
+			IF @ISREVISITCONTACTDETAILS=1
+				SET @sql +='LEFT OUTER JOIN MASTERSHOPMULTICONTACTMAP MSMC ON SHOP.SHOP_CODE= MSMC.SHOP_CODE '
+			--End of Rev 14.0
 			--set @sql +=' 
 			--group by shop.Shop_ID,Shop_Code,Shop_Name,shop.Address,shop.Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_CreateUser,Shop_CreateTime,
 			--usr.user_name,
