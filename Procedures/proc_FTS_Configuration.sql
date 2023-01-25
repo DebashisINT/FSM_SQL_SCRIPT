@@ -162,6 +162,7 @@ BEGIN
 	144.0		Debashis	10-01-2023	ADD SETTINGS @Action=UserCheck' IsContactPersonRequiredinQuotation.Row 789
 	145.0		Debashis	17-01-2023	ADD SETTINGS @Action=UserCheck' IsShowBeatInMenu.Row 796
 	146.0		Debashis	17-01-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatAvailable.Row 797
+	147.0		Debashis	25-01-2023	ADD SETTINGS @Action=GlobalCheck' isExpenseFeatureAvailable.Row 808
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -330,6 +331,9 @@ BEGIN
 	--Rev 146.0
 	,@IsBeatAvailable BIT
 	--End of Rev 146.0
+	--Rev 147.0
+	,@isExpenseFeatureAvailable BIT
+	--End of Rev 147.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -549,6 +553,9 @@ BEGIN
 		--Rev 146.0
 		SET @IsBeatAvailable =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatAvailable' AND IsActive=1)
 		--End of Rev 146.0
+		--Rev 147.0
+		SET @isExpenseFeatureAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isExpenseFeatureAvailable' AND IsActive=1)
+		--End of Rev 147.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -747,6 +754,9 @@ BEGIN
 			--Rev 146.0
 			,@IsBeatAvailable AS IsBeatAvailable
 			--End of Rev 146.0
+			--Rev 147.0
+			,@isExpenseFeatureAvailable AS isExpenseFeatureAvailable
+			--End of Rev 147.0
 	END
 
 	else if(@Action='UserCheck')
