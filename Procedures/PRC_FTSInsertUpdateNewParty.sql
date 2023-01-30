@@ -89,6 +89,8 @@ AS
 12.0		Sanchita	04-01-2022			A new feature required as "Re-assigned Area/Route/Beat. Resolved reported issue. refer: 25545
 13.0		v2.0.38		Sanchita	19-01-2023		In shop Master Table, the field shall be updated 'dealer_id=0' if no dealer type is 
 													selected while creating/editing Shop. Refer: 25593
+14.0		v2.0.38		Sanchita	27-01-2023		Bulk modification feature is required in Parties menu. Refer: 25609
+15.0		v2.0.38		Sanchita	27-01-2023		Assign to DD is not showing while making shop from Portal. Refer: 25606
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -142,6 +144,11 @@ BEGIN
 
 		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user WHERE user_inactive='N' order by username
 		-- End of Rev 11.0
+		-- Rev 15.0
+		select '0' as StateID_BulkModify,'Select' as StateName_BulkModify
+		UNION ALL
+		SELECT convert(nvarchar(10),id) as StateID_BulkModify,state as StateName_BulkModify FROM tbl_master_state where countryid=1 --order by StateName_BulkModify
+		-- End of Rev 15.0
 	END
 
 	IF @ACTION='InsertShop'
@@ -278,6 +285,9 @@ BEGIN
 		--rev 8.0
 		,GSTN_NUMBER=@GSTN_NUMBER,Trade_Licence_Number=@Trade_Licence_Number,Cluster=@Cluster,Alt_MobileNo1=@Alt_MobileNo1,Shop_Owner_Email2=@Shop_Owner_Email2
 		--End of rev 8.0
+		-- Rev 14.0
+		,IsShopModified=1
+		-- End of Rev 14.0
 		WHERE Shop_Code=@ShopCode 
 	END
 
@@ -398,7 +408,7 @@ BEGIN
 	-- Rev 12.0
 	IF @ACTION='GetDDShop'
 	BEGIN
-		set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@dealer_id)
+		set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@retailer_id)
 
 		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
 			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
