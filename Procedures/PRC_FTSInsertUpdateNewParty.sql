@@ -145,9 +145,9 @@ BEGIN
 		SELECT convert(nvarchar(10),user_id) as UserID ,user_name+'('+user_loginid+')' as username FROM tbl_master_user WHERE user_inactive='N' order by username
 		-- End of Rev 11.0
 		-- Rev 15.0
-		select '0' as StateID_BulkModify,'Select' as StateName_BulkModify
-		UNION ALL
-		SELECT convert(nvarchar(10),id) as StateID_BulkModify,state as StateName_BulkModify FROM tbl_master_state where countryid=1 --order by StateName_BulkModify
+		--select '0' as StateID_BulkModify,'Select' as StateName_BulkModify
+		--UNION ALL
+		SELECT convert(nvarchar(10),id) as StateID_BulkModify,state as StateName_BulkModify FROM tbl_master_state where countryid=1 order by StateName_BulkModify
 		-- End of Rev 15.0
 	END
 
@@ -408,12 +408,13 @@ BEGIN
 	-- Rev 12.0
 	IF @ACTION='GetDDShop'
 	BEGIN
-		set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@retailer_id)
+		--set @ShopType = (select top 1 type_id from tbl_shoptypeDetails where id=@retailer_id)
+		set @ShopType = (select top 1 id from tbl_shoptypeDetails where name='Distributor')
 
 		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
-			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
-				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' and dealer_id=@dealer_id) 
-				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' and dealer_id=@dealer_id)
+			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
+				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
+				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id)
 	END
 	-- End of Rev 12.0
 END

@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSBulkModifyParty]
 (
 @CreateUser_Id NVARCHAR(10)=NULL,
 @ACTION NVARCHAR(200)=NULL,
-@STATE INT = NULL,
+@STATE NVARCHAR(max) = NULL,
 @FromDate NVARCHAR(10)=NULL,
 @ToDate NVARCHAR(10)=NULL,
 @BULKMODIFYPARTY_TABLE UDT_BULKMODIFYPARTY READONLY
@@ -18,6 +18,8 @@ AS
 Written by Sanchita for V2.0.38		24-01-2023	Bulk modification feature is required in Parties menu. Refer: 25609
 ******************************************************************************************************************************/
 BEGIN
+	DECLARE @Strsql NVARCHAR(MAX)
+
 	IF @ACTION='BulkUpdate'
 		BEGIN
 			declare @i bigint=1
@@ -38,19 +40,22 @@ BEGIN
 				begin
 					IF exists (select * from tbl_master_shop where shop_code=@ShopCode)
 						BEGIN
-							set @Retailer_ID = (select top 1 shop_id from tbl_master_shop where Shop_Name=@Retailer)
+							--set @Retailer_ID = (select top 1 shop_id from tbl_master_shop where Shop_Name=@Retailer)
+							set @Retailer_ID = ( select top 1 ID from tbl_shoptypeDetails where Name=@Retailer )
 							set @Party_Status_ID = (select top 1 ID from FSM_PARTYSTATUS where PARTYSTATUS=@Party_Status)
 
-							if ( @Retailer<>'' and not exists(select top 1 shop_id from tbl_master_shop where Shop_Name=@Retailer) )
+							--if ( @Retailer<>'' and not exists(select top 1 shop_id from tbl_master_shop where Shop_Name=@Retailer) )
+							if ( @Retailer<>'' and not exists(select top 1 ID from tbl_shoptypeDetails where Name=@Retailer) )
 								begin
 									INSERT INTO FTS_BulkModifyLog ([Shop_Code], [Shop_Name], [Shop_Type], [Shop_Owner_Contact], [State], [Entitycode], 
 										[Retailer], [Party_Status], [Status], [Reason], [UpdateOn], [UpdatedBy])
 				
-									select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
+									select S.Shop_Code,S.Shop_Name,SType.Name,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
 									'Failed','Invalid Retailer',GETDATE(),@CreateUser_Id from tbl_master_shop S
 									left outer join tbl_master_state ST on S.stateId=ST.id
 									left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
 									left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
+									left outer join tbl_shoptype SType on S.type=Stype.shop_typeId
 									where S.Shop_Code=@ShopCode
 
 								end
@@ -59,11 +64,12 @@ BEGIN
 									INSERT INTO FTS_BulkModifyLog ([Shop_Code], [Shop_Name], [Shop_Type], [Shop_Owner_Contact], [State], [Entitycode], 
 										[Retailer], [Party_Status], [Status], [Reason], [UpdateOn], [UpdatedBy])
 				
-									select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
+									select S.Shop_Code,S.Shop_Name,Stype.Name,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
 									'Failed','Invalid Party Status',GETDATE(),@CreateUser_Id from tbl_master_shop S
 									left outer join tbl_master_state ST on S.stateId=ST.id
 									left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
 									left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
+									left outer join tbl_shoptype SType on S.type=Stype.shop_typeId
 									where S.Shop_Code=@ShopCode
 								end
 							else if ( @Party_Status='' and @Retailer='' )
@@ -71,11 +77,12 @@ BEGIN
 									INSERT INTO FTS_BulkModifyLog ([Shop_Code], [Shop_Name], [Shop_Type], [Shop_Owner_Contact], [State], [Entitycode], 
 										[Retailer], [Party_Status], [Status], [Reason], [UpdateOn], [UpdatedBy])
 				
-									select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
+									select S.Shop_Code,S.Shop_Name,SType.Name,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
 									'Failed','Blank Retailer and Party Status',GETDATE(),@CreateUser_Id from tbl_master_shop S
 									left outer join tbl_master_state ST on S.stateId=ST.id
 									left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
 									left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
+									left outer join tbl_shoptype SType on S.type=Stype.shop_typeId
 									where S.Shop_Code=@ShopCode
 								end
 							else
@@ -90,11 +97,12 @@ BEGIN
 									INSERT INTO FTS_BulkModifyLog ([Shop_Code], [Shop_Name], [Shop_Type], [Shop_Owner_Contact], [State], [Entitycode], 
 											[Retailer], [Party_Status], [Status], [Reason], [UpdateOn], [UpdatedBy])
 				
-									select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
+									select S.Shop_Code,S.Shop_Name,SType.Name,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
 									'Sucess','Sucess',GETDATE(),@CreateUser_Id from tbl_master_shop S
 									left outer join tbl_master_state ST on S.stateId=ST.id
 									left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
 									left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
+									left outer join tbl_shoptype SType on S.type=Stype.shop_typeId
 									where S.Shop_Code=@ShopCode
 								end
 																
@@ -104,11 +112,12 @@ BEGIN
 							INSERT INTO FTS_BulkModifyLog ([Shop_Code], [Shop_Name], [Shop_Type], [Shop_Owner_Contact], [State], [Entitycode], 
 									[Retailer], [Party_Status], [Status], [Reason], [UpdateOn], [UpdatedBy])
 				
-							select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
+							select S.Shop_Code,S.Shop_Name,SType.Name,S.Shop_Owner_Contact,ST.state,S.EntityCode,@Retailer Retailer_ID,@Party_Status Party_Status_id,
 							'Failed','Invalid Shop Code',GETDATE(),@CreateUser_Id from tbl_master_shop S
 							left outer join tbl_master_state ST on S.stateId=ST.id
 							left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
 							left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
+							left outer join tbl_shoptype SType on S.type=Stype.shop_typeId
 							where S.Shop_Code=@ShopCode
 						END
 
@@ -125,11 +134,19 @@ BEGIN
 
 	IF @ACTION='FetchDataStatewise'
 		BEGIN
-			select S.Shop_Code,S.Shop_Name,S.Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,SR.Shop_Name Retailer,PS.PARTYSTATUS Party_Status from tbl_master_shop S
-			left outer join tbl_master_state ST on S.stateId=ST.id
-			left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID
-			left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID
-			where S.stateId=@STATE
+			set @STATE = replace(@STATE,'[','')
+			set @STATE = replace(@STATE,']','')
+			set @STATE = replace(@STATE,'"','''')
+
+			SET @Strsql=''
+			SET @Strsql+=' select S.Shop_Code,S.Shop_Name,SType.Name Shop_Type,S.Shop_Owner_Contact,ST.state,S.EntityCode,StypeDet.Name Retailer,PS.PARTYSTATUS Party_Status from tbl_master_shop S '
+			SET @Strsql+=' left outer join tbl_master_state ST on S.stateId=ST.id '
+			SET @Strsql+=' left outer join tbl_master_shop SR on S.retailer_id=SR.Shop_ID '
+			SET @Strsql+=' left outer join FSM_PARTYSTATUS PS on S.Party_Status_id=PS.ID '
+			SET @Strsql+=' left outer join tbl_shoptype SType on S.type=Stype.shop_typeId '
+			SET @Strsql+=' left outer join tbl_shoptypeDetails StypeDet on S.retailer_id=StypeDet.Id '
+			SET @Strsql+=' where S.stateId in ('+@STATE+') '
+			exec sp_executesql @Strsql
 			
 		END
 	IF @ACTION='GetBulkModifyPartyLog'
