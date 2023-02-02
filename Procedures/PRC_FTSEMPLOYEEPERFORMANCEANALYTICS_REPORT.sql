@@ -21,7 +21,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEPERFORMANCEANALYTICS_REPORT]
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 31/01/2023
-Module	   : Employee Performance Analytics
+Module	   : Employee Performance Analytics.Refer: 0025620
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -337,6 +337,19 @@ BEGIN
 	FROM #TMPLOGINOUTLOC A
 	INNER JOIN #TMPLOGOUTLOC B ON A.USERID=B.USERID AND A.SDate=B.SDate
 
+	IF OBJECT_ID('tempdb..#TMPMAPDDSHOP') IS NOT NULL
+		DROP TABLE #TMPMAPDDSHOP
+
+	CREATE TABLE #TMPMAPDDSHOP(SHOP_CODE NVARCHAR(100),SHOP_CREATEUSER INT,SHOP_NAME NVARCHAR(2500),ADDRESS NVARCHAR(MAX),SHOP_OWNER_CONTACT NVARCHAR(100),ASSIGNED_TO_DD_ID NVARCHAR(100),
+	TYPE INT,ENTITYCODE NVARCHAR(100),PINCODE NVARCHAR(120))
+	CREATE NONCLUSTERED INDEX IX1 ON #TMPMAPDDSHOP(SHOP_CODE,ASSIGNED_TO_DD_ID)
+	
+	INSERT INTO #TMPMAPDDSHOP(SHOP_CODE,SHOP_CREATEUSER,SHOP_NAME,ADDRESS,SHOP_OWNER_CONTACT,ASSIGNED_TO_DD_ID,TYPE,ENTITYCODE,PINCODE)
+	SELECT DISTINCT shop.Shop_Code,shop.Shop_CreateUser,shop.Shop_Name,shop.Address,shop.Shop_Owner_Contact,shop.assigned_to_dd_id,shop.Type,
+	shop.EntityCode,shop.Pincode
+	FROM tbl_Master_shop shop 
+	WHERE shop.TYPE=1 AND SHOP.assigned_to_dd_id<>''
+
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEPERFORMANCEANALYTICS_REPORT') AND TYPE IN (N'U'))
 		BEGIN
 			CREATE TABLE FTSEMPLOYEEPERFORMANCEANALYTICS_REPORT
@@ -410,12 +423,14 @@ BEGIN
 	SET @Strsql+='WHERE UATTEN.USER_ID=USR.USER_ID AND UATTEN.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
 	SET @Strsql+='REPLACE((SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(ISNULL(A.Work_Desc,''''))) From #TMPATTENLOGINLOGOUT AS A '
 	SET @Strsql+='WHERE A.USER_ID=USR.USER_ID AND A.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),A.Work_datetime,105) FOR XML PATH('''')),1,1,''''),'''')),'','','''') AS REMARKS,'
-	SET @Strsql+='CASE WHEN ATTEN.MDD_YESNO=''Yes'' THEN ''MDD'' ELSE ''Shop'' END AS SHOP_TYPE,SHOP.Shop_Code,SHOP.Shop_Name,SHOP.OUTLET_TYPE,SHOP.ENTITYCODE,'
+	SET @Strsql+='CASE WHEN SHOP.SHOP_TYPE<>'''' THEN SHOP.SHOP_TYPE WHEN SHOPDD.SHOP_TYPE<>'''' THEN ''MDD'' END AS SHOP_TYPE,SHOP.Shop_Code,SHOP.Shop_Name,SHOP.OUTLET_TYPE,SHOP.ENTITYCODE,'
 	SET @Strsql+='CASE WHEN ATTEN.MDD_YESNO=''Yes'' THEN SHOP.SHOPSTATUS ELSE SHOPDD.SHOPDDSTATUS END AS MANNINGSTATUS,LOGINOUTLOC.LOGINLOATION,LOGINOUTLOC.LOGOUTLOATION,'
-	SET @Strsql+='SHOP.Address+'' ''+SHOP.Shop_Owner_Contact AS SHOPADDR_CONTACT,SHOP.CITY_NAME AS SHOP_DISTRICT,SHOP.Pincode AS SHOP_PINCODE,SHOPDD.ENTITYCODE AS DD_CODE,'
-	SET @Strsql+='SHOPDD.Shop_Name AS DD_NAME,SHOPDD.Address+'' ''+SHOPDD.Shop_Owner_Contact AS DDADDR_CONTACT,SHOPACT.VISITREMARKS,SHOPACT.MULTI_CONTACT_NAME,SHOPACT.MULTI_CONTACT_NUMBER,'
-	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,'
-	SET @Strsql+='ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,SPENT_DURATION,DISTANCE_TRAVELLED '
+	SET @Strsql+='SHOP.Address+'' ''+SHOP.Shop_Owner_Contact AS SHOPADDR_CONTACT,SHOP.CITY_NAME AS SHOP_DISTRICT,SHOP.Pincode AS SHOP_PINCODE,'	
+	SET @Strsql+='CASE WHEN SHOPDD.ENTITYCODE<>'''' THEN SHOPDD.ENTITYCODE ELSE MAPDDSHOP.ENTITYCODE END AS DD_CODE,'
+	SET @Strsql+='CASE WHEN SHOPDD.Shop_Name<>'''' THEN SHOPDD.Shop_Name ELSE MAPDDSHOP.Shop_Name END AS DD_NAME,'
+	SET @Strsql+='CASE WHEN (SHOPDD.Address+'' ''+SHOPDD.Shop_Owner_Contact)<>'''' THEN SHOPDD.Address+'' ''+SHOPDD.Shop_Owner_Contact ELSE MAPDDSHOP.Address+'' ''+MAPDDSHOP.Shop_Owner_Contact END AS DDADDR_CONTACT,'
+	SET @Strsql+='SHOPACT.VISITREMARKS,SHOPACT.MULTI_CONTACT_NAME,SHOPACT.MULTI_CONTACT_NUMBER,ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,'
+	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,SPENT_DURATION,DISTANCE_TRAVELLED '
 	SET @Strsql+='FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
@@ -459,20 +474,32 @@ BEGIN
 	SET @Strsql+=') SHOPACT ON CNT.cnt_internalId=SHOPACT.cnt_internalId AND ATTEN.Login_datetime=SHOPACT.VISITED_DATE '
 	SET @Strsql+='LEFT OUTER JOIN ('
 	SET @Strsql+='SELECT DISTINCT shop.Shop_Code,shop.Shop_CreateUser,shop.Shop_Name,shop.Address,shop.Shop_Owner_Contact,shop.assigned_to_pp_id,shop.assigned_to_dd_id,shop.Type,'
-	SET @Strsql+='shop.EntityCode,SHOPTYPE.Name AS OUTLET_TYPE,shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,PS.PARTYSTATUS AS SHOPSTATUS '
+	SET @Strsql+='shop.EntityCode,SHOPTYPE.Name AS OUTLET_TYPE,shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,PS.PARTYSTATUS AS SHOPSTATUS,SHPTYP.Name AS SHOP_TYPE '
 	SET @Strsql+='FROM tbl_Master_shop shop '
+	SET @Strsql+='INNER JOIN tbl_shoptype SHPTYP ON shop.TYPE=SHPTYP.shop_typeId '
 	SET @Strsql+='INNER JOIN tbl_shoptypeDetails SHOPTYPE ON shop.retailer_id=SHOPTYPE.ID '
 	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 	SET @Strsql+='LEFT OUTER JOIN FSM_PARTYSTATUS PS ON shop.Party_Status_id=PS.ID '
+	SET @Strsql+='WHERE shop.TYPE=1 '
 	IF @isRevisitTeamDetail='1'
 		SET @Strsql+=') SHOP ON SHOP.Shop_Code=SHOPACT.Shop_Id '
 	ELSE IF @isRevisitTeamDetail='0'
 		SET @Strsql+=') SHOP ON SHOP.Shop_CreateUser=USR.user_id AND SHOP.Shop_Code=SHOPACT.Shop_Id '
 	SET @Strsql+='LEFT OUTER JOIN( '
-	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,A.Type,A.EntityCode,PS.PARTYSTATUS AS SHOPDDSTATUS '
+	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,A.Type,A.EntityCode,PS.PARTYSTATUS AS SHOPDDSTATUS,'
+	SET @Strsql+='SHPTYP.Name AS SHOP_TYPE '
 	SET @Strsql+='FROM tbl_Master_shop A '
+	SET @Strsql+='INNER JOIN tbl_shoptype SHPTYP ON A.TYPE=SHPTYP.shop_typeId '
 	SET @Strsql+='LEFT OUTER JOIN FSM_PARTYSTATUS PS ON A.Party_Status_id=PS.ID '
-	SET @Strsql+=') SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+	SET @Strsql+='WHERE A.TYPE=4 '
+	SET @Strsql+=') SHOPDD ON SHOPDD.Shop_Code=SHOPACT.Shop_Id '
+	SET @Strsql+='LEFT OUTER JOIN('
+	SET @Strsql+='SELECT DISTINCT shop.Shop_Code AS DDSHOP,shop.Shop_CreateUser,shop.Shop_Name,shop.Address,shop.Shop_Owner_Contact,shop.assigned_to_dd_id,shop.Type,'
+	SET @Strsql+='shop.EntityCode,shop.Pincode,MAPDD.SHOP_CODE '
+	SET @Strsql+='FROM tbl_Master_shop shop '
+	SET @Strsql+='INNER JOIN #TMPMAPDDSHOP MAPDD ON SHOP.Shop_Code=MAPDD.assigned_to_dd_id '
+	SET @Strsql+='WHERE shop.TYPE=4 AND SHOP.assigned_to_dd_id IS NULL '
+	SET @Strsql+=') MAPDDSHOP ON SHOP.Shop_Code=MAPDDSHOP.SHOP_CODE '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ST.state AS STATE,'''' AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
@@ -562,6 +589,7 @@ BEGIN
 	DROP TABLE #TMPLOGINOUTLOC
 	DROP TABLE #TMPLOGOUTLOC
 	DROP TABLE #TMPATTENLOGOUT
+	DROP TABLE #TMPMAPDDSHOP
 
 	SET NOCOUNT OFF
 END
