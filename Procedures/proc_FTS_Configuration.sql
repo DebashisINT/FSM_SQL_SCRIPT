@@ -163,6 +163,7 @@ BEGIN
 	145.0		Debashis	17-01-2023	ADD SETTINGS @Action=UserCheck' IsShowBeatInMenu.Row 796
 	146.0		Debashis	17-01-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatAvailable.Row 797
 	147.0		Debashis	25-01-2023	ADD SETTINGS @Action=GlobalCheck' isExpenseFeatureAvailable.Row 808
+	148.0		Debashis	02-02-2023	ADD SETTINGS @Action=GlobalCheck' IsDiscountEditableInOrder & IsRouteStartFromAttendance.Row 809
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -334,6 +335,10 @@ BEGIN
 	--Rev 147.0
 	,@isExpenseFeatureAvailable BIT
 	--End of Rev 147.0
+	--Rev 148.0
+	,@IsDiscountEditableInOrder BIT
+	,@IsRouteStartFromAttendance BIT
+	--End of Rev 148.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -556,6 +561,10 @@ BEGIN
 		--Rev 147.0
 		SET @isExpenseFeatureAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isExpenseFeatureAvailable' AND IsActive=1)
 		--End of Rev 147.0
+		--Rev 148.0
+		SET @IsDiscountEditableInOrder  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDiscountEditableInOrder' AND IsActive=1)
+		SET @IsRouteStartFromAttendance  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsRouteStartFromAttendance' AND IsActive=1)
+		--End of Rev 148.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -757,6 +766,10 @@ BEGIN
 			--Rev 147.0
 			,@isExpenseFeatureAvailable AS isExpenseFeatureAvailable
 			--End of Rev 147.0
+			--Rev 148.0
+			,@IsDiscountEditableInOrder  AS IsDiscountEditableInOrder
+			,@IsRouteStartFromAttendance  AS IsRouteStartFromAttendance
+			--End of Rev 148.0
 	END
 
 	else if(@Action='UserCheck')
