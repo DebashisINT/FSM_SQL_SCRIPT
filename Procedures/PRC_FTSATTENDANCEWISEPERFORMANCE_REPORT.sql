@@ -32,6 +32,8 @@ Module	   : Attendance wise Performance Summary
 												marked attendance on Sunday then that day should be excluded from above Sunday count formula.
 												Refer mail: Performance report Monthwise
 5.0		V2.0.4		Tanmoy		02/01/2020		Year field required in the Monthly report.Refer: 0021574
+6.0		v2.0.38		Sanchita	02-02-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -85,6 +87,45 @@ BEGIN
 	OPTION (MAXRECURSION 1000)
 	--End of Rev 4.0
 
+	-- Rev 6.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 6.0
+
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
 		DROP TABLE #STATEID_LIST
 	CREATE TABLE #STATEID_LIST (State_Id INT)
@@ -131,8 +172,20 @@ BEGIN
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	-- Rev 6.0
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT CNT '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '
+	END
+	SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+	exec sp_executesql @Strsql
+	-- End of Rev 6.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSATTENDANCEWISEPERFORMANCE_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -488,4 +541,11 @@ BEGIN
 	--Rev 4.0
 	DROP TABLE #TMPSHOWSUNDAY
 	--End of Rev 4.0
+	-- Rev 6.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 6.0
 END
