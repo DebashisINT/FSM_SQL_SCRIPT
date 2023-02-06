@@ -477,7 +477,7 @@ BEGIN
 	SET @Strsql+='shop.EntityCode,SHOPTYPE.Name AS OUTLET_TYPE,shop.Pincode,CITY.CITY_NAME,shop.CLUSTER,PS.PARTYSTATUS AS SHOPSTATUS,SHPTYP.Name AS SHOP_TYPE '
 	SET @Strsql+='FROM tbl_Master_shop shop '
 	SET @Strsql+='INNER JOIN tbl_shoptype SHPTYP ON shop.TYPE=SHPTYP.shop_typeId '
-	SET @Strsql+='INNER JOIN tbl_shoptypeDetails SHOPTYPE ON shop.retailer_id=SHOPTYPE.ID '
+	SET @Strsql+='LEFT OUTER JOIN tbl_shoptypeDetails SHOPTYPE ON shop.retailer_id=SHOPTYPE.ID '
 	SET @Strsql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 	SET @Strsql+='LEFT OUTER JOIN FSM_PARTYSTATUS PS ON shop.Party_Status_id=PS.ID '
 	SET @Strsql+='WHERE shop.TYPE=1 '
