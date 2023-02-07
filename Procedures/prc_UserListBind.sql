@@ -24,6 +24,7 @@ ALTER PROCEDURE [dbo].[prc_UserListBind]
 5.0		10-03-2022		Sanchita	V2.0.28		FSM Portal : A column required 'Associate ID' in User master Listing. Refer: 24740
 6.0		11-04-2022		Swati	          	    In user master in Assign Party entry section in edit mode selected party not coming as checked Mantise Refer: 0024819
 7.0		01-08-2022		Swati	    V2.0.32     branch details not fetch in assign party details edit mode in user master Refer:0025119
+8.0		06/02/2023		Sanchita	V2.0.39		FSM User Master - To implement Show button. refer: 25641
 ***************************************************************************************************************************************/
 Begin
 	--Rev 1.0
@@ -65,36 +66,66 @@ Begin
 
 	IF @ACTION='BINDUSERLIST'
 	BEGIN
+		-- Rev 8.0
+		IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FSMUser_Master_List') AND TYPE IN (N'U'))
+		BEGIN
+			CREATE TABLE FSMUser_Master_List
+			(
+				SRLNO int, user_id numeric(10,0), user_name varchar(50), user_loginId varchar(50), Status VARCHAR(20), StatusMac VARCHAR(50),
+				Onlinestatus numeric(18,0), designation VARCHAR(50), AssignedUser VARCHAR(500), BranchName VARCHAR(200), 
+				grp_name VARCHAR(50), AssignedUserID VARCHAR(100), USERID int
+
+			)
+			CREATE NONCLUSTERED INDEX IX1 ON FSMUser_Master_List (user_id)
+		end
+		DELETE FROM FSMUser_Master_List WHERE USERID=@userid
+		-- End of Rev 8.0
+
 		--Rev 1.0
 		--IF ((select IsDMSFeatureOn from tbl_master_user where user_id=@userid)=1)
 		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@userid)=1)
 		--End of Rev 1.0
 		BEGIN
-
-			SELECT  distinct user_id,user_name,user_loginId,case when  (user_inactive ='Y') then 'Inactive' else 'Active' end as Status,case when  (user_maclock ='Y') then 'Mac Restriction' else 'Mac Open' end as StatusMac,user_status as Onlinestatus,
-			(select top 1  deg_designation from tbl_master_designation where deg_id in (select top 1 emp_Designation from tbl_trans_employeeCTC where emp_CntId= user_contactId order by emp_id desc )) as designation,
-			isnull(cnt_firstName,'')+' '+isnull(cnt_middleName,'')+' '+isnull(cnt_lastName,'') as 'AssignedUser', (select branch_description from tbl_master_branch where branch_id=tbl_master_contact.cnt_branchid) as BranchName,grp_name
-			-- Rev 5.0
-			,cnt_UCC 'AssignedUserID'
-			-- End of Rev 5.0
-			FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup,#EMPHR_EDIT
-			where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId and EMPCODE=cnt_internalId
-			and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit(',',@BRANCHID))
+			-- Rev 8.0
+			insert into FSMUser_Master_List
+			select ROW_NUMBER()  OVER (order by user_id DESC) as SRLNO, user_id, user_name, user_loginId, Status, StatusMac, Onlinestatus, designation, 
+			AssignedUser, BranchName, grp_name, AssignedUserID, @userid from (
+			-- End of Rev 8.0
+				SELECT  distinct user_id,user_name,user_loginId,case when  (user_inactive ='Y') then 'Inactive' else 'Active' end as Status,case when  (user_maclock ='Y') then 'Mac Restriction' else 'Mac Open' end as StatusMac,user_status as Onlinestatus,
+				(select top 1  deg_designation from tbl_master_designation where deg_id in (select top 1 emp_Designation from tbl_trans_employeeCTC where emp_CntId= user_contactId order by emp_id desc )) as designation,
+				isnull(cnt_firstName,'')+' '+isnull(cnt_middleName,'')+' '+isnull(cnt_lastName,'') as 'AssignedUser', (select branch_description from tbl_master_branch where branch_id=tbl_master_contact.cnt_branchid) as BranchName,grp_name
+				-- Rev 5.0
+				,cnt_UCC 'AssignedUserID'
+				-- End of Rev 5.0
+				FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup,#EMPHR_EDIT
+				where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId and EMPCODE=cnt_internalId
+				and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit(',',@BRANCHID))
+			-- Rev 8.0
+			) A
+			-- End of Rev 8.0
 
 			DROP TABLE #EMPHR
 			DROP TABLE #EMPHR_EDIT
 		END
 		ELSE
 		BEGIN
-			SELECT  distinct user_id,user_name,user_loginId,case when  (user_inactive ='Y') then 'Inactive' else 'Active' end as Status,case when  (user_maclock ='Y') then 'Mac Restriction' else 'Mac Open' end as StatusMac,user_status as Onlinestatus,
-			(select top 1  deg_designation from tbl_master_designation where deg_id in (select top 1 emp_Designation from tbl_trans_employeeCTC where emp_CntId= user_contactId order by emp_id desc )) as designation,
-			isnull(cnt_firstName,'')+' '+isnull(cnt_middleName,'')+' '+isnull(cnt_lastName,'') as 'AssignedUser', (select branch_description from tbl_master_branch where branch_id=tbl_master_contact.cnt_branchid) as BranchName,grp_name
-			-- Rev 5.0
-			,cnt_UCC 'AssignedUserID'
-			-- End of Rev 5.0
-			FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup
-			where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId
-			and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit(',',@BRANCHID))
+			-- Rev 8.0
+			insert into FSMUser_Master_List
+			select ROW_NUMBER()  OVER (order by user_id DESC) as SRLNO, user_id, user_name, user_loginId, Status, StatusMac, Onlinestatus, designation, 
+			AssignedUser, BranchName, grp_name, AssignedUserID, @userid from (
+			-- End of Rev 8.0
+				SELECT  distinct user_id,user_name,user_loginId,case when  (user_inactive ='Y') then 'Inactive' else 'Active' end as Status,case when  (user_maclock ='Y') then 'Mac Restriction' else 'Mac Open' end as StatusMac,user_status as Onlinestatus,
+				(select top 1  deg_designation from tbl_master_designation where deg_id in (select top 1 emp_Designation from tbl_trans_employeeCTC where emp_CntId= user_contactId order by emp_id desc )) as designation,
+				isnull(cnt_firstName,'')+' '+isnull(cnt_middleName,'')+' '+isnull(cnt_lastName,'') as 'AssignedUser', (select branch_description from tbl_master_branch where branch_id=tbl_master_contact.cnt_branchid) as BranchName,grp_name
+				-- Rev 5.0
+				,cnt_UCC 'AssignedUserID'
+				-- End of Rev 5.0
+				FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup
+				where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId
+				and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit(',',@BRANCHID))
+			-- Rev 8.0
+			) A
+			-- End of Rev 8.0
 		END
 	END
 
