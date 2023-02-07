@@ -18,13 +18,14 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 27/11/2018 CHANGE TANMOY GHOSH 07/05/2019 NEW ADD PP NAME AND DD NAME 08/05/19 ADD EMPLOYEE ID
 Module	   : FTS Order Register 
-1.0			v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
-2.0			v2.0.12		Debashis	11/06/2020		Order taken by another user which is not showing in Order Summary report.Now solved.Refer: 0022479
-3.0			v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
-4.0			v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
-5.0			v2.0.26		Pratik		05/01/2022		Scheme Qty, Scheme Rate, Scheme Value columns required in Order Register report.Refer: 	0024593
-6.0			v2.0.26		Debashis	10/01/2022		DD name column is showing PP name in Order Register report.Refer: 0024607
-7.0			v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
+1.0		v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
+2.0		v2.0.12		Debashis	11/06/2020		Order taken by another user which is not showing in Order Summary report.Now solved.Refer: 0022479
+3.0		v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
+4.0		v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
+5.0		v2.0.26		Pratik		05/01/2022		Scheme Qty, Scheme Rate, Scheme Value columns required in Order Register report.Refer: 	0024593
+6.0		v2.0.26		Debashis	10/01/2022		DD name column is showing PP name in Order Register report.Refer: 0024607
+7.0		v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
+8.0		v2.0.39		Debashis	07/02/2023		Order Register Report is not working.Increased the field length of SHOPNAME.Refer: 0025651
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -164,7 +165,10 @@ BEGIN
 		  --Rev 3.0
 		  BRANCHDESC NVARCHAR(300),
 		  --End of Rev 3.0
-		  SHOPNAME NVARCHAR(100) NULL,
+		  --Rev 8.0
+		  --SHOPNAME NVARCHAR(100) NULL,
+		  SHOPNAME NVARCHAR(500) NULL,
+		  --End of Rev 8.0
 		  --Rev 1.0
 		  ENTITYCODE NVARCHAR(600) NULL,
 		  --End of Rev 1.0
