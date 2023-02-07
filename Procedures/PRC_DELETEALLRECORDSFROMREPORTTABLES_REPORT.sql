@@ -336,6 +336,11 @@ BEGIN
         BEGIN
 			DELETE FROM FSMUser_Master_List
 		END
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FSMEmployee_Master') AND TYPE IN (N'U'))
+        BEGIN
+			DELETE FROM FSMEmployee_Master
+		END
 	-- End of Rev 1.0
 
 	SET NOCOUNT OFF
