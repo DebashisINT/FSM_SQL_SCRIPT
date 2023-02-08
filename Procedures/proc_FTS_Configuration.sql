@@ -164,6 +164,7 @@ BEGIN
 	146.0		Debashis	17-01-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatAvailable.Row 797
 	147.0		Debashis	25-01-2023	ADD SETTINGS @Action=GlobalCheck' isExpenseFeatureAvailable.Row 808
 	148.0		Debashis	02-02-2023	ADD SETTINGS @Action=GlobalCheck' IsDiscountEditableInOrder & IsRouteStartFromAttendance.Row 809
+	149.0		Debashis	08-02-2023	ADD SETTINGS @Action=GlobalCheck' IsShowOtherInfoinShopMaster & IsShowQuotationFooterforEurobond.Row 812
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -339,6 +340,10 @@ BEGIN
 	,@IsDiscountEditableInOrder BIT
 	,@IsRouteStartFromAttendance BIT
 	--End of Rev 148.0
+	--Rev 149.0
+	,@IsShowOtherInfoinShopMaster BIT
+	,@IsShowQuotationFooterforEurobond BIT
+	--End of Rev 149.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -565,6 +570,10 @@ BEGIN
 		SET @IsDiscountEditableInOrder  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDiscountEditableInOrder' AND IsActive=1)
 		SET @IsRouteStartFromAttendance  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsRouteStartFromAttendance' AND IsActive=1)
 		--End of Rev 148.0
+		--Rev 149.0
+		SET @IsShowOtherInfoinShopMaster  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowOtherInfoinShopMaster' AND IsActive=1)
+		SET @IsShowQuotationFooterforEurobond  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowQuotationFooterforEurobond' AND IsActive=1)
+		--End of Rev 149.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -770,6 +779,10 @@ BEGIN
 			,@IsDiscountEditableInOrder  AS IsDiscountEditableInOrder
 			,@IsRouteStartFromAttendance  AS IsRouteStartFromAttendance
 			--End of Rev 148.0
+			--Rev 149.0
+			,@IsShowOtherInfoinShopMaster  AS IsShowOtherInfoinShopMaster
+			,@IsShowQuotationFooterforEurobond  AS IsShowQuotationFooterforEurobond
+			--End of Rev 149.0
 	END
 
 	else if(@Action='UserCheck')
