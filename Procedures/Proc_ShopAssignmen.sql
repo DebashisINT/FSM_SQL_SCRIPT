@@ -1,4 +1,5 @@
 --EXEC Proc_ShopAssignmen @Action='DD',@state_id='15',@user_id=11986
+--EXEC Proc_ShopAssignmen @Action='Shop',@state_id='18',@user_id=11741
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Proc_ShopAssignmen]') AND type in (N'P', N'PC'))
 BEGIN
@@ -21,6 +22,8 @@ BEGIN
 	4.0		Tanmoy		23-07-2020	@Action='DD' IF @AllDDSHOW CHECKING
 	5.0		Debashis	16-08-2021	@Action='DD' Added two new columns as Shop_Lat & Shop_Long
 	6.0		Tanmoy		27-08-2021	@SQLEXC parameter length change
+	7.0		Debashis	09-02-2023	An error ocured "Error Converting nvarchar to bigint".Now solved.
+									Refer: 0025657
 	************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -98,7 +101,10 @@ BEGIN
 			CASE WHEN ISNULL(convert(varchar(10),retailer_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),retailer_id),'''') end type_id  from tbl_Master_shop WITH(NOLOCK) '
 			SET @SQLEXC +='where type=1 '
 			--SET @SQLEXC +=' AND stateid='''+@state_id+''' '
-			SET @SQLEXC +='AND Shop_CreateUser='''+@user_id+'''  '
+			--Rev 7.0
+			--SET @SQLEXC +='AND Shop_CreateUser='''+@user_id+'''  '
+			SET @SQLEXC +='AND Shop_CreateUser='''+LTRIM(RTRIM(STR(@user_id)))+'''  '
+			--End of Rev 7.0
 			SET @SQLEXC +=' order by Shop_Name  '
 
 			exec sp_sqlexec @SQLEXC
