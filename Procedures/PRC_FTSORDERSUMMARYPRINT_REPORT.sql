@@ -1,4 +1,4 @@
---EXEC PRC_FTSORDERSUMMARYPRINT_REPORT '','','','Details',317,'P'
+--EXEC PRC_FTSORDERSUMMARYPRINT_REPORT '','','','Details',467,'P'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSORDERSUMMARYPRINT_REPORT]') AND type in (N'P', N'PC')) 
  BEGIN 
@@ -14,12 +14,13 @@ ALTER PROCEDURE [dbo].[PRC_FTSORDERSUMMARYPRINT_REPORT]
 @TABLENAME NVARCHAR(50),
 @ORDID NVARCHAR(MAX),
 @ISCREATEORPREVIEW NVARCHAR(1)
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /*****************************************************************************************************************************************************************************************************
 Written By : Pratik Ghosh On 15/06/2022
 Purpose : For Sales Order Print.Refer: 24944
 1.0		v2.0.30		Debashis	27/06/2022	Amount in Word showing wrong.Now solved.
+2.0	    v2.0.39		PRITI 	    07/02/2023	0025604:Enhancement Required in the Order Summary Report
 ******************************************************************************************************************************************************************************************************/
 BEGIN
     SET NOCOUNT ON
@@ -71,6 +72,9 @@ BEGIN
 				BEGIN
 					SET @StrSql='SELECT 0 AS SEQ,Order_ProdId,0 AS sProducts_ID,'''' AS sProducts_Code,'''' AS sProducts_Description,'''' AS sProducts_Name,Product_Id,0.00 AS Product_Qty,0.00 AS Product_Rate,0.00 AS Product_Price,'''' AS Shop_code,'''' AS Shop_Name,'''' AS sProducts_Name,'
 					SET @StrSql+='0 AS relation_Id,0.00 AS MRP,'''' AS Orderdate,'''' AS OrderCode,0 AS Address,'''' AS Shop_Owner_Contact,'''' AS EmployeeName,'''' AS AmountInWords '
+					--Rev 2.0
+					SET @StrSql+=',0.00 AS ORDER_MRP,0.00 AS ORDER_DISCOUNT '
+					--Rev 2.0 End
 					SET @StrSql+='FROM tbl_FTs_OrderdetailsProduct ordprod '
 				END
 			ELSE IF @ISCREATEORPREVIEW='P'
@@ -84,6 +88,9 @@ BEGIN
 					--SET @StrSql+=',(select  dbo.[FN_AmountInWords]((SELECT SUM(ISNULL(Product_Price,0)) from tbl_FTs_OrderdetailsProduct where Order_ID='+@ORDID+'),0 ) ) AS AmountInWords '
 					SET @StrSql+=',(select  dbo.[FN_AmountInWords]((SELECT SUM(ISNULL(Product_Price,0)) from tbl_FTs_OrderdetailsProduct where Order_ID='+@ORDID+'),@@NESTLEVEL)) AS AmountInWords '
 					--End of Rev 1.0
+					--Rev 2.0
+					SET @StrSql+=',ISNULL(ordprod.ORDER_MRP,0)ORDER_MRP,ISNULL(ordprod.ORDER_DISCOUNT,0)ORDER_DISCOUNT '
+					--Rev 2.0 End
 					SET @StrSql+='from tbl_FTs_OrderdetailsProduct as ordprod '
 					SET @StrSql+='inner join Master_sProducts as mprod on ordprod.Product_Id=mprod.sProducts_ID '
 					SET @StrSql+='inner join tbl_Master_shop as shp on shp.Shop_Code=ordprod.Shop_code '
