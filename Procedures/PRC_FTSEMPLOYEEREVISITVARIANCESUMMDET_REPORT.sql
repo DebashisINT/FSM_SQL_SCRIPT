@@ -16,11 +16,13 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEREVISITVARIANCESUMMDET_REPORT]
 @EMPID NVARCHAR(MAX)=NULL,
 @REPORTTYPE NVARCHAR(10),
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 12/06/2019
 Module	   : Employee Re-visit variance - Details & Summary
+1.0		v2.0.38		Sanchita	02-02-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -61,6 +63,45 @@ BEGIN
 			SET @sqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@EMPID+')'
 			EXEC SP_EXECUTESQL @sqlStrTable
 		END
+	
+	-- Rev 1.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 1.0
 
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 		DROP TABLE #TEMPCONTACT
@@ -73,8 +114,20 @@ BEGIN
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	-- Rev 1.0
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT CNT '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '
+	END
+	SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+	exec sp_executesql @Strsql
+	-- End of Rev 1.0
 
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TMPMASTERSHOP') AND TYPE IN (N'U'))
 		DROP TABLE #TMPMASTERSHOP
@@ -299,4 +352,11 @@ BEGIN
 	DROP TABLE #TEMPCONTACT
 	DROP TABLE #TMPMASTERSHOP
 	DROP TABLE #TMPREVISVARIANCE
+	-- Rev 6.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 6.0
 END

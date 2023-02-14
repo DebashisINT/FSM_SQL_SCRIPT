@@ -16,6 +16,7 @@ AS
 1.0					Tanmoy      18-11-2019      change Order_ProdId as id and sProducts_ID as PRODID
 2.0		v2.0.26		Debashis	29-12-2021		Enhancement done for Row No. 598
 3.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 608
+4.0		v2.0.38		Debashis	23-01-2023		Enhancement done for Row No. 806
 ********************************************************************************************************************************************/
 BEGIN
 
@@ -54,6 +55,7 @@ BEGIN
 
 	--Rev 2.0 && Three new columns Scheme_Qty,Scheme_Rate & Total_Scheme_Price has been added.
 	--Rev 3.0 && A new column added as MRP
+	--Rev 4.0 && Two new columns added as order_mrp & order_discount
 		SET @SQL=''
 		--Rev 1.0 Start
 		SET @SQL+='SELECT  ORDHEAD.Shop_Code as SHOPID,Order_ProdId as id, '
@@ -67,7 +69,8 @@ BEGIN
 		SET @SQL+=',ORDDET.Product_Qty as qty  '
 		SET @SQL+=',ORDDET.Product_Price as total_price  '
 		SET @SQL+=',ORDDET.Product_Rate as rate,'
-		SET @SQL+='ISNULL(ORDDET.Scheme_Qty,0.00) AS scheme_qty,ISNULL(ORDDET.Scheme_Rate,0.00) AS scheme_rate,ISNULL(ORDDET.Total_Scheme_Price,0.00) AS total_scheme_price,ISNULL(ORDDET.MRP,0.00) AS MRP '
+		SET @SQL+='ISNULL(ORDDET.Scheme_Qty,0.00) AS scheme_qty,ISNULL(ORDDET.Scheme_Rate,0.00) AS scheme_rate,ISNULL(ORDDET.Total_Scheme_Price,0.00) AS total_scheme_price,ISNULL(ORDDET.MRP,0.00) AS MRP,'
+		SET @SQL+='ISNULL(ORDDET.ORDER_MRP,0.00) AS order_mrp,ISNULL(ORDDET.ORDER_DISCOUNT,0.00) AS order_discount '
 		SET @SQL+='FROM tbl_trans_fts_Orderupdate as ORDHEAD	'
 		SET @SQL+='INNER JOIN tbl_FTs_OrderdetailsProduct ORDDET ON ORDHEAD.OrderId=ORDDET.Order_ID	'
 		SET @SQL+='INNER JOIN Master_sProducts PROD ON PROD.sProducts_ID=ORDDET.Product_Id	'

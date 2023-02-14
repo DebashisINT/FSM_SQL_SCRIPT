@@ -35,6 +35,8 @@ Module	   : Performance Summary Month Wise
 7.0		v19.0.0		27/02/2019		Debashis		New Column in Performance Summary Month Wise after "Not Login" column as "Attendance" = Count of (Atwork + On Leave), 
 													"Man Days"=Day Count of Current Month (excluding sunday).Refer mail: (no subject)
 8.0		v2.0.4		02/01/2020		Tanmoy			Year field required in the Monthly report.Refer: 0021574
+9.0		v2.0.38		02-02-2023		Sanchita		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+													then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -110,6 +112,45 @@ BEGIN
 	--WHERE EMPCTC.emp_cntId=@LOGINEMPCODE
 	--End of Rev 4.0
 
+	-- Rev 9.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR1
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR1
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR1 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR1 a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 9.0
+
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TMPMASTEMPLOYEE') AND TYPE IN (N'U'))
 		DROP TABLE #TMPMASTEMPLOYEE
 	CREATE TABLE #TMPMASTEMPLOYEE(EMP_ID NUMERIC(18, 0) NOT NULL,EMP_UNIQUECODE VARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,EMP_CONTACTID NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL)
@@ -163,8 +204,20 @@ BEGIN
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	-- Rev 9.0
+	--INSERT INTO #TEMPCONTACT
+	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT CNT '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '
+	END
+	SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+	exec sp_executesql @Strsql
+	-- End of Rev 9.0
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSPERFORMANCESUMMARYMONTHWISE_REPORT') AND TYPE IN (N'U'))
 		BEGIN
@@ -518,4 +571,11 @@ BEGIN
 	--Rev 2.0
 	DROP TABLE #TMPSHOWSUNDAY
 	--End of Rev 2.0
+	-- Rev 9.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR1
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 9.0
 END

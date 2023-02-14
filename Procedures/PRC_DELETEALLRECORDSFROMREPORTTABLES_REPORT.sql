@@ -5,11 +5,13 @@ END
 GO 
 
 ALTER PROCEDURE [dbo].[PRC_DELETEALLRECORDSFROMREPORTTABLES_REPORT]
---WITH ENCRYPTION
+WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 11/01/2023
 Module	   : Delete all records from reports related tables.
+
+1.0		06/02/2023		Sanchita	V2.0.39		FSM User Master - To implement Show button FSM User Master. refer: 25641
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -323,6 +325,23 @@ BEGIN
         BEGIN
 			DELETE FROM FTS_EMPLIST_REPORT
 		END
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEPERFORMANCEANALYTICS_REPORT') AND TYPE IN (N'U'))
+        BEGIN
+			DELETE FROM FTSEMPLOYEEPERFORMANCEANALYTICS_REPORT
+		END
+	
+	-- Rev 1.0
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FSMUser_Master_List') AND TYPE IN (N'U'))
+        BEGIN
+			DELETE FROM FSMUser_Master_List
+		END
+
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FSMEmployee_Master') AND TYPE IN (N'U'))
+        BEGIN
+			DELETE FROM FSMEmployee_Master
+		END
+	-- End of Rev 1.0
 
 	SET NOCOUNT OFF
 END

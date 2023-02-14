@@ -12,6 +12,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 31/08/2022
 Module	   : Attendance data Archive from main tables
+1.0		v2.0.38		Debashis	25-01-2023		Increase month by 3 from 2.
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -111,20 +112,32 @@ BEGIN
 		Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason,From_AreaId,To_AreaId,Distance,StaticDistance)
 		SELECT Id,User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,
 		Market_Worked,LeaveReason,From_AreaId,To_AreaId,Distance,StaticDistance FROM tbl_fts_UserAttendanceLoginlogout
-		WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		--Rev 1.0
+		--WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--End of Rev 1.0
 		SET IDENTITY_INSERT tbl_fts_UserAttendanceLoginlogout_ARCH OFF
 
-		DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		--Rev 1.0
+		--DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--End of Rev 1.0
 
 		SET IDENTITY_INSERT FSMUSERWISEDAYSTARTEND_ARCH ON
 		INSERT INTO FSMUSERWISEDAYSTARTEND_ARCH(ID,USER_ID,STARTENDDATE,LOCATION_NAME,LATITUDE,LONGITUDE,SHOP_TYPE,SHOP_ID,ISSTART,ISEND,SALE_VALUE,REMARKS,DAYSTARTENDIMAGE,VISITDDID,VISITDDNAME,
 		VISITDDDATE,ISDDVISTEDONCEBYDAY)
 		SELECT ID,USER_ID,STARTENDDATE,LOCATION_NAME,LATITUDE,LONGITUDE,SHOP_TYPE,SHOP_ID,ISSTART,ISEND,SALE_VALUE,REMARKS,DAYSTARTENDIMAGE,VISITDDID,VISITDDNAME,VISITDDDATE,ISDDVISTEDONCEBYDAY
 		FROM FSMUSERWISEDAYSTARTEND
-		WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
+		--Rev 1.0
+		--WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
+		WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120) 
+		--End of Rev 1.0
 		SET IDENTITY_INSERT FSMUSERWISEDAYSTARTEND_ARCH OFF
 
-		DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
+		--Rev 1.0
+		--DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
+		DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END

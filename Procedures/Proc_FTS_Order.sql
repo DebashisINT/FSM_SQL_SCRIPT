@@ -39,6 +39,7 @@ As
 3.0		v2.0.26		Debashis	29-12-2021		Enhancement done for Row No. 597
 4.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 606 & 607
 5.0		v2.0.33		Debashis	13-10-2022		Product_Qty length has been increased.Refer: 25368
+6.0		v2.0.38		Debashis	23-01-2023		Enhancement done for Row No. 805
 *************************************************************************************************************************************/
 BEGIN
 
@@ -75,7 +76,8 @@ BEGIN
 					--Rev 3.0 && Three new columns Scheme_Qty,Scheme_Rate & Total_Scheme_Price has been added.
 					--Rev 4.0 && A new column added as MRP
 					--Rev 5.0 && Column size increase from XMLproduct.value('(qty/text())[1]','decimal(18,2)')	to XMLproduct.value('(qty/text())[1]','decimal(18,3)')
-					INSERT  INTO  tbl_FTs_OrderdetailsProduct (Order_ID,Product_Id,Product_Qty,Product_Rate,Product_Price,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,Shop_code,User_Id)
+					--Rev 6.0 && Two new columns added as order_mrp & order_discount
+					INSERT  INTO  tbl_FTs_OrderdetailsProduct (Order_ID,Product_Id,Product_Qty,Product_Rate,Product_Price,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,ORDER_MRP,ORDER_DISCOUNT,Shop_code,User_Id)
 					select distinct @OrderUniqueId,
 					XMLproduct.value('(id/text())[1]','bigint')	,
 					XMLproduct.value('(qty/text())[1]','decimal(18,3)')	,
@@ -84,7 +86,9 @@ BEGIN
 					XMLproduct.value('(scheme_qty/text())[1]','decimal(18,2)'),
 					XMLproduct.value('(scheme_rate/text())[1]','decimal(18,2)'),
 					XMLproduct.value('(total_scheme_price/text())[1]','decimal(18,2)'),
-					XMLproduct.value('(MRP/text())[1]','decimal(18,2)')
+					XMLproduct.value('(MRP/text())[1]','decimal(18,2)'),
+					XMLproduct.value('(order_mrp/text())[1]','decimal(18,2)'),
+					XMLproduct.value('(order_discount/text())[1]','decimal(18,2)')
 					,@Shop_Id,@user_id
 					FROM  @Product_List.nodes('/root/data')AS TEMPTABLE(XMLproduct)   
 

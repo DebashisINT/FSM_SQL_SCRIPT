@@ -14,10 +14,12 @@ ALTER PROCEDURE [dbo].[PRC_FTSSALESSUMMARY_REPORTDALY]
 @DESIGNID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0		v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
+2.0		v2.0.38		Sanchita	12-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -67,6 +69,45 @@ BEGIN
 			EXEC SP_EXECUTESQL @sqlStrTable
 		END
 
+	-- Rev 2.0
+	DECLARE @user_contactId NVARCHAR(15)
+	SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+		;with cte as(select	
+		EMPCODE,RPTTOEMPCODE
+		from #EMPHR 
+		where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+		union all
+		select	
+		a.EMPCODE,a.RPTTOEMPCODE
+		from #EMPHR a
+		join cte b
+		on a.RPTTOEMPCODE = b.EMPCODE
+		) 
+		INSERT INTO #EMPHR_EDIT
+		select EMPCODE,RPTTOEMPCODE  from cte 
+
+	END
+	-- End of Rev 2.0
+
 	--Rev 1.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
@@ -85,11 +126,24 @@ BEGIN
 		cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 	)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	--Rev 1.0
-	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-	--End of Rev 1.0
+	-- Rev 2.0
+	--INSERT INTO #TEMPCONTACT
+	----Rev 1.0
+	----SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	--SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	----End of Rev 1.0
+
+	SET @Strsql=''
+	SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+	SET @Strsql+=' SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT CNT '
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON cnt.cnt_internalId=HRY.EMPCODE '
+	END
+	SET @Strsql+=' WHERE CNT.cnt_contactType IN(''EM'') '
+	EXEC SP_EXECUTESQL @Strsql
+	-- End of Rev 2.0
+
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSSALESDETAILSDAYWISE_REPORT') AND TYPE IN (N'U'))
 	BEGIN
 		CREATE TABLE FTSSALESDETAILSDAYWISE_REPORT
@@ -318,6 +372,13 @@ BEGIN
   DROP TABLE #EMPLOYEE_LIST
   DROP TABLE #STATEID_LIST
   DROP TABLE #TEMPCONTACT
+  -- Rev 2.0
+	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+	BEGIN
+		DROP TABLE #EMPHR
+		DROP TABLE #EMPHR_EDIT
+	END
+	-- End of Rev 2.0
 
   SET NOCOUNT OFF
 END

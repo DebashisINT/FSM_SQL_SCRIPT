@@ -160,6 +160,11 @@ BEGIN
 	142.0		Debashis	12-12-2022	ADD SETTINGS @Action=GlobalCheck' IsShowStateInTeam,IsShowBranchInTeam,IsShowDesignationInTeam & IsAllowZeroRateOrder.Row 778
 	143.0		Debashis	09-01-2023	ADD SETTINGS @Action=UserCheck' IsMultipleContactEnableforShop & IsContactPersonSelectionRequiredinRevisit.Row 782
 	144.0		Debashis	10-01-2023	ADD SETTINGS @Action=UserCheck' IsContactPersonRequiredinQuotation.Row 789
+	145.0		Debashis	17-01-2023	ADD SETTINGS @Action=UserCheck' IsShowBeatInMenu.Row 796
+	146.0		Debashis	17-01-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatAvailable.Row 797
+	147.0		Debashis	25-01-2023	ADD SETTINGS @Action=GlobalCheck' isExpenseFeatureAvailable.Row 808
+	148.0		Debashis	02-02-2023	ADD SETTINGS @Action=GlobalCheck' IsDiscountEditableInOrder & IsRouteStartFromAttendance.Row 809
+	149.0		Debashis	08-02-2023	ADD SETTINGS @Action=GlobalCheck' IsShowOtherInfoinShopMaster & IsShowQuotationFooterforEurobond.Row 812
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -325,6 +330,20 @@ BEGIN
 	,@IsShowDesignationInTeam BIT
 	,@IsAllowZeroRateOrder BIT
 	--End of Rev 142.0
+	--Rev 146.0
+	,@IsBeatAvailable BIT
+	--End of Rev 146.0
+	--Rev 147.0
+	,@isExpenseFeatureAvailable BIT
+	--End of Rev 147.0
+	--Rev 148.0
+	,@IsDiscountEditableInOrder BIT
+	,@IsRouteStartFromAttendance BIT
+	--End of Rev 148.0
+	--Rev 149.0
+	,@IsShowOtherInfoinShopMaster BIT
+	,@IsShowQuotationFooterforEurobond BIT
+	--End of Rev 149.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -541,6 +560,20 @@ BEGIN
 		SET @IsShowDesignationInTeam =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowDesignationInTeam' AND IsActive=1)
 		SET @IsAllowZeroRateOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowZeroRateOrder' AND IsActive=1)
 		--End of Rev 142.0
+		--Rev 146.0
+		SET @IsBeatAvailable =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatAvailable' AND IsActive=1)
+		--End of Rev 146.0
+		--Rev 147.0
+		SET @isExpenseFeatureAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isExpenseFeatureAvailable' AND IsActive=1)
+		--End of Rev 147.0
+		--Rev 148.0
+		SET @IsDiscountEditableInOrder  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsDiscountEditableInOrder' AND IsActive=1)
+		SET @IsRouteStartFromAttendance  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsRouteStartFromAttendance' AND IsActive=1)
+		--End of Rev 148.0
+		--Rev 149.0
+		SET @IsShowOtherInfoinShopMaster  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowOtherInfoinShopMaster' AND IsActive=1)
+		SET @IsShowQuotationFooterforEurobond  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowQuotationFooterforEurobond' AND IsActive=1)
+		--End of Rev 149.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -736,6 +769,20 @@ BEGIN
 			,@IsShowDesignationInTeam AS IsShowDesignationInTeam
 			,@IsAllowZeroRateOrder AS IsAllowZeroRateOrder
 			--End of Rev 142.0
+			--Rev 146.0
+			,@IsBeatAvailable AS IsBeatAvailable
+			--End of Rev 146.0
+			--Rev 147.0
+			,@isExpenseFeatureAvailable AS isExpenseFeatureAvailable
+			--End of Rev 147.0
+			--Rev 148.0
+			,@IsDiscountEditableInOrder  AS IsDiscountEditableInOrder
+			,@IsRouteStartFromAttendance  AS IsRouteStartFromAttendance
+			--End of Rev 148.0
+			--Rev 149.0
+			,@IsShowOtherInfoinShopMaster  AS IsShowOtherInfoinShopMaster
+			,@IsShowQuotationFooterforEurobond  AS IsShowQuotationFooterforEurobond
+			--End of Rev 149.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1668,6 +1715,11 @@ BEGIN
 		SELECT 'IsContactPersonRequiredinQuotation' AS [Key],CONVERT(NVARCHAR(15),USR.IsContactPersonRequiredinQuotation) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 144.0
+		--Rev 145.0
+		UNION ALL
+		SELECT 'IsShowBeatInMenu' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowBeatInMenu) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 145.0
 	END
 
 	SET NOCOUNT OFF

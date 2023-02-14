@@ -14,6 +14,9 @@ ALTER PROC [dbo].[prc_ReimbursementAllowance_Report_Get]
 	@MODEOFTRAVEL NVARCHAR(MAX)= NULL,
 	@FUELTYPE NVARCHAR(MAX)= NULL,
 	@ACTION VARCHAR(200) = ''
+	-- Rev 3.0
+	,@USERID INT=null
+	-- End of Rev 3.0
 )  --WITH ENCRYPTION
 AS 
 
@@ -23,6 +26,8 @@ Module	  : Travel Allowance - Report
 1.0	v1.0.0	Surojit	 07/02/2019 Show EligibleAmount = EligibleDistance * EligibleRate if EligibleDistance is not null EligibleRate is not null.
 1.0 v2.0.0  Surojit  07/02/2019 Don't get report without state id
 2.0		V2.0.35		Sanchita	In the Expense report, Conveyance details are not populating under Travelling Allowance report. refer: 25547.
+3.0		v2.0.38		Sanchita	02-02-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
+												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
 ****************************************************************************************************************************************************************************/
 
 SET NOCOUNT ON ;
@@ -119,6 +124,45 @@ SET NOCOUNT ON ;
 			EXEC SP_EXECUTESQL @sqlStrTable
 		END
 
+		-- Rev 3.0
+		DECLARE @user_contactId NVARCHAR(15)
+		SELECT @user_contactId=user_contactId  from tbl_master_user WITH(NOLOCK) where user_id=@USERID
+
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			CREATE TABLE #EMPHR
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHR
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@user_contactId  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+		-- End of Rev 3.0
+
 		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 		DROP TABLE #TEMPCONTACT
 		CREATE TABLE #TEMPCONTACT
@@ -130,8 +174,20 @@ SET NOCOUNT ON ;
 		cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 		CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-		INSERT INTO #TEMPCONTACT
-		SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+		-- Rev 3.0
+		--INSERT INTO #TEMPCONTACT
+		--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+
+		SET @Strsql=''
+		SET @Strsql+=' INSERT INTO #TEMPCONTACT '
+		SET @Strsql+=' SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT CNT '
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '
+		END
+		SET @Strsql+=' WHERE cnt_contactType IN(''EM'') '
+		exec sp_executesql @Strsql
+		-- End of Rev 3.0
 
 	SET @Strsql=''
 		
@@ -269,6 +325,13 @@ SET NOCOUNT ON ;
 		DROP TABLE #TempModeTravel
 		DROP TABLE #TempFuelType
 		DROP TABLE #TEMPCONTACT
+		-- Rev 3.0
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+			DROP TABLE #EMPHR
+			DROP TABLE #EMPHR_EDIT
+		END
+		-- End of Rev 3.0
 
 	END
 	IF @ACTION = 'GetSateList'
