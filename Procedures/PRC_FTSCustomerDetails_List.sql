@@ -1,4 +1,4 @@
---EXEC PRC_FTSCustomerDetails_List '2020-06-10','2021-06-11','','',378
+EXEC PRC_FTSCustomerDetails_List '2023-01-01','2023-01-31','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSCustomerDetails_List]') AND type in (N'P', N'PC'))
 BEGIN
@@ -23,6 +23,7 @@ AS
 3.0		Debashis	30-09-2021		Master - Contact - Parties and Master - Contact - Customer Details.Refer: 0024384
 4.0		Sanchita	v2.0.36			10-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" then data in portal shall be populated based on Hierarchy Only.
 													Refer: 25504
+5.0		PRITI		V2.0.39			13-02-2023		0025663:Last Visit fields shall be available in Outlet Reports
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -192,8 +193,12 @@ BEGIN
 		Assoc_Customer NVARCHAR(300),
 		--Rev 3.0 
 		STATE_NAME NVARCHAR(200),
-		DISTRICT NVARCHAR(200)
+		DISTRICT NVARCHAR(200),
 		--End of Rev 3.0 
+		LASTVISITDATE NVARCHAR(100),--REV 5.0	
+		LASTVISITTIME NVARCHAR(100),--REV 5.0	
+		LASTVISITEDBY NVARCHAR(200)--REV 5.0	
+
 		)
 	END
 
@@ -228,14 +233,20 @@ BEGIN
 	--Rev 3.0
 	SET @Strsql+=' ,ST.state,cty.city_name'
 	--End of Rev 3.0
-
+	--Rev 5.0
+	SET @Strsql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)Lastvisitdate,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,UserTBl.user_name user_name'
+	--End of Rev 5.0
 	SET @Strsql+=' FROM tbl_Master_shop shop   '
 	SET @Strsql+=' LEFT OUTER JOIN TBL_SHOPTYPEDETAILS shopTypeDetails ON shopTypeDetails.Id=shop.dealer_id	  '
 	SET @Strsql+=' LEFT OUTER JOIN TBL_SHOPTYPEDETAILS shopTypeDetails1 ON shopTypeDetails1.Id=shop.retailer_id	  '
 	SET @Strsql+=' LEFT OUTER JOIN FSM_ENTITY ENTITY ON ENTITY.Id=shop.Entity_Id	  '
 	SET @Strsql+=' LEFT OUTER JOIN FSM_PARTYSTATUS PARTYSTATUS ON PARTYSTATUS.Id=shop.Party_Status_id	  '
 	SET @Strsql+=' LEFT OUTER JOIN FSM_GROUPBEAT GROUPBEAT ON GROUPBEAT.Id=shop.beat_id	  '
-	SET @Strsql+=' LEFT OUTER JOIN tbl_shoptype shoptype ON shoptype.shop_typeId=shop.type AND shoptype.IsActive=1    '
+	SET @Strsql+=' LEFT OUTER JOIN tbl_shoptype shoptype ON shoptype.shop_typeId=shop.type AND shoptype.IsActive=1 
+	'
+	--REV 5.0 START
+	SET @Strsql+=' LEFT OUTER JOIN tbl_master_user UserTBl ON CAST(UserTBl.user_id AS INT)=shop.Shop_CreateUser   		'
+	--REV 5.0	END
 	-- Rev 4.0
 	--SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=shop.Shop_CreateUser    '
 	
@@ -271,6 +282,7 @@ BEGIN
 	SET @Strsql+=' CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,    '
 	SET @Strsql+=' DESG.deg_designation AS RPTTODESG,CNT.cnt_ucc AS REPORTTO_ID FROM tbl_master_employee EMP	  '
 	SET @Strsql+=' LEFT OUTER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo		'
+	
 	-- Rev 4.0
 	--SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId	  '
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
@@ -282,6 +294,7 @@ BEGIN
 		SET @Strsql+=' LEFT OUTER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId    '
 	end
 	-- End of Rev 4.0
+	
 	SET @Strsql+=' LEFT OUTER JOIN (	    '
 	SET @Strsql+=' SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt		'
 	SET @Strsql+=' LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL	  '

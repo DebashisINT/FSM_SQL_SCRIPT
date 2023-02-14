@@ -36,7 +36,9 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 --Rev 14.0
 @ISREVISITCONTACTDETAILS INT=NULL
 --End of Rev 14.0
-) --WITH ENCRYPTION
+
+) WITH ENCRYPTION
+
 AS
 /*================================================================================================================================================================
 1.0					Tanmoy		30-07-2019     change left outer join to inner join
@@ -54,6 +56,10 @@ AS
 12.0	V2.0.37		Pallab	    15/11/2022		Multiple photo attachments columns are required in the Shops report refer: 25448
 13.0	V2.0.37		Pallab	    23/11/2022		It is showing Show image in the Shoplist report if there is no image refer: 25464
 14.0	v2.0.38		Debashis	23/01/2023		Multiple contact information to be displayed in the Shops report.Refer: 0025585
+
+15.0	v2.0.39		PRITI		13/02/2023		0025663:Last Visit fields shall be available in Outlet Reports
+
+
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -157,6 +163,9 @@ BEGIN
 					-- Rev 11.0
 					SET @sql+=', isnull(BEAT.NAME,'''') as Beat '
 					-- End of Rev 11.0
+					--REV 15.0
+					SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY'	
+					--REV 15.0 End
 					SET @sql+='from tbl_Master_shop as shop
 					INNER JOIN  tbl_master_user usr on shop.Shop_CreateUser=usr.user_id '
 					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Create_UserId)=1)
@@ -216,6 +225,9 @@ BEGIN
 					--Rev 6.0
 					SET @sql+='shop.Alt_MobileNo1,shop.Shop_Owner_Email2 '
 					--End of Rev 6.0
+					--REV 15.0
+					SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY'	
+					--REV 15.0 End
 					SET @sql+='from tbl_Master_shop as shop
 					INNER JOIN  tbl_master_user usr on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN  tbl_shoptype  as typs on typs.shop_typeId=shop.type '
@@ -307,7 +319,10 @@ BEGIN
 					--End of Rev 10.0
 					--, countactivity=(select isnull(count(Act.ActivityId),0)  from tbl_trans_shopActivitysubmit as Act where Act.Shop_Id=shop.Shop_Code )
 					--,Lastactivitydate=(select top 1 convert(varchar(50),visited_time,103) + '' '' + FORMAT(visited_time,''hh:mm tt'') as SDate1 from tbl_trans_shopActivitysubmit as shpusr  where  shpusr.user_id=usr.user_id and shpusr.Shop_Id=shop.Shop_Code order by visited_time desc)
-					set @sql +='from tbl_Master_shop as shop
+					--REV 15.0
+					SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY'						
+					--REV 15.0 End
+					set @sql +=' from tbl_Master_shop as shop
 					INNER JOIN tbl_master_user  usr on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN tbl_shoptype  as typs on typs.shop_typeId=shop.type '
 					IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Create_UserId)=1)
@@ -372,7 +387,10 @@ BEGIN
 					--Rev 10.0
 					SET @sql+='BR.BRANCH_ID,BR.BRANCH_DESCRIPTION '
 					--End of Rev 10.0
-					SET @sql+='ORDER BY Shop_ID DESC '
+					--REV 15.0	
+					SET @sql+=' ,shop.Lastvisit_date,usr.user_name'					
+					--REV 15.0	End
+					SET @sql+=' ORDER BY Shop_ID DESC '
 					--select @sql
 					EXEC SP_EXECUTESQL @sql
 
@@ -549,6 +567,11 @@ BEGIN
 					SET @sql+='NULL AS CONTACT_NAME5,NULL AS CONTACT_NUMBER5,NULL AS CONTACT_EMAIL5,NULL AS CONTACT_DOA5,NULL AS CONTACT_DOB5,NULL AS CONTACT_NAME6,NULL AS CONTACT_NUMBER6,NULL AS CONTACT_EMAIL6,NULL AS CONTACT_DOA6,NULL AS CONTACT_DOB6 '
 				END
 			--End of Rev 14.0
+
+			--REV 15.0
+			SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY '	
+			--REV 15.0 End
+
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '

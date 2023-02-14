@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]
 @BRANCHID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 03/11/2021
@@ -213,7 +213,12 @@ BEGIN
 	SET @Strsql+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL) HRPTTO ON HRPTTO.emp_cntId=RPTTO.REPORTTOID '
 	SET @Strsql+='LEFT OUTER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
+
+	--Rev 3.0
 	SET @Strsql+=' LEFT OUTER JOIN tbl_master_user UserTBl ON CAST(UserTBl.user_id AS INT)=MS.Shop_CreateUser '
+	--REV 3.0	end
+
+
 	--Rev 1.0
 	--SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
 	SET @Strsql+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
