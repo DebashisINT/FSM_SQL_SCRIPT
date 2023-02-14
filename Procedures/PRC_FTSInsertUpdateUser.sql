@@ -309,6 +309,7 @@ AS
 												any user 'Make Inactive'.Refer: 0025508
 25.0	v2.0.36		27-12-2022		Sanchita	During Employee Creation the Office Address State will be mapped by default as State Mapping of that Employee.
 												Refer: 25532
+26.0	v2.0.39		13-02-2023		Sanchita	Need Audit functionality in User Master. Refer: 25648
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -318,6 +319,9 @@ BEGIN
 	-- Rev 25.0
 	DECLARE @branch_state int
 	-- End of Rev 25.0
+	-- Rev 26.0
+	DECLARE @DOC_ID BIGINT = 0
+	-- End of Rev 26.0
 
 	IF OBJECT_ID('tempdb..#Shoptype_List') IS NOT NULL
 	DROP TABLE #Shoptype_List
@@ -614,6 +618,10 @@ BEGIN
 
 			set @user_id=SCOPE_IDENTITY();
 
+			-- Rev 26.0
+			EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='TBL_MASTER_USER', @UserId=@CreateUser, @Action='I',@DOC_ID=@user_id 
+			-- End of Rev 26.0
+
 			-- Rev 21.0
 			if (@CalledFromUserAccount=1 )
 			begin
@@ -745,6 +753,10 @@ BEGIN
 					where user_id=@user_id
 				end
 
+				-- Rev 26.0
+				EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='TBL_MASTER_USER', @UserId=@CreateUser, @Action='U',@DOC_ID=@user_id 
+				-- End of Rev 26.0
+
 				-- Rev 22.0
 				insert into FTS_EmployeeBranchMap
 				select C.cnt_id,U.user_branchId,378,getdate(), U.user_contactId from tbl_master_user U 
@@ -752,15 +764,36 @@ BEGIN
 				inner join tbl_master_employee E on E.emp_contactId=U.user_contactId
 				where U.user_id=@user_id and not exists(select employeeid from FTS_EmployeeBranchMap where Employeeid= C.cnt_id )
 				-- End of Rev 22.0
+
+				-- Rev 26.0
+				set @DOC_ID=SCOPE_IDENTITY();
+
+				EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_EmployeeBranchMap', @UserId=@CreateUser, @Action='I',@DOC_ID=@user_id 
+				-- End of Rev 26.0
+
 			end
 			-- End of Rev 21.0
 
 			if exists (Select * from #Shoptype_List)
 			BEGIN
+				-- Rev 26.0
+				SET @DOC_ID = (SELECT TOP 1 ID FROM FTS_UserPartyCreateAccess WHERE User_Id=@user_id )
+				IF @DOC_ID>0
+				BEGIN
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_UserPartyCreateAccess', @UserId=@CreateUser, @Action='D',@DOC_ID=@DOC_ID 
+				END
+				-- End of Rev 26.0
+
 				DELETE FROM FTS_UserPartyCreateAccess WHERE User_Id=@user_id
 
 				INSERT INTO FTS_UserPartyCreateAccess
 				SELECT @user_id,TypeId FROM #Shoptype_List
+
+				-- Rev 26.0
+				set @DOC_ID=SCOPE_IDENTITY();
+
+				EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_UserPartyCreateAccess', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+				-- End of Rev 26.0
 			END
 			--Rev 19.0
 			set @user_contactId=(select top 1 tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
@@ -772,14 +805,33 @@ BEGIN
 				BEGIN
 					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
 					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+
+					-- Rev 26.0
+					set @DOC_ID=SCOPE_IDENTITY();
+
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+					-- End of Rev 26.0
 				END
 				ELSE
 				BEGIN
+					-- Rev 26.0
+					set @DOC_ID= (select TOP 1 EP_MAPID from Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId )
+					IF(@DOC_ID>0)
+					BEGIN
+						EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='D',@DOC_ID=@DOC_ID
+					END
+					-- End of Rev 26.0
 
 					DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
 
 					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
 					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+
+					-- Rev 26.0
+					set @DOC_ID=SCOPE_IDENTITY();
+
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+					-- End of Rev 26.0
 				END
 			end
 			--End of Rev 19.0
@@ -791,12 +843,148 @@ BEGIN
 			begin
 				insert into FTS_EMPSTATEMAPPING (USER_ID,STATE_ID,SYS_DATE_TIME ,AUTHOR )
 				values(@user_id,@branch_state,GETDATE(),@CreateUser)
+
+				-- Rev 26.0
+				-- set @DOC_ID=SCOPE_IDENTITY();  -- No identity column in table FTS_EMPSTATEMAPPING
+
+				EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_EMPSTATEMAPPING', @UserId=@CreateUser, @Action='I',@DOC_ID=@user_id
+				-- End of Rev 26.0
 			end
 			-- End of Rev 25.0
 		END
 
 	ELSE IF @ACTION='UPDATE'
 		BEGIN
+			-- Rev 26.0
+			SET @DOC_ID = 0
+			
+			IF EXISTS (SELECT USER_ID FROM TBL_MASTER_USER WHERE USER_ID=@user_id AND (
+				user_name<>@txtusername OR user_branchId<>@b_id OR user_group<>@usergroup OR user_loginId<>@txtuserid OR user_inactive<>@isactive OR user_maclock<>@isactivemac OR user_contactid<>@contact  
+				--LastModifyDate<>@CreateDate OR LastModifyUser<>@CreateUser 
+				OR user_superuser <>@superuser OR user_EntryProfile<>@ddDataEntry OR user_AllowAccessIP<>@IPAddress OR Gps_Accuracy<>@txtgps OR HierarchywiseTargetSettings<>@istargetsettings OR 
+				willLeaveApprovalEnable<>@isLeaveApprovalEnable OR IsAutoRevisitEnable<>@IsAutoRevisitEnable OR IsShowPlanDetails<>@IsShowPlanDetails OR IsMoreDetailsMandatory<>@IsMoreDetailsMandatory OR 
+				IsShowMoreDetailsMandatory<>@IsShowMoreDetailsMandatory OR isMeetingAvailable<>@isMeetingAvailable OR isRateNotEditable<>@isRateNotEditable OR 
+				IsShowTeamDetails<>@IsShowTeamDetails OR IsAllowPJPUpdateForTeam<>@IsAllowPJPUpdateForTeam OR willReportShow<>@willReportShow OR 
+				isFingerPrintMandatoryForAttendance<>@isFingerPrintMandatoryForAttendance OR isFingerPrintMandatoryForVisit<>@isFingerPrintMandatoryForVisit OR 
+				isSelfieMandatoryForAttendance<>@isSelfieMandatoryForAttendance
+				 OR isAttendanceReportShow<>@isAttendanceReportShow OR isPerformanceReportShow<>@isPerformanceReportShow OR isVisitReportShow<>@isVisitReportShow OR willTimesheetShow<>@willTimesheetShow OR 
+				isAttendanceFeatureOnly<>@isAttendanceFeatureOnly OR isOrderShow<>@isOrderShow OR isVisitShow<>@isVisitShow OR iscollectioninMenuShow<>@iscollectioninMenuShow OR 	
+				isShopAddEditAvailable<>@isShopAddEditAvailable OR isEntityCodeVisible<>@isEntityCodeVisible OR isAreaMandatoryInPartyCreation<>@isAreaMandatoryInPartyCreation OR 
+				isShowPartyInAreaWiseTeam<>@isShowPartyInAreaWiseTeam OR isChangePasswordAllowed<>@isChangePasswordAllowed OR isHomeRestrictAttendance<>@isHomeRestrictAttendance
+				 OR isQuotationShow<>@isQuotationShow OR IsStateMandatoryinReport<>@IsStateMandatoryinReport
+				 OR homeLocDistance<>@homeLocDistance OR shopLocAccuracy<>@shopLocAccuracy OR isAchievementEnable<>@isAchievementEnable OR isTarVsAchvEnable<>@isTarVsAchvEnable
+				 OR isQuotationPopupShow<>@isQuotationPopupShow OR isOrderReplacedWithTeam<>@isOrderReplacedWithTeam OR isMultipleAttendanceSelection<>@isMultipleAttendanceSelection OR 
+				isOfflineTeam<>@isOfflineTeam OR isDDShowForMeeting<>@isDDShowForMeeting OR isDDMandatoryForMeeting<>@isDDMandatoryForMeeting OR 
+				isAllTeamAvailable<>@isAllTeamAvailable OR isRecordAudioEnable<>@isRecordAudioEnable OR isNextVisitDateMandatory<>@isNextVisitDateMandatory OR 
+				isShowCurrentLocNotifiaction<>@isShowCurrentLocNotifiaction OR isUpdateWorkTypeEnable<>@isUpdateWorkTypeEnable OR isLeaveEnable<>@isLeaveEnable OR 
+				isOrderMailVisible<>@isOrderMailVisible OR LateVisitSMS<>@LateVisitSMS OR isShopEditEnable<>@isShopEditEnable OR isTaskEnable<>@isTaskEnable	
+				 OR isAppInfoEnable<>@isAppInfoEnable OR willDynamicShow<>@willDynamicShow OR willActivityShow<>@willActivityShow OR 
+				isDocumentRepoShow<>@isDocumentRepoShow OR isChatBotShow<>@isChatBotShow OR isAttendanceBotShow<>@isAttendanceBotShow OR isVisitBotShow<>@isVisitBotShow OR 
+				appInfoMins<>@appInfoMins
+				 OR isInstrumentCompulsory<>@isInstrumentCompulsory OR isBankCompulsory<>@isBankCompulsory
+				 OR isComplementaryUser<>@isComplementaryUser OR isVisitPlanShow<>@isVisitPlanShow OR isVisitPlanMandatory<>@isVisitPlanMandatory OR isAttendanceDistanceShow<>@isAttendanceDistanceShow OR 
+				willTimelineWithFixedLocationShow<>@willTimelineWithFixedLocationShow OR isShowOrderRemarks<>@isShowOrderRemarks OR isShowOrderSignature<>@isShowOrderSignature
+				 OR isShowSmsForParty<>@isShowSmsForParty OR isShowTimeline<>@isShowTimeline OR willScanVisitingCard<>@willScanVisitingCard OR isCreateQrCode<>@isCreateQrCode OR isScanQrForRevisit<>@isScanQrForRevisit OR 
+				isShowLogoutReason<>@isShowLogoutReason OR willShowHomeLocReason<>@willShowHomeLocReason OR willShowShopVisitReason<>@willShowShopVisitReason
+				 OR willShowPartyStatus<>@willShowPartyStatus OR willShowEntityTypeforShop<>@willShowEntityTypeforShop OR isShowRetailerEntity<>@isShowRetailerEntity OR isShowDealerForDD<>@isShowDealerForDD OR 
+				isShowBeatGroup<>@isShowBeatGroup OR isShowShopBeatWise<>@isShowShopBeatWise OR isShowBankDetailsForShop<>@isShowBankDetailsForShop OR isShowOTPVerificationPopup<>@isShowOTPVerificationPopup
+				 OR isShowMicroLearing<>@isShowMicroLearing OR isMultipleVisitEnable<>@isMultipleVisitEnable OR isShowVisitRemarks<>@isShowVisitRemarks OR isShowNearbyCustomer<>@isShowNearbyCustomer OR 
+				isServiceFeatureEnable<>@isServiceFeatureEnable OR isPatientDetailsShowInOrder<>@isPatientDetailsShowInOrder OR isPatientDetailsShowInCollection<>@isPatientDetailsShowInCollection
+				 OR isAttachmentMandatory<>@isAttachmentMandatory OR isShopImageMandatory<>@isShopImageMandatory
+				 OR isLogShareinLogin<>@isLogShareinLogin OR IsCompetitorenable<>@IsCompetitorenable OR IsOrderStatusRequired<>@IsOrderStatusRequired OR IsCurrentStockEnable<>@IsCurrentStockEnable OR 
+				IsCurrentStockApplicableforAll<>@IsCurrentStockApplicableforAll OR IscompetitorStockRequired<>@IscompetitorStockRequired OR IsCompetitorStockforParty<>@IsCompetitorStockforParty	
+				 OR ShowFaceRegInMenu<>@ShowFaceRegInMenu OR IsFaceDetection<>@IsFaceDetection OR IsUserwiseDistributer<>@IsUserwiseDistributer OR 
+				IsPhotoDeleteShow<>@IsPhotoDeleteShow OR IsAllDataInPortalwithHeirarchy<>@IsAllDataInPortalwithHeirarchy OR IsFaceDetectionWithCaptcha<>@IsFaceDetectionWithCaptcha
+				 OR IsShowMenuAddAttendance<>@IsShowMenuAddAttendance OR IsShowMenuAttendance<>@IsShowMenuAttendance OR IsShowMenuShops<>@IsShowMenuShops OR IsShowMenuOutstandingDetailsPPDD<>@IsShowMenuOutstandingDetailsPPDD OR 
+				IsShowMenuStockDetailsPPDD<>@IsShowMenuStockDetailsPPDD OR IsShowMenuTA<>@IsShowMenuTA OR IsShowMenuMISReport<>@IsShowMenuMISReport OR IsShowMenuReimbursement<>@IsShowMenuReimbursement
+				 OR IsShowMenuAchievement<>@IsShowMenuAchievement OR IsShowMenuMapView<>@IsShowMenuMapView OR IsShowMenuShareLocation<>@IsShowMenuShareLocation OR IsShowMenuHomeLocation<>@IsShowMenuHomeLocation OR 
+				IsShowMenuWeatherDetails<>@IsShowMenuWeatherDetails OR IsShowMenuChat<>@IsShowMenuChat OR IsShowMenuScanQRCode<>@IsShowMenuScanQRCode OR 
+				IsShowMenuPermissionInfo<>@IsShowMenuPermissionInfo OR IsShowMenuAnyDesk<>@IsShowMenuAnyDesk
+				 OR IsDocRepoFromPortal<>@IsDocRepoFromPortal OR IsDocRepShareDownloadAllowed<>@IsDocRepShareDownloadAllowed OR IsScreenRecorderEnable<>@IsScreenRecorderEnable
+				 OR IsShowPartyOnAppDashboard<>@IsShowPartyOnAppDashboard OR IsShowAttendanceOnAppDashboard<>@IsShowAttendanceOnAppDashboard OR IsShowTotalVisitsOnAppDashboard<>@IsShowTotalVisitsOnAppDashboard OR 
+				IsShowVisitDurationOnAppDashboard<>@IsShowVisitDurationOnAppDashboard OR IsShowDayStart<>@IsShowDayStart OR IsshowDayStartSelfie<>@IsshowDayStartSelfie
+				 OR IsShowDayEnd<>@IsShowDayEnd OR IsshowDayEndSelfie<>@IsshowDayEndSelfie OR IsShowLeaveInAttendance<>@IsShowLeaveInAttendance OR IsLeaveGPSTrack<>@IsLeaveGPSTrack OR 
+				IsShowActivitiesInTeam<>@IsShowActivitiesInTeam OR IsShowMarkDistVisitOnDshbrd<>@IsShowMarkDistVisitOnDshbrd
+				 OR RevisitRemarksMandatory<>@IsRevisitRemarksMandatory OR GPSAlert<>@GPSAlert OR GPSAlertwithSound<>@GPSAlertwithSound
+				 OR FaceRegistrationFrontCamera<>@FaceRegistrationFrontCamera OR MRPInOrder<>@MRPInOrder
+				 OR IsHierarchyforHorizontalPerformanceReport<>@isHorizontalPerformReportShow
+				 OR FaceRegTypeID<>@FaceRegTypeID
+				 OR Showdistributorwisepartyorderreport<>@DistributerwisePartyOrderReport
+				 OR ShowAttednaceClearmenu<>@ShowAttednaceClearmenu
+				 OR AllowProfileUpdate<>@ShowAllowProfileUpdate
+				 OR AutoDDSelect<>@ShowAutoDDSelect
+				 OR BatterySetting<>@ShowBatterySetting
+				 OR CommonAINotification<>@ShowCommonAINotification
+				 OR Custom_Configuration<>@ShowCustom_Configuration
+				 OR GPSAlertwithVibration<>@ShowGPSAlertwithVibration
+				 OR HierarchywiseLoginInPortal<>@ShowHierarchywiseLoginInPortal
+				 OR IgnoreNumberCheckwhileShopCreation<>@ShowIgnoreNumberCheckwhileShopCreation
+				 OR InAppUpdateApplicable<>@ShowInAppUpdateApplicable
+				 OR isAadharRegistered<>@ShowisAadharRegistered
+				 OR IsActivateNewOrderScreenwithSize<>@ShowIsActivateNewOrderScreenwithSize
+				 OR IsAllowBreakageTracking<>@ShowIsAllowBreakageTracking
+				 OR IsAllowBreakageTrackingunderTeam<>@ShowIsAllowBreakageTrackingunderTeam
+				 OR IsAllowClickForPhotoRegister<>@ShowIsAllowClickForPhotoRegister
+				 OR IsAllowClickForVisit<>@ShowIsAllowClickForVisit
+				 OR IsAllowClickForVisitForSpecificUser<>@ShowIsAllowClickForVisitForSpecificUser
+				 OR IsAllowShopStatusUpdate<>@ShowIsAllowShopStatusUpdate
+				 OR IsAlternateNoForCustomer<>@ShowIsAlternateNoForCustomer
+				 OR IsAttendVisitShowInDashboard<>@ShowIsAttendVisitShowInDashboard
+				 OR IsAutoLeadActivityDateTime<>@ShowIsAutoLeadActivityDateTime
+				 OR IsBeatRouteReportAvailableinTeam<>@ShowIsBeatRouteReportAvailableinTeam
+				 OR IsCollectionOrderWise<>@ShowIsCollectionOrderWise
+				 OR IsFaceRecognitionOnEyeblink<>@ShowIsFaceRecognitionOnEyeblink
+				 OR isFaceRegistered<>@ShowisFaceRegistered
+				 OR IsFeedbackAvailableInShop<>@ShowIsFeedbackAvailableInShop
+				 OR IsFeedbackHistoryActivated<>@ShowIsFeedbackHistoryActivated
+				 OR IsFromPortal<>@ShowIsFromPortal
+				 OR IsIMEICheck<>@ShowIsIMEICheck
+				 OR IslandlineforCustomer<>@ShowIslandlineforCustomer
+				 OR IsNewQuotationfeatureOn<>@ShowIsNewQuotationfeatureOn
+				 OR IsNewQuotationNumberManual<>@ShowIsNewQuotationNumberManual
+				 OR IsPendingCollectionRequiredUnderTeam<>@ShowIsPendingCollectionRequiredUnderTeam
+				 OR IsprojectforCustomer<>@ShowIsprojectforCustomer
+				 OR IsRateEnabledforNewOrderScreenwithSize<>@ShowIsRateEnabledforNewOrderScreenwithSize
+				 OR IsRestrictNearbyGeofence<>@ShowIsRestrictNearbyGeofence
+				 OR IsReturnEnableforParty<>@ShowIsReturnEnableforParty
+				 OR IsShowHomeLocationMap<>@ShowIsShowHomeLocationMap
+				 OR IsShowManualPhotoRegnInApp<>@ShowIsShowManualPhotoRegnInApp
+				 OR IsShowMyDetails<>@ShowIsShowMyDetails
+				 OR IsShowNearByTeam<>@ShowIsShowNearByTeam
+				 OR IsShowRepeatOrderinNotification<>@ShowIsShowRepeatOrderinNotification
+				 OR IsShowRepeatOrdersNotificationinTeam<>@ShowIsShowRepeatOrdersNotificationinTeam
+				 OR IsShowRevisitRemarksPopup<>@ShowIsShowRevisitRemarksPopup
+				 OR IsShowTypeInRegistration<>@ShowIsShowTypeInRegistration
+				 OR IsTeamAttendance<>@ShowIsTeamAttendance
+				 OR IsTeamAttenWithoutPhoto<>@ShowIsTeamAttenWithoutPhoto
+				 OR IsWhatsappNoForCustomer<>@ShowIsWhatsappNoForCustomer
+				 OR Leaveapprovalfromsupervisorinteam<>@ShowLeaveapprovalfromsupervisorinteam
+				 OR LogoutWithLogFile<>@ShowLogoutWithLogFile
+				 OR MarkAttendNotification<>@ShowMarkAttendNotification
+				 OR PartyUpdateAddrMandatory<>@ShowPartyUpdateAddrMandatory
+				 OR PowerSaverSetting<>@ShowPowerSaverSetting
+				 OR ShopScreenAftVisitRevisit<>@ShowShopScreenAftVisitRevisit
+				 OR Show_App_Logout_Notification<>@Show_App_Logout_Notification
+				 OR ShowAmountNewQuotation<>@ShowAmountNewQuotation
+				 OR ShowAutoRevisitInAppMenu<>@ShowAutoRevisitInAppMenu
+				 OR ShowAutoRevisitInDashboard<>@ShowAutoRevisitInDashboard
+				 OR ShowCollectionAlert<>@ShowCollectionAlert
+				 OR ShowCollectionOnlywithInvoiceDetails<>@ShowCollectionOnlywithInvoiceDetails
+				 OR ShowPurposeInShopVisit<>@ShowPurposeInShopVisit
+				 OR ShowQuantityNewQuotation<>@ShowQuantityNewQuotation
+				 OR ShowTotalVisitAppMenu<>@ShowTotalVisitAppMenu
+				 OR ShowUserwiseLeadMenu<>@ShowUserwiseLeadMenu
+				 OR ShowZeroCollectioninAlert<>@ShowZeroCollectioninAlert
+				 OR UpdateOtherID<>@ShowUpdateOtherID
+				 OR UpdateUserID<>@ShowUpdateUserID
+				 OR UpdateUserName<>@ShowUpdateUserName
+				 OR WillRoomDBShareinLogin<>@ShowWillRoomDBShareinLogin)
+				)
+			BEGIN
+				SET @DOC_ID = 1
+			END
+			-- End of Rev 26.0
+
 			Update tbl_master_user SET user_name=@txtusername,user_branchId=@b_id,user_group=@usergroup,user_loginId=@txtuserid,user_inactive=@isactive,user_maclock=@isactivemac,user_contactid=@contact,
 			LastModifyDate=@CreateDate,LastModifyUser=@CreateUser,user_superuser =@superuser,user_EntryProfile=@ddDataEntry,user_AllowAccessIP=@IPAddress,Gps_Accuracy=@txtgps,HierarchywiseTargetSettings=@istargetsettings,
 			willLeaveApprovalEnable=@isLeaveApprovalEnable,IsAutoRevisitEnable=@IsAutoRevisitEnable,IsShowPlanDetails=@IsShowPlanDetails,IsMoreDetailsMandatory=@IsMoreDetailsMandatory,
@@ -967,6 +1155,13 @@ BEGIN
 			-- End of Rev 23.0
 			 Where  user_id =@user_id
 
+			-- Rev 26.0
+			IF @DOC_ID=1
+			BEGIN
+				EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='TBL_MASTER_USER', @UserId=@CreateUser, @Action='U',@DOC_ID=@user_id 
+			END
+			-- End of Rev 26.0
+
 			--Rev 1.0 Start
 			--Rev 24.0
 			--IF ISNULL(@isactive,'N')='Y'
@@ -979,10 +1174,28 @@ BEGIN
 
 			if exists (Select * from #Shoptype_List)
 			BEGIN
+				-- Rev 26.0
+				SET @DOC_ID = (SELECT TOP 1 ID FROM FTS_UserPartyCreateAccess WHERE User_Id=@user_id )
+				IF @DOC_ID>0
+				BEGIN
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_UserPartyCreateAccess', @UserId=@CreateUser, @Action='D',@DOC_ID=@DOC_ID 
+				END
+				-- End of Rev 26.0
+
 				DELETE FROM FTS_UserPartyCreateAccess WHERE User_Id=@user_id
 
 				INSERT INTO FTS_UserPartyCreateAccess
 				SELECT @user_id,TypeId FROM #Shoptype_List
+
+				-- Rev 26.0
+				IF @DOC_ID>0
+				BEGIN
+					set @DOC_ID=SCOPE_IDENTITY();
+
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_UserPartyCreateAccess', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+				END
+				-- End of Rev 26.0
+
 			END
 			--Rev 19.0
 			set @user_contactId=(select tmu.user_contactId from tbl_master_user as tmu where tmu.user_id=@user_id)
@@ -994,14 +1207,37 @@ BEGIN
 				BEGIN
 					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
 					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+
+					-- Rev 26.0
+					set @DOC_ID=SCOPE_IDENTITY();
+
+					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+					-- End of Rev 26.0
 				END
 				ELSE
 				BEGIN
+					-- Rev 26.0
+					set @DOC_ID= (select TOP 1 EP_MAPID from Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId AND EP_CH_ID<>@ChannelId )
+					IF(@DOC_ID>0)
+					BEGIN
+						EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='D',@DOC_ID=@DOC_ID
+					END
+					-- End of Rev 26.0
 
 					DELETE FROM Employee_ChannelMap WHERE EP_EMP_CONTACTID=@user_contactId
 
 					INSERT INTO Employee_ChannelMap (EP_CH_ID,EP_EMP_CONTACTID,CreateDate,CreateUser)
 					values(@ChannelId,@user_contactId,GETDATE(),@CreateUser)
+
+					-- Rev 26.0
+					IF(@DOC_ID>0)
+					BEGIN
+						set @DOC_ID=SCOPE_IDENTITY();
+
+						EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='Employee_ChannelMap', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
+					END
+					-- End of Rev 26.0
+
 				END
 			end
 			--End of Rev 19.0
