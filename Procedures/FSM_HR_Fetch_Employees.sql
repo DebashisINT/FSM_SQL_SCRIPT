@@ -23,6 +23,9 @@ ALTER PROCEDURE [dbo].[FSM_HR_Fetch_Employees]
 @DevXFilterOn Char(1),--'Y','N'
 @DevXFilterString Varchar(4000)
 ,@User_id int=null
+-- Rev 6.0
+,@Employees nvarchar(max)=''
+-- End of Rev 6.0
 -- exec HR_Fetch_Employees '6/1/2012 12:00:00 AM','10/26/2012 12:00:00 AM','10','1','','','','S','N','',11706
 AS
 /***************************************************************************************************************************************
@@ -36,6 +39,7 @@ AS
 	5.0		17-10-2022		Sanchita	Employee Master getting hanged in ITC Live. Solution given :
 										1) WITH (NOLOCK) added after each table
 										2) Table_Master_Contact table has been replaced with #TEMPCONTACT
+	6.0		15-02-2023		Sanchita	A setting required for Employee and User Master module in FSM Portal. Refer: 25668
 ***************************************************************************************************************************************/
 BEGIN
   Declare @DSql nVarchar(Max),@DSql1 nVarchar(Max), @DSql_SearchBy nVarchar(2000)
@@ -94,22 +98,37 @@ BEGIN
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 
-	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@User_id)=1)
-		BEGIN
-			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
-			INSERT INTO #TEMPCONTACT
-			SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
-			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
-		END
-	ELSE
-		BEGIN
-			--Rev 4.0 && WITH (NOLOCK) has been added in all tables
-			INSERT INTO #TEMPCONTACT
-			SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
-			WHERE cnt_contactType IN('EM')
-		END
+	-- Rev 6.0
+	--IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@User_id)=1)
+	--	BEGIN
+	--		--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--		INSERT INTO #TEMPCONTACT
+	--		SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+	--		INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
+	--	END
+	--ELSE
+	--	BEGIN
+	--		--Rev 4.0 && WITH (NOLOCK) has been added in all tables
+	--		INSERT INTO #TEMPCONTACT
+	--		SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+	--		WHERE cnt_contactType IN('EM')
+	--	END
 
-		-- End of Rev 5.0
+	Set @DSql = ''
+	SET @DSql = 'INSERT INTO #TEMPCONTACT '
+	SET @DSql += 'SELECT cnt_id, cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK) '
+	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@User_id)=1)
+	begin
+		SET @DSql += 'INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
+	end
+	SET @DSql += 'WHERE cnt_contactType IN(''EM'') '
+	IF (@Employees <>'')
+	BEGIN
+		SET @Employees = '''' + replace(@Employees,',',''',''')  + ''''
+		SET @DSql += 'AND cnt_internalId in ('+@Employees+')'
+	END
+	Exec sp_executesql @Dsql
+	-- End of Rev 6.0
 
   --This Query Will Be Inserted in Main Queries Where There is Any Filtering Option Like EN--Employee Name or EC--Employee Code
   Set @DSql_SearchBy=''
