@@ -276,7 +276,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@ShowUpdateUserName INT=0
 ,@ShowWillRoomDBShareinLogin INT=0
 -- End of Rev 23.0
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
 1.0					20-05-2020		Tanmoy		inactive user IMEI and password update
@@ -685,7 +685,16 @@ BEGIN
 						OfflineShopAccuracy='150',
 						ShowTotalVisitAppMenu='1',
 						IsAllowShopStatusUpdate='1',
-						IsShowHomeLocationMap='0'
+						IsShowHomeLocationMap='0',
+						-- Rev Sanchita
+						CommonAINotification='1',
+						GPSNetworkIntervalMins='0',
+						locationTrackInterval='60',
+						WillRoomDBShareinLogin='1',
+						IsShowTypeInRegistrationForSpecificUser='1',
+						IsFeedbackAvailableInShop='0',
+						IsHierarchyforHorizontalPerformanceReport='0'
+						-- End of Rev Sanchita
 					where user_id=@user_id
 				end
 				else
@@ -749,7 +758,14 @@ BEGIN
 						OfflineShopAccuracy='150',
 						ShowTotalVisitAppMenu='0',
 						IsAllowShopStatusUpdate='0',
-						IsShowHomeLocationMap='0'
+						IsShowHomeLocationMap='0',
+						-- Rev Sanchita
+						locationTrackInterval='60',
+						IsShowTypeInRegistrationForSpecificUser='1',
+						CommonAINotification='0',
+						IsFeedbackAvailableInShop='0',
+						IsHierarchyforHorizontalPerformanceReport='0'
+						-- End of Rev Sanchita
 					where user_id=@user_id
 				end
 
@@ -1188,12 +1204,12 @@ BEGIN
 				SELECT @user_id,TypeId FROM #Shoptype_List
 
 				-- Rev 26.0
-				IF @DOC_ID>0
-				BEGIN
+				--IF @DOC_ID>0
+				--BEGIN
 					set @DOC_ID=SCOPE_IDENTITY();
 
 					EXEC PRC_FTSTblMasterUser_Audit @TABLE_NAME='FTS_UserPartyCreateAccess', @UserId=@CreateUser, @Action='I',@DOC_ID=@DOC_ID
-				END
+				--END
 				-- End of Rev 26.0
 
 			END

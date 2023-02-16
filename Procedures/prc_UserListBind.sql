@@ -15,7 +15,7 @@ ALTER PROCEDURE [dbo].[prc_UserListBind]
  @SHOP_CODE NVARCHAR(100)=NULL,
  @Header_id BIGINT=NULL
  -- Rev 9.0
-,@Employees nvarchar(max)=''
+,@Users nvarchar(max)=''
 -- End of Rev 9.0
  AS
  /***************************************************************************************************************************************
@@ -124,15 +124,12 @@ Begin
 			SET @DSql += '	FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup,#EMPHR_EDIT '
 			SET @DSql += '	where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId and EMPCODE=cnt_internalId '
 			SET @DSql += '	and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit('','','''+@BRANCHID+''')) '
-			IF (@Employees <>'')
+			IF (@Users <>'')
 				BEGIN
-					SET @Employees = '''' + replace(@Employees,',',''',''')  + ''''
-					SET @DSql += 'AND cnt_internalId in ('+@Employees+')'
+					SET @Users = '''' + replace(@Users,',',''',''')  + ''''
+					SET @DSql += 'AND user_id in ('+@Users+')'
 				END
 			SET @DSql += ') A '
-		
-		insert into test values(@Dsql)
-
 			Exec sp_executesql @Dsql
 			-- End of Rev 9.0
 
@@ -171,15 +168,12 @@ Begin
 			SET @DSql += '	FROM [tbl_master_user],tbl_master_employee,tbl_master_contact,tbl_master_usergroup '
 			SET @DSql += '	where emp_ContactId=user_contactId  and cnt_InternalId=user_contactId '
 			SET @DSql += '	and user_group=grp_id  and user_branchId in (SELECT s FROM dbo.GetSplit('','','''+@BRANCHID+''')) '
-			IF (@Employees <>'')
+			IF (@Users <>'')
 				BEGIN
-					SET @Employees = '''' + replace(@Employees,',',''',''')  + ''''
-					SET @DSql += 'AND cnt_internalId in ('+@Employees+')'
+					SET @Users = '''' + replace(@Users,',',''',''')  + ''''
+					SET @DSql += 'AND user_id in ('+@Users+')'
 				END
 			SET @DSql += ') A '
-
-			insert into test values(@Dsql)
-
 			Exec sp_executesql @Dsql
 			-- End of Rev 9.0
 		END
