@@ -59,6 +59,7 @@ Module	   : Employee Performance Details
 24.0	v2.0.29		Debashis	22/04/2022		Shop type will show the exact name from Tbl_Master_Shop table while generating performance summary report.Refer: 0024833
 25.0	v2.0.38		Debashis	27/12/2022		Beat Column required in Performance Summary report.Refer: 0025524
 26.0	v2.0.38		Debashis	20/01/2023		Revisit Contact information is required in the Performance Summary report.Refer: 0025586
+27.0	v2.0.38		Debashis	17/02/2023		Optimization of Performance Summary Report.Refer: 0025681
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -130,11 +131,21 @@ BEGIN
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	INSERT INTO #TEMPCONTACT
-	--Rev 14.0
-	--SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-	SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-	--End of Rev 14.0
+	--Rev 27.0
+	--INSERT INTO #TEMPCONTACT
+	----Rev 14.0
+	----SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	--SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+	----End of Rev 14.0
+	SET @sqlStrTable=''
+	SET @sqlStrTable='INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType) '
+	SET @sqlStrTable+='SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN(''EM'') '
+	IF @EMPID<>''
+		SET @sqlStrTable+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=TBL_MASTER_CONTACT.cnt_internalId) '
+	
+	--SELECT @sqlStrTable
+	EXEC SP_EXECUTESQL @sqlStrTable
+	--End of Rev 27.0
 
 	--Rev 17.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
@@ -301,6 +312,9 @@ BEGIN
 
 	CREATE TABLE #TMPATTENLOGINLOGOUT(ID BIGINT,USER_ID BIGINT,Login_datetime DATETIME,Logout_datetime DATETIME,Work_Desc VARCHAR(MAX),Work_datetime DATETIME,Isonleave VARCHAR(50),WrkActvtyDescription VARCHAR(MAX))
 	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINLOGOUT(ID,USER_ID,Login_datetime,Logout_datetime,Isonleave)
+	--Rev 27.0
+	CREATE NONCLUSTERED INDEX IX2 ON #TMPATTENLOGINLOGOUT(USER_ID)
+	--End of Rev 27.0
 
 	SET @Strsql=''
 	SET @Strsql='INSERT INTO #TMPATTENLOGINLOGOUT(ID,USER_ID,Login_datetime,Logout_datetime,Work_Desc,Work_datetime,Isonleave,WrkActvtyDescription) '
@@ -362,7 +376,10 @@ BEGIN
 			  --Rev 10.0
 			  ENTITYCODE NVARCHAR(600) NULL,
 			  --End of Rev 10.0
-			  SHOPADDR_CONTACT NVARCHAR(300) NULL,
+			  --Rev 27.0
+			  --SHOPADDR_CONTACT NVARCHAR(300) NULL,
+			  SHOPADDR_CONTACT NVARCHAR(1000) NULL,
+			  --End of Rev 27.0
 			  --Rev 18.0
 			  SHOP_DISTRICT NVARCHAR(50) NULL,
 			  SHOP_PINCODE NVARCHAR(120) NULL,
@@ -580,14 +597,24 @@ BEGIN
 	--SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact FROM tbl_Master_shop A '
 	--SET @Strsql+=') SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
 	--End of Rev 1.0
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+	--Rev 27.0
+	--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+	--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+	SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+	SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+	IF @STATEID<>''
+		SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+	--End of Rev 27.0
 	SET @Strsql+='INNER JOIN ( '
 	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 	--Rev 6.0
 	--SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	--End of Rev 6.0
+	--Rev 27.0
+	IF @DESIGNID<>''
+		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DESG.deg_id) '
+	--End of Rev 27.0
 	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
 	SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
@@ -824,157 +851,176 @@ BEGIN
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),COLLEC.collection_date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='GROUP BY COLLEC.user_id,COLLEC.shop_id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),COLLEC.collection_date,105)) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId AND ATTEN.Login_datetime=COLLEC.collection_date AND COLLEC.shop_id=SHOP.SHOP_CODE '
 	--Rev 3.0
-	SET @Strsql+='UNION ALL '
-	--Rev 13.0
-	--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,'
-	SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
-	SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,'
-	--End of Rev 13.0
-	--Rev 14.0
-	--SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,'
-	SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,'''' AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
-	SET @Strsql+='USR.user_loginId AS CONTACTNO,'
-	--End of Rev 14.0
-	--Rev 12.0
-	--SET @Strsql+='RPTTO.REPORTTO,RPTTO.RPTTODESG,LOGIN_DATETIME,REPLACE(REPLACE(LOGGEDIN,''AM'','' AM''),''PM'','' PM'') AS LOGGEDIN,REPLACE(REPLACE(LOGEDOUT,''AM'','' AM''),''PM'','' PM'') AS LOGEDOUT,'
-	SET @Strsql+='RPTTO.REPORTTO,RPTTO.RPTTODESG,LOGIN_DATETIME,ATTEN.LOGGEDIN AS LOGGEDIN,ATTEN.LOGEDOUT AS LOGEDOUT,'
-	--End of Rev 12.0
-	SET @Strsql+='ADDR.add_address1+'' ''+ISNULL(ADDR.add_address2,'''')+'' ''+ISNULL(ADDR.add_address3,'''') AS OFFICE_ADDRESS,EMP.emp_uniqueCode AS EMPID,ATTEN_STATUS,'
-	--Rev 15.0
-	--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS ATTEN '
-	--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=ATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
-	--SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=ATTEN.Leave_Type '
-	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' '
-	--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	--Rev 23.0
-	--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
-	--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
-	--SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=UATTEN.Leave_Type '
-	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
-	--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(UATTEN.WrkActvtyDescription)) From #TMPATTENLOGINLOGOUT AS UATTEN '
-	SET @Strsql+='WHERE UATTEN.USER_ID=USR.USER_ID AND UATTEN.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
-	--End of Rev 23.0
-	--End of Rev 15.0
-	--Rev 5.0
-	SET @Strsql+=''''' AS REMARKS,'
-	--End of Rev 5.0
-	--Rev 10.0
-	--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,'
-	--Rev 13.0
-	--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
-	--SET @Strsql+='0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,'
-	--Rev 18.0
-	--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
-	--Rev 19.0
-	--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'''' AS PP_NAME,'
-	--SET @Strsql+=''''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
-	--Rev 25.0
-	--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'''' AS ALT_MOBILENO1,'
-	SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS BEATNAME,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'
-	SET @Strsql+=''''' AS ALT_MOBILENO1,'
-	--End of Rev 25.0
-	SET @Strsql+=''''' AS Shop_Owner_Email2,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
-	--End of Rev 19.0
-	--End of Rev 18.0
-	--Rev 26.0
-	--SET @Strsql+=''''' AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,'
-	SET @Strsql+=''''' AS MULTI_CONTACT_NAME,'''' AS MULTI_CONTACT_NUMBER,'''' AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,'
-	--End of Rev 26.0
-	--End of Rev 13.0
-	--End of Rev 10.0
-	--Rev 4.0
-	--SET @Strsql+='0.00 AS Total_Order_Booked_Value,0.00 AS Total_Collection '
-	--Rev 16.0 && A new field added as SPENT_DURATION
-	SET @Strsql+='NULL AS SPENT_DURATION,0.00 AS DISTANCE_TRAVELLED,0.00 AS Total_Order_Booked_Value,0.00 AS Total_Collection '
-	--End of Rev 4.0
-	SET @Strsql+='FROM tbl_master_employee EMP '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-	--Rev 14.0
-	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
-	--End of Rev 14.0
-	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
-	SET @Strsql+='INNER JOIN ( '
-	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-	--Rev 6.0
-	--SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
-	--End of Rev 6.0
-	SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
-	SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
-	SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
-	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
-	SET @Strsql+='INNER JOIN ( '
-	SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
-	--Rev 6.0
-	--SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
-	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
-	--End of Rev 6.0
-	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
-	--Rev 23.0
-	--SET @Strsql+='INNER JOIN ( '
-	--SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
-	----Rev 12.0
-	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	----End of Rev 12.0
-	--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
-	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-	--SET @Strsql+='UNION ALL '
-	----Rev 12.0
-	----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
-	----End of Rev 12.0
-	--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
-	--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-	--SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
-	--SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
-	SET @Strsql+='INNER JOIN ('
-	SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM('
-	SET @Strsql+='SELECT USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM #TMPLEAVELOGINOUT '
-	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS '
-	SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
-	--End of Rev 23.0
-	--End of Rev 3.0
+	--Rev 27.0
+	IF (SELECT COUNT(0) FROM #TMPLEAVELOGINOUT)>0
+		BEGIN
+	--End of Rev 27.0
+			SET @Strsql+='UNION ALL '
+			--Rev 13.0
+			--SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,'
+			SET @Strsql+='SELECT CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
+			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,'
+			--End of Rev 13.0
+			--Rev 14.0
+			--SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,'
+			SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,'''' AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
+			SET @Strsql+='USR.user_loginId AS CONTACTNO,'
+			--End of Rev 14.0
+			--Rev 12.0
+			--SET @Strsql+='RPTTO.REPORTTO,RPTTO.RPTTODESG,LOGIN_DATETIME,REPLACE(REPLACE(LOGGEDIN,''AM'','' AM''),''PM'','' PM'') AS LOGGEDIN,REPLACE(REPLACE(LOGEDOUT,''AM'','' AM''),''PM'','' PM'') AS LOGEDOUT,'
+			SET @Strsql+='RPTTO.REPORTTO,RPTTO.RPTTODESG,LOGIN_DATETIME,ATTEN.LOGGEDIN AS LOGGEDIN,ATTEN.LOGEDOUT AS LOGEDOUT,'
+			--End of Rev 12.0
+			SET @Strsql+='ADDR.add_address1+'' ''+ISNULL(ADDR.add_address2,'''')+'' ''+ISNULL(ADDR.add_address3,'''') AS OFFICE_ADDRESS,EMP.emp_uniqueCode AS EMPID,ATTEN_STATUS,'
+			--Rev 15.0
+			--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS ATTEN '
+			--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=ATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+			--SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=ATTEN.Leave_Type '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' '
+			--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+			--Rev 23.0
+			--SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(LTYP.LeaveType)) From tbl_fts_UserAttendanceLoginlogout AS UATTEN '
+			--SET @Strsql+='INNER JOIN tbl_master_user MUSR ON MUSR.USER_ID=UATTEN.USER_ID AND MUSR.user_inactive=''N'' AND MUSR.USER_ID=USR.USER_ID '
+			--SET @Strsql+='INNER JOIN tbl_FTS_Leavetype LTYP ON LTYP.Leave_Id=UATTEN.Leave_Type '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),UATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) '
+			--SET @Strsql+='GROUP BY LTYP.LeaveType FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+			SET @Strsql+='(SELECT DISTINCT ISNULL(STUFF((SELECT '','' + LTRIM(RTRIM(UATTEN.WrkActvtyDescription)) From #TMPATTENLOGINLOGOUT AS UATTEN '
+			SET @Strsql+='WHERE UATTEN.USER_ID=USR.USER_ID AND UATTEN.USER_ID=ATTEN.USERID AND ATTEN.Login_datetime=CONVERT(NVARCHAR(10),UATTEN.Work_datetime,105) FOR XML PATH('''')), 1, 1, ''''),'''')) AS WORK_LEAVE_TYPE,'
+			--End of Rev 23.0
+			--End of Rev 15.0
+			--Rev 5.0
+			SET @Strsql+=''''' AS REMARKS,'
+			--End of Rev 5.0
+			--Rev 10.0
+			--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,'
+			--Rev 13.0
+			--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
+			--SET @Strsql+='0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,'
+			--Rev 18.0
+			--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
+			--Rev 19.0
+			--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'''' AS PP_NAME,'
+			--SET @Strsql+=''''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
+			--Rev 25.0
+			--SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'''' AS ALT_MOBILENO1,'
+			SET @Strsql+=''''' AS SHOP_TYPE,'''' AS Shop_Code,'''' AS Shop_Name,'''' AS BEATNAME,'''' AS EntityCode,'''' AS SHOPADDR_CONTACT,'''' AS SHOP_DISTRICT,'''' AS SHOP_PINCODE,'''' AS SHOP_CLUSTER,'
+			SET @Strsql+=''''' AS ALT_MOBILENO1,'
+			--End of Rev 25.0
+			SET @Strsql+=''''' AS Shop_Owner_Email2,'''' AS PP_NAME,'''' AS PPADDR_CONTACT,'''' AS DD_NAME,'''' AS DDADDR_CONTACT,'
+			--End of Rev 19.0
+			--End of Rev 18.0
+			--Rev 26.0
+			--SET @Strsql+=''''' AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,'
+			SET @Strsql+=''''' AS MULTI_CONTACT_NAME,'''' AS MULTI_CONTACT_NUMBER,'''' AS VISITREMARKS,'''' AS MEETINGREMARKS,'''' AS MEETING_ADDRESS,0 AS TOTAL_VISIT,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,0 AS TOTMETTING,'
+			--End of Rev 26.0
+			--End of Rev 13.0
+			--End of Rev 10.0
+			--Rev 4.0
+			--SET @Strsql+='0.00 AS Total_Order_Booked_Value,0.00 AS Total_Collection '
+			--Rev 16.0 && A new field added as SPENT_DURATION
+			SET @Strsql+='NULL AS SPENT_DURATION,0.00 AS DISTANCE_TRAVELLED,0.00 AS Total_Order_Booked_Value,0.00 AS Total_Collection '
+			--End of Rev 4.0
+			SET @Strsql+='FROM tbl_master_employee EMP '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			--Rev 14.0
+			SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
+			--End of Rev 14.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
+			--Rev 27.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			--SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
+			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
+			IF @STATEID<>''
+				SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+			--End of Rev 27.0
+			SET @Strsql+='INNER JOIN ( '
+			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
+			--Rev 6.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			--End of Rev 6.0
+			--Rev 27.0
+			IF @DESIGNID<>''
+				SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DESG.deg_id) '
+			--End of Rev 27.0
+			SET @Strsql+='LEFT OUTER JOIN (SELECT EMPCTC.emp_cntId,EMPCTC.emp_reportTo,CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS REPORTTO,'
+			SET @Strsql+='DESG.deg_designation AS RPTTODESG FROM tbl_master_employee EMP '
+			SET @Strsql+='INNER JOIN tbl_trans_employeeCTC EMPCTC ON EMP.emp_id=EMPCTC.emp_reportTo '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
+			SET @Strsql+='INNER JOIN ( '
+			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
+			--Rev 6.0
+			--SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
+			--End of Rev 6.0
+			SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL ) RPTTO ON RPTTO.emp_cntId=CNT.cnt_internalId '
+			--Rev 23.0
+			--SET @Strsql+='INNER JOIN ( '
+			--SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM( '
+			----Rev 12.0
+			----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(15),CAST(ATTEN.Login_datetime as TIME),100)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+			--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+			----End of Rev 12.0
+			--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
+			--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+			--SET @Strsql+='UNION ALL '
+			----Rev 12.0
+			----SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(15),CAST(ATTEN.Logout_datetime as TIME),100)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+			--SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime,'
+			----End of Rev 12.0
+			--SET @Strsql+='''On Leave'' AS ATTEN_STATUS '
+			--SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
+			--SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''true'' GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
+			--SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS) ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+			SET @Strsql+='INNER JOIN ('
+			SET @Strsql+='SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM('
+			SET @Strsql+='SELECT USERID,LOGGEDIN,LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS FROM #TMPLEAVELOGINOUT '
+			SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime,ATTEN_STATUS '
+			SET @Strsql+=') ATTEN ON ATTEN.cnt_internalId=CNT.cnt_internalId AND ATTEN.USERID=USR.user_id '
+			--End of Rev 23.0
+			--End of Rev 3.0
+	--Rev 27.0
+		END
+	--End of Rev 27.0
 	SET @Strsql+=') AS DB '
-	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
-		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
-	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID=''
-		SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
-	ELSE IF @STATEID='' AND @DESIGNID='' AND @EMPID<>''
-		SET @Strsql+='WHERE EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
-	ELSE IF @STATEID<>'' AND @DESIGNID='' AND @EMPID<>''
-		BEGIN
-			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
-			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
-		END
-	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID<>''
-		BEGIN
-			SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
-			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
-		END
-	ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID=''
-		BEGIN
-			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
-			SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
-		END
-	ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID<>''
-		BEGIN
-			SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
-			SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
-			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
-		END
+	--Rev 27.0
+	--IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
+	--	SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	--ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID=''
+	--	SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+	--ELSE IF @STATEID='' AND @DESIGNID='' AND @EMPID<>''
+	--	SET @Strsql+='WHERE EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	--ELSE IF @STATEID<>'' AND @DESIGNID='' AND @EMPID<>''
+	--	BEGIN
+	--		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	--		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	--	END
+	--ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID<>''
+	--	BEGIN
+	--		SET @Strsql+='WHERE EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+	--		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	--	END
+	--ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID=''
+	--	BEGIN
+	--		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	--		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+	--	END
+	--ELSE IF @STATEID<>'' AND @DESIGNID<>'' AND @EMPID<>''
+	--	BEGIN
+	--		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=DB.STATEID) '
+	--		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DB.deg_id) '
+	--		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=DB.EMPCODE) '
+	--	END
+	--End of Rev 27.0
 	--SELECT @Strsql
 	EXEC SP_EXECUTESQL @Strsql
 
