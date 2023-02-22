@@ -6,10 +6,13 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_Empl
 
 
 ALTER PROCEDURE [dbo].[PRC_EmployeeUserImportFromExcel]
-
+(
+@CreateUser_Id BIGINT=0,
+@FileName VARCHAR(200)=NULL
+)
 AS
 /*****************************************************************************************************************
-Written by : Priti Roy ON 15/02/2023
+Written by : Priti Roy ON 20/02/2023
 Module	   : Employee  Master Refer: 0025676
 *******************************************************************************************************************/
 BEGIN
@@ -53,9 +56,81 @@ BEGIN
 	,@personalmobile,@Supervisor,@Group
 	while @@FETCH_STATUS=0
 	begin
-
-		
-		declare @sal_id int =(case @salutation when 'Mr' then 1 when 'Mr.' then 1 when 'Mrs' then 2 when 'Mrs.' then 2 when 'Ms' then 3 when 'Ms.' then 3 end)		
+		 Declare @loopNumber int=0
+		 set @loopNumber=1
+		if(Isnull(@emplcode,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Code can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@salutation,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Salutation can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@firstname,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee first name can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@gender,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed','','Employee Gender can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@doj,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Date Of Joining can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		else if(Isnull(@organisation,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Organization can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@jobres,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Job Responsibility can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@branch,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Branch can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@deg,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Designation can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@emp_type,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Type can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@department,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Department can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@personalmobile,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee mobile number can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@Supervisor,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee Report To can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else if(Isnull(@Group,''))=''
+		Begin
+				insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+				values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee group can not be blank',@CreateUser_Id,GETDATE(),0)
+		END
+		Else
+		Begin
+			declare @sal_id int =(case @salutation when 'Mr' then 1 when 'Mr.' then 1 when 'Mrs' then 2 when 'Mrs.' then 2 when 'Ms' then 3 when 'Ms.' then 3 end)		
 		declare @gen_id int =(case @gender when 'F' then 2 else 1 end)		
 		declare @mar_id int =0		
 		declare @internalId varchar(50)='', @BranchId int=0,@empid  bigint
@@ -337,11 +412,25 @@ BEGIN
 
 					insert into FTS_EMPSTATEMAPPING (USER_ID,STATE_ID,SYS_DATE_TIME ,AUTHOR ) values(@USERID,@StateId,SYSDATETIME(),'378')
 
+
+
+					insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+					values(@emplcode,@loopNumber,@empname,'Success',@FileName,'Employee Code Save Successfully',@CreateUser_Id,GETDATE(),0)
 					
 			end
 			
 		END
+
+		        ELSE
+				BEGIN
+					insert into EmployeeImportLog(EmployeeCode,LoopNumber,EmpName,Status,FileName,Description,CreatedBy,CreatedDatetime,ISShow)
+					values(@emplcode,@loopNumber,@empname,'Failed',@FileName,'Employee CODE can not be Same.',@CreateUser_Id,GETDATE(),0)
+				END
 		END
+
+			
+		End
+		
 
 	fetch next from db_cursor into @emplcode,@empname,@salutation,@firstname,@middle,@lastname,@gender,@doj,@organisation,@jobres,@branch,@deg,@emp_type,@department	
 	,@personalmobile,@Supervisor,@Group
@@ -352,7 +441,7 @@ BEGIN
 	--insert into tbl_trans_LastSegment(ls_cntId,ls_lastSegment,ls_lastCompany,ls_lastFinYear,ls_lastSettlementNo,ls_lastSettlementType,ls_lastdpcoid,ls_userid)
 	--select user_contactId,1,'COR0000002','2018-2019','2016001','F','1',user_id from tbl_master_user where user_id not in (select ls_userid from tbl_trans_LastSegment)
 
-
+	DELETE FROM TEMPEmployeeData
 	
 	
 END
