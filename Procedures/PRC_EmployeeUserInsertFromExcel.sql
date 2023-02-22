@@ -6,15 +6,17 @@ GO
 
 ALTER PROCEDURE [dbo].[PRC_EmployeeUserInsertFromExcel]
 (
-@ImportEmployee UDT_ImportUser READONLY,
+@ImportEmployee UDT_ImportEmployeeData READONLY,
 -- Rev 1.0	
+--@ImportEmployee UDT_ImportEmployee READONLY,
 --@ImportUser UDT_ImportUser READONLY,
+@FileName VARCHAR(200)=NULL,
 -- Rev 1.0 End
 @CreateUser_Id BIGINT
 )
 AS
 /*****************************************************************************************************************
-Rev 1.0		Priti	v2.0.39		15-02-2023	 	0025676: Employee Import Facility
+Rev 1.0		Priti	v2.0.39		20-02-2023	 	0025676: Employee Import Facility
 *******************************************************************************************************************/
 BEGIN
 
@@ -56,6 +58,6 @@ BEGIN
 
 	--EXEC PRC_EmployeeUserImport
 
-	EXEC PRC_EmployeeUserImportFromExcel
+	EXEC PRC_EmployeeUserImportFromExcel @CreateUser_Id ,@FileName
 	-- Rev 1.0 End
 END
