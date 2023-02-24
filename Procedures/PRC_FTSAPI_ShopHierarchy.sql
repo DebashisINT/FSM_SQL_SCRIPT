@@ -26,6 +26,15 @@ AS
 9.0		v2.0.30		Debashis	31-05-2022		Shop visited count will consider "tbl_trans_shopActivitysubmit" table to show the actual count while checking from team details.Refer: 0024918
 10.0	v2.0.33		Debashis	06-10-2022		Shop Duplicate in Case of Team Visit by Supervisor.Refer: 0025285
 11.0	v2.0.37		Debashis	17-01-2023		Some new fields added.Row: 798
+12.0	v2.0.39		Debashis	24-02-2023		Team shop data view for PP->DD->Shop.
+												For "View Party" in team details from App the flow of viewing PP->DD->Shop Hierarchy needs to consider as
+												Stages:
+												1) if shop_id is blank then all PP of a particular user comes
+												2) user selects PPfrom list & api hit with that PP id in "shop_id" parameter and returns DD list mapeed with that PP
+												3) as same user selects DD from list and api hit with that DD id in "shop_id" parameter and returns shop list mapeed with that DD
+
+												**type 2(PP) and type 4(Distributor).
+												** if no PP is there then DD list comes by default.Refer: 0025701
 ************************************************************************************************************************************************************************************************/ 
 BEGIN
 	 DECLARE @SHOP_TYPE NVARCHAR(10)
@@ -43,29 +52,23 @@ BEGIN
 		
 			IF EXISTS(SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type=2 AND Shop_CreateUser=@user_id  AND Area_id=ISNULL(@area_id,''))
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='2'
 				INSERT INTO #tMPFirst_Id VaLUeS(2)
-				--END OF REV DEBASHIS
 			END
 			ELSE IF EXISTS(SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(4,6) AND Shop_CreateUser=@user_id  AND Area_id=ISNULL(@area_id,''))
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='4,6'
 				INSERT INTO #tMPFirst_Id VaLUeS(4)
 				INSERT INTO #tMPFirst_Id VaLUeS(6)
-				--END OF REV DEBASHIS
 			END
 			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(1,3,5,7,8) AND Shop_CreateUser=@user_id AND Area_id=ISNULL(@area_id,''))
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='1,3,5,7,8'
 				INSERT INTO #tMPFirst_Id VaLUeS(1)
 				INSERT INTO #tMPFirst_Id VaLUeS(3)
 				INSERT INTO #tMPFirst_Id VaLUeS(5)
 				INSERT INTO #tMPFirst_Id VaLUeS(7)
 				INSERT INTO #tMPFirst_Id VaLUeS(8)
-				--END OF REV DEBASHIS
 			END
 			--Rev 8.0
 			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(17,18,19,20,21,22,23,24) AND Shop_CreateUser=@user_id)
@@ -82,10 +85,8 @@ BEGIN
 			--End of Rev 8.0
 			ELSE
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='0'
 				INSERT INTO #tMPFirst_Id VaLUeS(0)
-				--END OF REV DEBASHIS
 			END
 		
 		END
@@ -94,29 +95,23 @@ BEGIN
 
 			IF EXISTS(SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type=2 AND Shop_CreateUser=@user_id)
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='2'
 				INSERT INTO #tMPFirst_Id VaLUeS(2)
-				--END OF REV DEBASHIS
 			END
 			ELSE IF EXISTS(SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(4,6) AND Shop_CreateUser=@user_id)
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='4,6'
 				INSERT INTO #tMPFirst_Id VaLUeS(4)
 				INSERT INTO #tMPFirst_Id VaLUeS(6)
-				--END OF REV DEBASHIS
 			END
 			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(1,3,5,7,8) AND Shop_CreateUser=@user_id)
 			BEGIN
-				--REV DEBASHIS
 				--SET @First_Id='1,3,5,7,8'
 				INSERT INTO #tMPFirst_Id VaLUeS(1)
 				INSERT INTO #tMPFirst_Id VaLUeS(3)
 				INSERT INTO #tMPFirst_Id VaLUeS(5)
 				INSERT INTO #tMPFirst_Id VaLUeS(7)
 				INSERT INTO #tMPFirst_Id VaLUeS(8)
-				--END OF REV DEBASHIS
 			END
 			--Rev 8.0
 			ELSE IF EXISTS (SELECT TOP(1)1 FROM tbl_Master_shop  WHERE type IN(17,18,19,20,21,22,23,24) AND Shop_CreateUser=@user_id)
@@ -134,10 +129,8 @@ BEGIN
 			ELSE
 			BEGIN
 				--SET @First_Id='0'
-				--REV DEBASHIS
 				--SET @First_Id='0'
 				INSERT INTO #tMPFirst_Id VaLUeS(0)
-				--END OF REV DEBASHIS
 			END
 		END
 
@@ -165,27 +158,29 @@ BEGIN
 		SET @SQL+='ON SHOP.Shop_Code=SHOPACT.Shop_Id '
 		--End of Rev 9.0
 		--Rev 10.0
-		IF @SHOP_CODE=''
+		--Rev 12.0
+		--IF @SHOP_CODE=''
+		IF @SHOP_CODE='' AND @SHOP_TYPE NOT IN(2,4)
+		--End of Rev 12.0
 			SET @SQL+='AND SHOP.Shop_CreateUser=SHOPACT.User_Id '
 		--End of Rev 10.0
 		SET @SQL+=' WHERE SHOP.Entity_Status=1 '
 		--Rev 10.0
-		IF @SHOP_CODE<>''
+		--Rev 12.0
+		--IF @SHOP_CODE<>''
+		IF @SHOP_CODE<>'' AND @SHOP_TYPE NOT IN(2,4)
+		--End of Rev 12.0
 			SET @SQL+='AND SHOP.Shop_Code='''+@SHOP_CODE+''' '
 		--End of Rev 10.0
 		
 		IF ISNULL(@SHOP_TYPE,'')='' AND ISNULL(@SHOP_CODE,'')='' --AND ISNULL(@area_id,'')=''
 		BEGIN
-			--REV DEBASHIS
 			--SET @SQL+=' AND (SHOP.type IN ('+@First_Id+') AND SHOP.Shop_CreateUser='+STR(@user_id)+') '
 			SET @SQL+=' AND (SHOP.type IN (SELECT First_Id FROM #tMPFirst_Id) AND SHOP.Shop_CreateUser='+STR(@user_id)+') '
-			--END OF REV DEBASHIS
 			--Hard code added for rollick only
 
-			--REV DEBASHIS
 			--IF(@First_Id=2)
 			IF EXISTS (SELECT First_Id FROM #tMPFirst_Id WHERE First_Id=2)
-			--END OF REV DEBASHIS
 			BEGIN
 				SET @SQL+=' OR SHOP.Shop_Code=''378_1578494646142'' '
 			END
