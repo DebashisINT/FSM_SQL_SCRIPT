@@ -103,7 +103,7 @@ BEGIN
 			--SET @SQLEXC +=' AND stateid='''+@state_id+''' '
 			--Rev 7.0
 			--SET @SQLEXC +='AND Shop_CreateUser='''+@user_id+'''  '
-			SET @SQLEXC +='AND Shop_CreateUser='''+LTRIM(RTRIM(STR(@user_id)))+'''  '
+			SET @SQLEXC +='AND CONVERT(NVARCHAR(10),Shop_CreateUser)='''+LTRIM(RTRIM(STR(@user_id)))+'''  '
 			--End of Rev 7.0
 			SET @SQLEXC +=' order by Shop_Name  '
 
