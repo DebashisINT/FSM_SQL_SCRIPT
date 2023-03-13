@@ -30,6 +30,7 @@ AS
 8.0		v2.0.37		Debashis	10/01/2023		Some new fields have been added.Row: 786
 9.0		v2.0.37		Debashis	20/01/2023		The feedback provided from the app is not showing fully in the Performance Summary report.
 												Refer: 0025605
+10.0	v2.0.38		Debashis	13/03/2023		A new parameter has been added.Row: 814
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -253,14 +254,38 @@ BEGIN
 			INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 			ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
 			--End of Rev 5.0
-
-			select
-			XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
-			XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
-			XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
-			XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
-			XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
+			--Rev 10.0
+			--select
+			--XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	as shopid,
+			--XMLproduct.value('(total_visit_count/text())[1]','int')	as total_visit_count,
+			--XMLproduct.value('(visited_time/text())[1]','datetime')	as visited_time,
+			--XMLproduct.value('(visited_date/text())[1]','date')	as visited_date,
+			--XMLproduct.value('(spent_duration/text())[1]','varchar(50)') as spent_duration
+			--FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+			SELECT
+			XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	AS shopid,
+			XMLproduct.value('(spent_duration/text())[1]','varchar(50)') AS spent_duration,
+			XMLproduct.value('(visited_date/text())[1]','date')	AS visited_date,
+			XMLproduct.value('(visited_time/text())[1]','datetime')	AS visited_time,
+			XMLproduct.value('(total_visit_count/text())[1]','int')	AS total_visit_count,
+			XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
+			CAST(1 AS BIT) AS IsShopUpdate,'Success' AS STRMESSAGE			
 			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+			WHERE EXISTS(SELECT ActivityId FROM  tbl_trans_shopActivitysubmit WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') 
+			AND visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND User_Id=@user_id)
+			UNION ALL
+			SELECT
+			XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	AS shopid,
+			XMLproduct.value('(spent_duration/text())[1]','varchar(50)') AS spent_duration,
+			XMLproduct.value('(visited_date/text())[1]','date')	AS visited_date,
+			XMLproduct.value('(visited_time/text())[1]','datetime')	AS visited_time,
+			XMLproduct.value('(total_visit_count/text())[1]','int')	AS total_visit_count,
+			XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
+			CAST(0 AS BIT) AS IsShopUpdate,'Success' AS STRMESSAGE			
+			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+			WHERE NOT EXISTS(SELECT ActivityId FROM  tbl_trans_shopActivitysubmit WHERE shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') 
+			AND visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND User_Id=@user_id)
+			--End of Rev 10.0
 
 		COMMIT TRAN
 	END TRY
