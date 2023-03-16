@@ -13,6 +13,11 @@ Written by : Debashis Talukder on 26/12/2018
 Module	   : Big data handle
 1.0					Tanmoy		22-01-2020		add new column for tbl_trans_shopActivitysubmit_Archive
 2.0		v2.0.32		Debashis	22-09-2022		Added a new table.Row: 743
+3.0		v2.0.38		Debashis	16-03-2023		Big Data Transfer FSM_ITC Data moved to Archived table.
+												14 Executed as user: NT SERVICE\SQLSERVERAGENT. Violation of PRIMARY KEY constraint 'PK_VisitId'. 
+												Cannot insert duplicate key in object 'dbo.TBL_TRANS_SHOPUSER_ARCH'. 
+												The duplicate key value is (51944738). [SQLSTATE 23000] (Error 2627)  The statement has been terminated. 
+												[SQLSTATE 01000] (Error 3621).  The step failed.Now solved.
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -39,11 +44,17 @@ BEGIN
 		 CREATE NONCLUSTERED INDEX [IX_shopuserARCH] ON TBL_TRANS_SHOPUSER_ARCH([User_Id] ASC,[LoginLogout] ASC)INCLUDE ([SDate])
 		END
 
-	INSERT INTO TBL_TRANS_SHOPUSER_ARCH
-	--SELECT * FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) NOT BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND GETDATE()
+	--Rev 3.0
+	--INSERT INTO TBL_TRANS_SHOPUSER_ARCH
+	----SELECT * FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) NOT BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND GETDATE()
 
-	--DELETE FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) NOT BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND GETDATE()
-	SELECT * FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) < CONVERT(NVARCHAR(10),GETDATE(),120)
+	----DELETE FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) NOT BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND GETDATE()
+	--SELECT * FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) < CONVERT(NVARCHAR(10),GETDATE(),120)
+	INSERT INTO TBL_TRANS_SHOPUSER_ARCH(VisitId,User_Id,Shop_Id,Lat_visit,Long_visit,location_name,distance_covered,SDate,Stime,shops_covered,Createddate,LoginLogout,IsUsed,meeting_attended,
+	home_distance,network_status,battery_percentage,home_duration)
+	SELECT VisitId,User_Id,Shop_Id,Lat_visit,Long_visit,location_name,distance_covered,SDate,Stime,shops_covered,Createddate,LoginLogout,IsUsed,meeting_attended,
+	home_distance,network_status,battery_percentage,home_duration FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) < CONVERT(NVARCHAR(10),GETDATE(),120)
+	--End of Rev 3.0
 
 	DELETE FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) < CONVERT(NVARCHAR(10),GETDATE(),120)
 
