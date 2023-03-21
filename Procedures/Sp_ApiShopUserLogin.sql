@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopUserLogin]
 @version_name NVARCHAR(MAX)=NULL,
 @Weburl NVARCHAR(MAX)=NULL,
 @device_token NVARCHAR(300)=NULL
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************************************
 REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
@@ -32,6 +32,9 @@ REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
 8.0			02-08-2021						TANMOY				willAlarmTrigger set value user_inactive='N' checking Refer:24220
 9.0			14-02-2022		V 2.0.27		Debashis			Added two new fields as IsOnLeaveForToday & OnLeaveForTodayStatus.Row: 646
 10.0		14-10-2022		V2.0.35			Debashis			Code Optimized.
+11.0		21-03-2023		V2.0.39			Sanchita			Some alarms [for viewing the Performance Summary report] are ringing in the BreezeFSM apps 
+																if the designation is set as ASM, ZM,BM & SO - alarm made based on system settings
+																Refer: 25738
 ****************************************************************************************************************************************************************************************************/
 BEGIN
 	--BEGIN  TRAN
@@ -62,6 +65,12 @@ BEGIN
 	declare @Outtime NVARCHAR(50)=NULL
 
 	declare @versions int
+
+	-- Rev 11.0
+	DECLARE @IsDesignationwiseAlarmforApp NVARCHAR(10)
+	SELECT @IsDesignationwiseAlarmforApp=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDesignationwiseAlarmforApp'
+	-- End of Rev 11.0
+
 	--Rev Debashis
 	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
 	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
@@ -127,23 +136,29 @@ BEGIN
 				set @Idealtime=(select value from FTS_APP_CONFIG_SETTINGS where [Key]='idle_time')
 			END
 
+		-- Rev 11.0
+		IF(@IsDesignationwiseAlarmforApp = '1')
+		BEGIN
+		-- End of Rev 11.0
+			IF EXISTS(select  top 1 u.user_id  from tbl_trans_employeeCTC  as c WITH(NOLOCK) 
+			inner join tbl_master_employee e WITH(NOLOCK) on c.emp_reportTo=e.emp_id 
+			inner join tbl_master_user as u WITH(NOLOCK) on u.user_contactId=e.emp_contactId where u.user_id=@UserId)
+				BEGIN
+					SET @willAlarmTrigger='true'
+				END
 
-		IF EXISTS(select  top 1 u.user_id  from tbl_trans_employeeCTC  as c WITH(NOLOCK) 
-		inner join tbl_master_employee e WITH(NOLOCK) on c.emp_reportTo=e.emp_id 
-		inner join tbl_master_user as u WITH(NOLOCK) on u.user_contactId=e.emp_contactId where u.user_id=@UserId)
-			BEGIN
-				SET @willAlarmTrigger='true'
-			END
-
-		--Rev 8.0 Start
-		----REV 6.0  Start
-		--IF ((select ISNULL(IsShowPlanDetails,0) from tbl_master_user where user_contactId=(select top 1 user_contactId from tbl_master_user where user_id=@userid))=1 and @willAlarmTrigger='false')
-		IF ((select ISNULL(IsShowPlanDetails,0) from tbl_master_user WITH(NOLOCK) where user_contactId=(select top 1 user_contactId from tbl_master_user WITH(NOLOCK) where user_id=@userid) AND user_inactive='N')=1 and @willAlarmTrigger='false')
-		--Rev 8.0 End
-			BEGIN
-				SET @willAlarmTrigger='true'
-			END
-		--REV 6.0  End
+			--Rev 8.0 Start
+			----REV 6.0  Start
+			--IF ((select ISNULL(IsShowPlanDetails,0) from tbl_master_user where user_contactId=(select top 1 user_contactId from tbl_master_user where user_id=@userid))=1 and @willAlarmTrigger='false')
+			IF ((select ISNULL(IsShowPlanDetails,0) from tbl_master_user WITH(NOLOCK) where user_contactId=(select top 1 user_contactId from tbl_master_user WITH(NOLOCK) where user_id=@userid) AND user_inactive='N')=1 and @willAlarmTrigger='false')
+			--Rev 8.0 End
+				BEGIN
+					SET @willAlarmTrigger='true'
+				END
+			--REV 6.0  End
+		-- Rev 11.0
+		END
+		-- End of Rev 11.0
 
 		IF EXISTS(select  User_Id from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@UserId and Login_datetime is not null
 		and cast(Login_datetime as date)=cast(GETDATE() as date))
