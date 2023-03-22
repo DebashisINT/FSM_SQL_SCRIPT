@@ -17,6 +17,8 @@ ALTER  Procedure[dbo].[prc_CheckMasterData]
 /*****************************************************************************************************    
 1.0		Sanchita	V2.0.26		27-01-2022	FTS Portal # Three Master Modules required under Master > Other Masters : (As like Designation master module)
 											Refer: 24646:
+2.0		Sanchita	v2.0.39		22-03-2023	While creating a new Branch, that branch should be mapped automatically for System Admin Employee/User
+											Refer: 25744
 *****************************************************************************************************/
 Begin    
     if(@action='Education')    
@@ -896,6 +898,9 @@ Begin
       else    
    begin    
       Delete from tbl_master_contactRemarks  Where rea_internalId=(select branch_internalId from tbl_master_branch where branch_id=@id)
+	  -- Rev 2.0
+	  delete from FTS_EmployeeBranchMap where BranchId=@id
+	  -- End of Rev 2.0
       Delete from tbl_master_branch  Where branch_ID =@id and branch_id not in (select distinct cnt_branchid from tbl_master_contact) 
     set @ReturnValue='1'    
    end    
