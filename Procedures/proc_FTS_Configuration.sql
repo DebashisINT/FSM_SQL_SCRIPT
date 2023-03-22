@@ -165,6 +165,7 @@ BEGIN
 	147.0		Debashis	25-01-2023	ADD SETTINGS @Action=GlobalCheck' isExpenseFeatureAvailable.Row 808
 	148.0		Debashis	02-02-2023	ADD SETTINGS @Action=GlobalCheck' IsDiscountEditableInOrder & IsRouteStartFromAttendance.Row 809
 	149.0		Debashis	08-02-2023	ADD SETTINGS @Action=GlobalCheck' IsShowOtherInfoinShopMaster & IsShowQuotationFooterforEurobond.Row 812
+	150.0		Debashis	22-03-2023	ADD SETTINGS @Action=GlobalCheck' ShowApproxDistanceInNearbyShopList.Row 815
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -344,6 +345,9 @@ BEGIN
 	,@IsShowOtherInfoinShopMaster BIT
 	,@IsShowQuotationFooterforEurobond BIT
 	--End of Rev 149.0
+	--Rev 150.0
+	,@ShowApproxDistanceInNearbyShopList BIT
+	--End of Rev 150.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -574,6 +578,9 @@ BEGIN
 		SET @IsShowOtherInfoinShopMaster  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowOtherInfoinShopMaster' AND IsActive=1)
 		SET @IsShowQuotationFooterforEurobond  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowQuotationFooterforEurobond' AND IsActive=1)
 		--End of Rev 149.0
+		--Rev 150.0
+		SET @ShowApproxDistanceInNearbyShopList  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowApproxDistanceInNearbyShopList' AND IsActive=1)
+		--End of Rev 150.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -783,6 +790,9 @@ BEGIN
 			,@IsShowOtherInfoinShopMaster  AS IsShowOtherInfoinShopMaster
 			,@IsShowQuotationFooterforEurobond  AS IsShowQuotationFooterforEurobond
 			--End of Rev 149.0
+			--Rev 150.0
+			,@ShowApproxDistanceInNearbyShopList  AS ShowApproxDistanceInNearbyShopList
+			--End of Rev 150.0
 	END
 
 	else if(@Action='UserCheck')
