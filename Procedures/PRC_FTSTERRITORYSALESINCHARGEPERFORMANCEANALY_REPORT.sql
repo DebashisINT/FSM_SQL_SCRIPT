@@ -18,6 +18,8 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 25/11/2022
 Module	   : Territory Sales incharge Wise Performance Analytics.Refer: 0025458
+1.0		v2.0.38		Debashis	23/02/2023		While generating the "TERRITORY SALES INCHARGE WISE PERFORMANCE ANALYTICS" report with below parameters, 
+												"Total Orders without Visit" column is showing a negative figure.Now it has been taken care of.Refer: 0025751
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -146,6 +148,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 
 	--SELECT @Strsql
@@ -165,6 +171,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SPENT_DURATION '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,Shop_Id,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITED_TIME,SPENT_DURATION,'
@@ -174,6 +184,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,SHOPACT.Shop_Id,SHOPACT.visited_time,SPENT_DURATION '
 
 	--SELECT @Strsql
@@ -191,12 +205,43 @@ BEGIN
 			SET @Strsql+='SELECT ORDH.USER_ID,ORDH.SHOP_ID,ORDH.ORDER_DATE,SUM(ISNULL(ORDD.Ordervalue,0)) AS Ordervalue FROM ORDERPRODUCTATTRIBUTE ORDH WITH(NOLOCK) '
 			SET @Strsql+='INNER JOIN(SELECT ORDD.ID,ORDD.USER_ID,ORDD.ORDER_ID,(ORDD.QTY*ORDD.RATE) AS Ordervalue FROM ORDERPRODUCTATTRIBUTEDET ORDD WITH(NOLOCK) '
 			SET @Strsql+=') ORDD ON ORDH.ID=ORDD.ID AND ORDH.USER_ID=ORDD.USER_ID AND ORDH.ORDER_ID=ORDD.ORDER_ID '
+			--Rev 1.0
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.USER_ID '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--End of Rev 1.0
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--Rev 1.0
+			IF @EMPID<>''
+				SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+			--End of Rev 1.0
 			SET @Strsql+='GROUP BY ORDH.USER_ID,ORDH.ORDER_ID,ORDH.SHOP_ID,ORDH.ORDER_DATE '
 
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
+	--Rev 1.0
+	ELSE IF @IsActivateNewOrderScreenwithSize=0
+		BEGIN
+			IF OBJECT_ID('tempdb..#TMPORDERTSIA') IS NOT NULL
+				DROP TABLE #TMPORDERTSIA
+			CREATE TABLE #TMPORDERTSIA(USER_ID BIGINT,CNT_INTERNALID NVARCHAR(10),Ordervalue DECIMAL(18,2),ORDER_DATE DATETIME)
+			CREATE NONCLUSTERED INDEX IX1 ON #TMPORDERTSIA (USER_ID ASC)
+
+			SET @Strsql=''
+			SET @Strsql='INSERT INTO #TMPORDERTSIA(USER_ID,CNT_INTERNALID,Ordervalue,ORDER_DATE) '
+			SET @Strsql+='SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS Ordervalue,ORDH.Orderdate AS ORDDATE '
+			SET @Strsql+='FROM tbl_trans_fts_Orderupdate ORDH WITH(NOLOCK) '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.userID '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			IF @EMPID<>''
+				SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+			SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId,ORDH.Orderdate '
+
+			--SELECT @Strsql
+			EXEC SP_EXECUTESQL @Strsql
+		END
+	--End of Rev 1.0
 
 	--New Visit/Re Visit Conversion Rate
 	IF OBJECT_ID('tempdb..#TMPSHOPVISITREVISITCONVRATETSIA') IS NOT NULL
@@ -216,6 +261,10 @@ BEGIN
 		SET @Strsql+='LEFT OUTER JOIN tbl_trans_fts_Orderupdate ORDH ON SHOPACT.User_Id=ORDH.userID AND SHOPACT.Shop_Id=ORDH.Shop_Code '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOPVISITCONVRATE,0 AS NORDSHPCNT,COUNT(SHOPACT.Shop_Id) AS REVISITCONVRATE,COUNT(DISTINCT ORDH.SHOP_CODE) AS RORDSHPCNT '
@@ -228,6 +277,10 @@ BEGIN
 		SET @Strsql+='LEFT OUTER JOIN tbl_trans_fts_Orderupdate ORDH ON SHOPACT.User_Id=ORDH.userID AND SHOPACT.Shop_Id=ORDH.Shop_Code '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId '
 
 	--SELECT @Strsql
@@ -277,6 +330,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
@@ -286,6 +343,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime) LGINOUT '
 	SET @Strsql+='LEFT OUTER JOIN('
@@ -299,6 +360,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,CAST(SHOPACT.visited_time AS DATE) '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT SHOPACT.User_Id,CNT.cnt_internalId,0 AS NEWSHOP_VISITED,COUNT(SHOPACT.Shop_Id) AS RE_VISITED,CAST(SHOPACT.visited_time AS DATE) AS visited_time,'
@@ -308,6 +373,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SHOPACT.visited_time,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND SHOPACT.Is_Newshopadd=0 AND SHOPACT.ISMEETING=0 '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY SHOPACT.User_Id,CNT.cnt_internalId,CAST(SHOPACT.visited_time AS DATE) '
 	SET @Strsql+=') AA GROUP BY User_Id,cnt_internalId,CAST(VISITED_TIME AS DATE) '
 	SET @Strsql+=') SHOPACT ON SHOPACT.cnt_internalId=LGINOUT.cnt_internalId AND LGINOUT.Login_datetime=SHOPACT.VISITED_TIME '
@@ -349,6 +418,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
@@ -358,6 +431,10 @@ BEGIN
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
+	--Rev 1.0
+	IF @EMPID<>''
+		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+	--End of Rev 1.0
 	SET @Strsql+='GROUP BY ATTEN.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) '
 	SET @Strsql+=') LOGINLOGOUT GROUP BY USERID,cnt_internalId,Login_datetime '
 	SET @Strsql+=') LGINOUT '
@@ -466,7 +543,15 @@ BEGIN
 	SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @Strsql+='CITY.city_id AS CITYID,CITY.CITY_NAME AS EMPCITY,ST.ID AS STATEID,ST.STATE,BR.branch_description AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,RPTTO.REPORTTO,RPTTO.RPTTODESG,ISNULL(ORDHEAD.ORDSHPCNT,0) AS ORDSHPCNT,'
-	SET @Strsql+='ISNULL(ORDHEAD.Ordervalue,0) AS TOTALORDERVALUE,ISNULL(ORDWOV.ORDVALWITHOUTVISIT,0) AS TOTALORDVALWITHOUTVISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,'
+	--Rev 1.0
+	--SET @Strsql+='ISNULL(ORDHEAD.Ordervalue,0) AS TOTALORDERVALUE,ISNULL(ORDWOV.ORDVALWITHOUTVISIT,0) AS TOTALORDVALWITHOUTVISIT,ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,'
+	SET @Strsql+='ISNULL(ORDHEAD.Ordervalue,0) AS TOTALORDERVALUE,'
+	IF @IsActivateNewOrderScreenwithSize=0
+		SET @Strsql+='(SELECT SUM(ISNULL(Ordervalue,0)) FROM #TMPORDERTSIA WHERE USER_ID=USR.user_id GROUP BY USER_ID) AS TOTALORDVALWITHOUTVISIT,'
+	ELSE IF @IsActivateNewOrderScreenwithSize=1
+		SET @Strsql+='(SELECT SUM(ISNULL(Ordervalue,0)) FROM #TMPORDATTRIBUTETSIA WHERE USER_ID=USR.user_id GROUP BY USER_ID) AS TOTALORDVALWITHOUTVISIT,'
+	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTAL_VISIT,'
+	--End of Rev 1.0
 	SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,ISNULL(TARGETORDVALUE,0) AS TARGETORDVALUE,ISNULL(SHOP.SHOPCNT,0) AS SHOPCNT,'
 	SET @Strsql+='ISNULL(APPROVEEXP.APPROVEEXPAMT,0) AS APPROVEEXPAMT,ISNULL(SHOPVISITCONVRATE.NORDSHPCNT,0) AS NORDSHPCNT,ISNULL(SHOPVISITCONVRATE.NEWSHOPVISITCONVRATE,0) AS NEWSHOPVISITCONVRATE,'
 	SET @Strsql+='ISNULL(SHOPVISITCONVRATE.RORDSHPCNT,0) AS RORDSHPCNT,ISNULL(SHOPVISITCONVRATE.REVISITCONVRATE,0) AS REVISITCONVRATE,ISNULL(SPENT_DURATION,0) AS SPENT_DURATION,ISNULL(SNV.CNTVISITTIME,0) AS CNTVISITTIME,'
@@ -511,14 +596,16 @@ BEGIN
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='GROUP BY ORDH.userID,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) '
 			SET @Strsql+=') ORDHEAD ON CNT.cnt_internalId=ORDHEAD.cnt_internalId AND ATTEN.Login_datetime=ORDHEAD.ORDDATE AND SHOPACT.Shop_Id=ORDHEAD.SHOP_CODE '
-			SET @Strsql+='LEFT OUTER JOIN ('
-			SET @Strsql+='SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS ORDVALWITHOUTVISIT,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) AS ORDDATE '
-			SET @Strsql+='FROM tbl_trans_fts_Orderupdate ORDH WITH(NOLOCK) '
-			SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.userID '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-			SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) '
-			SET @Strsql+=') ORDWOV ON CNT.cnt_internalId=ORDWOV.cnt_internalId AND ATTEN.Login_datetime=ORDWOV.ORDDATE '
+			--Rev 1.0
+			--SET @Strsql+='LEFT OUTER JOIN ('
+			--SET @Strsql+='SELECT ORDH.userID,CNT.cnt_internalId,SUM(ISNULL(Ordervalue,0)) AS ORDVALWITHOUTVISIT,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) AS ORDDATE '
+			--SET @Strsql+='FROM tbl_trans_fts_Orderupdate ORDH WITH(NOLOCK) '
+			--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.userID '
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.Orderdate,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='GROUP BY ORDH.userID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.Orderdate,105) '
+			--SET @Strsql+=') ORDWOV ON CNT.cnt_internalId=ORDWOV.cnt_internalId AND ATTEN.Login_datetime=ORDWOV.ORDDATE '
+			--End of Rev 1.0
 		END
 	ELSE IF @IsActivateNewOrderScreenwithSize=1
 		BEGIN
@@ -530,14 +617,16 @@ BEGIN
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @Strsql+='GROUP BY ORDH.USER_ID,ORDH.SHOP_CODE,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,105) '
 			SET @Strsql+=') ORDHEAD ON CNT.cnt_internalId=ORDHEAD.cnt_internalId AND ATTEN.Login_datetime=ORDHEAD.ORDDATE AND SHOPACT.Shop_Id=ORDHEAD.SHOP_CODE '
-			SET @Strsql+='LEFT OUTER JOIN ('
-			SET @Strsql+='SELECT ORDH.USER_ID,CNT.cnt_internalId,SUM(ISNULL(ORDH.Ordervalue,0)) AS ORDVALWITHOUTVISIT,CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,105) AS ORDDATE '
-			SET @Strsql+='FROM #TMPORDATTRIBUTETSIA ORDH '
-			SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.USER_ID '
-			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-			SET @Strsql+='GROUP BY ORDH.USER_ID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,105) '
-			SET @Strsql+=') ORDWOV ON CNT.cnt_internalId=ORDWOV.cnt_internalId AND ATTEN.Login_datetime=ORDWOV.ORDDATE '
+			--Rev 1.0
+			--SET @Strsql+='LEFT OUTER JOIN ('
+			--SET @Strsql+='SELECT ORDH.USER_ID,CNT.cnt_internalId,SUM(ISNULL(ORDH.Ordervalue,0)) AS ORDVALWITHOUTVISIT,CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,105) AS ORDDATE '
+			--SET @Strsql+='FROM #TMPORDATTRIBUTETSIA ORDH '
+			--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ORDH.USER_ID '
+			--SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+			--SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+			--SET @Strsql+='GROUP BY ORDH.USER_ID,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ORDH.ORDER_DATE,105) '
+			--SET @Strsql+=') ORDWOV ON CNT.cnt_internalId=ORDWOV.cnt_internalId AND ATTEN.Login_datetime=ORDWOV.ORDDATE '
+			--End of Rev 1.0
 		END
 	SET @Strsql+='LEFT OUTER JOIN ('
 	SET @Strsql+='SELECT EmployeeCode,SUM(ISNULL(OrderValue,0)) AS TARGETORDVALUE FROM tbl_FTS_EmployeesTargetSetting WITH(NOLOCK) '
@@ -603,6 +692,10 @@ BEGIN
 	DROP TABLE #TMPVISITTOCALLTSIA
 	IF @IsActivateNewOrderScreenwithSize=1
 		DROP TABLE #TMPORDATTRIBUTETSIA
+	--Rev 1.0
+	IF @IsActivateNewOrderScreenwithSize=0
+		DROP TABLE #TMPORDERTSIA
+	--End of Rev 1.0
 	
 	SET NOCOUNT OFF
 END
