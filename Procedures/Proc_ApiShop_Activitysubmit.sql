@@ -30,7 +30,7 @@ AS
 8.0		v2.0.37		Debashis	10/01/2023		Some new fields have been added.Row: 786
 9.0		v2.0.37		Debashis	20/01/2023		The feedback provided from the app is not showing fully in the Performance Summary report.
 												Refer: 0025605
-10.0	v2.0.38		Debashis	13/03/2023		A new parameter has been added.Row: 814
+10.0	v2.0.39		Debashis	27/03/2023		A new parameter has been added.Row: 814 & Refer: 0025749
 *****************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
