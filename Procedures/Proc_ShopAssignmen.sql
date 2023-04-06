@@ -15,16 +15,17 @@ ALTER PROCEDURE [dbo].[Proc_ShopAssignmen]
 ) --WITH ENCRYPTION
 AS
 BEGIN
-	/************************************************************************************************
-	1.0		Tanmoy		16-10-2019	@Action='DD' SEARCH BY SHOP CREATE USER
-	2.0		Tanmoy		14-01-2020	@Action='pp' PP ALLOW TO SHOW TO ALL STATE AND STATE WISE
-	3.0		Tanmoy		13-02-2020	@Action='pp' shop type show pp and stockist
-	4.0		Tanmoy		23-07-2020	@Action='DD' IF @AllDDSHOW CHECKING
-	5.0		Debashis	16-08-2021	@Action='DD' Added two new columns as Shop_Lat & Shop_Long
-	6.0		Tanmoy		27-08-2021	@SQLEXC parameter length change
-	7.0		Debashis	09-02-2023	An error ocured "Error Converting nvarchar to bigint".Now solved.
-									Refer: 0025657
-	************************************************************************************************/ 
+/**************************************************************************************************************************************************************
+1.0		Tanmoy		16-10-2019	@Action='DD' SEARCH BY SHOP CREATE USER
+2.0		Tanmoy		14-01-2020	@Action='pp' PP ALLOW TO SHOW TO ALL STATE AND STATE WISE
+3.0		Tanmoy		13-02-2020	@Action='pp' shop type show pp and stockist
+4.0		Tanmoy		23-07-2020	@Action='DD' IF @AllDDSHOW CHECKING
+5.0		Debashis	16-08-2021	@Action='DD' Added two new columns as Shop_Lat & Shop_Long
+6.0		Tanmoy		27-08-2021	@SQLEXC parameter length change
+7.0		Debashis	09-02-2023	An error ocured "Error Converting nvarchar to bigint".Now solved.
+								Refer: 0025657
+8.0		Debashis	06-04-2023	@Action='DD' Added a new column as Address. Row: 818
+**************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
 	DECLARE @DDSHOW NVARCHAR(10),@AllDDSHOW NVARCHAR(10)
@@ -68,9 +69,11 @@ BEGIN
 	else if(@Action='DD')
 		BEGIN
 			--Rev 5.0 && Added two new columns as Shop_Lat & Shop_Long
+			--Rev 8.0 && Added a new column as Address
 			SET @SQLEXC='select Shop_Code as assigned_to_dd_id , assigned_to_pp_id,Shop_Name as assigned_to_dd_authorizer_name ,Shop_Owner_Contact as phn_no,
 			CASE WHEN ISNULL(convert(varchar(10),dealer_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),dealer_id),'''') end type_id,'
-			SET @SQLEXC +='CASE WHEN Shop_Lat=''0'' OR Shop_Lat='''' THEN ''0'' ELSE Shop_Lat END AS dd_latitude,CASE WHEN Shop_Long=''0'' OR Shop_Long='''' THEN ''0'' ELSE Shop_Long END AS dd_longitude from tbl_Master_shop WITH(NOLOCK) '
+			SET @SQLEXC +='CASE WHEN Shop_Lat=''0'' OR Shop_Lat='''' THEN ''0'' ELSE Shop_Lat END AS dd_latitude,CASE WHEN Shop_Long=''0'' OR Shop_Long='''' THEN ''0'' 
+			ELSE Shop_Long END AS dd_longitude,Address AS address from tbl_Master_shop WITH(NOLOCK) '
 			SET @SQLEXC +='where type=4 '
 			IF ((SELECT IsUserwiseDistributer FROM TBL_MASTER_USER WITH(NOLOCK) WHERE USER_ID=@user_id)=0)
 			BEGIN

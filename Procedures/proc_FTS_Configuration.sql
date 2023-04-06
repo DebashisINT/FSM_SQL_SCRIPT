@@ -166,6 +166,8 @@ BEGIN
 	148.0		Debashis	02-02-2023	ADD SETTINGS @Action=GlobalCheck' IsDiscountEditableInOrder & IsRouteStartFromAttendance.Row 809
 	149.0		Debashis	08-02-2023	ADD SETTINGS @Action=GlobalCheck' IsShowOtherInfoinShopMaster & IsShowQuotationFooterforEurobond.Row 812
 	150.0		Debashis	22-03-2023	ADD SETTINGS @Action=GlobalCheck' ShowApproxDistanceInNearbyShopList.Row 815
+	151.0		Debashis	06-04-2023	ADD SETTINGS @Action=UserCheck' IsAssignedDDAvailableForAllUser.Row 816
+	152.0		Debashis	06-04-2023	ADD SETTINGS @Action=GlobalCheck' IsAssignedDDAvailableForAllUser.Row 817
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -348,6 +350,9 @@ BEGIN
 	--Rev 150.0
 	,@ShowApproxDistanceInNearbyShopList BIT
 	--End of Rev 150.0
+	--Rev 152.0
+	,@IsAssignedDDAvailableForAllUser BIT
+	--End of Rev 152.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -581,6 +586,9 @@ BEGIN
 		--Rev 150.0
 		SET @ShowApproxDistanceInNearbyShopList  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowApproxDistanceInNearbyShopList' AND IsActive=1)
 		--End of Rev 150.0
+		--Rev 152.0
+		SET @IsAssignedDDAvailableForAllUser  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAssignedDDAvailableForAllUser' AND IsActive=1)
+		--End of Rev 152.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -793,6 +801,9 @@ BEGIN
 			--Rev 150.0
 			,@ShowApproxDistanceInNearbyShopList  AS ShowApproxDistanceInNearbyShopList
 			--End of Rev 150.0
+			--Rev 152.0
+			,@IsAssignedDDAvailableForAllUser  AS IsAssignedDDAvailableForAllUser
+			--End of Rev 152.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1730,6 +1741,11 @@ BEGIN
 		SELECT 'IsShowBeatInMenu' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowBeatInMenu) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 145.0
+		--Rev 151.0
+		UNION ALL
+		SELECT 'IsAssignedDDAvailableForAllUser' AS [Key],CONVERT(NVARCHAR(15),USR.IsAssignedDDAvailableForAllUser) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 151.0
 	END
 
 	SET NOCOUNT OFF
