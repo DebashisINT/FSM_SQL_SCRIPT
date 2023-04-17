@@ -13,9 +13,6 @@ ALTER PROCEDURE [dbo].[PRC_FTSTERRITORYSALESINCHARGEPERFORMANCEANALY_REPORT]
 @STATEID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
--- Rev 2.0
-,@ShowInactiveUsers INT=0
--- End of Rev 2.0
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -23,8 +20,6 @@ Written by : Debashis Talukder on 25/11/2022
 Module	   : Territory Sales incharge Wise Performance Analytics.Refer: 0025458
 1.0		v2.0.38		Debashis	23/02/2023		While generating the "TERRITORY SALES INCHARGE WISE PERFORMANCE ANALYTICS" report with below parameters, 
 												"Total Orders without Visit" column is showing a negative figure.Now it has been taken care of.Refer: 0025751
-2.0		V2.0.38		Sanchita	13/04/2023		A tick box required as "Show Inactive Users" in parameter of 
-												TERRITORY SALES INCHARGE WISE PERFORMANCE ANALYTICS report. Refer: 25811
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -149,13 +144,7 @@ BEGIN
 	SET @Strsql='INSERT INTO #TMPATTENLOGINTSIA(USERID,LOGGEDIN,cnt_internalId,Login_datetime) '
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,CNT.cnt_internalId,CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
@@ -337,13 +326,7 @@ BEGIN
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
@@ -356,13 +339,7 @@ BEGIN
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
@@ -437,13 +414,7 @@ BEGIN
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,NULL AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NOT NULL AND Logout_datetime IS NULL AND Isonleave=''false'' '
@@ -456,13 +427,7 @@ BEGIN
 	SET @Strsql+='SELECT ATTEN.User_Id AS USERID,NULL AS LOGGEDIN,MAX(CONVERT(VARCHAR(5),CAST(ATTEN.Logout_datetime AS TIME),108)) AS LOGEDOUT,COUNT(ATTEN.Login_datetime) AS CNTATTENDANCE,CNT.cnt_internalId,'
 	SET @Strsql+='CONVERT(NVARCHAR(10),ATTEN.Work_datetime,105) AS Login_datetime '
 	SET @Strsql+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH(NOLOCK) '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id  '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+='AND Login_datetime IS NULL AND Logout_datetime IS NOT NULL AND Isonleave=''false'' '
@@ -596,13 +561,7 @@ BEGIN
 	SET @Strsql+='FROM tbl_master_employee EMP WITH(NOLOCK) '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @Strsql+='INNER JOIN tbl_master_branch BR WITH(NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
-	-- Rev 2.0
-	--SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
-	if(@ShowInactiveUsers=1)
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId '
-	else
-		SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
-	-- End of Rev 2.0
+	SET @Strsql+='INNER JOIN tbl_master_user USR WITH(NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 	SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH(NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 	SET @Strsql+='INNER JOIN TBL_MASTER_CITY CITY WITH(NOLOCK) ON ADDR.add_city=CITY.city_id '
 	SET @Strsql+='INNER JOIN tbl_master_state ST WITH(NOLOCK) ON ADDR.add_state=ST.id '
