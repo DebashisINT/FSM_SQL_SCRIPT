@@ -40,6 +40,8 @@ AS
 										1) WITH (NOLOCK) added after each table
 										2) Table_Master_Contact table has been replaced with #TEMPCONTACT
 	6.0		15-02-2023		Sanchita	A setting required for Employee and User Master module in FSM Portal. Refer: 25668
+	7.0		18-04-2023		Sanchita	V2.0.38		Report To not showing in Employee Master when Show button is clicked selecting any Employee. 
+													Refer: 25841
 ***************************************************************************************************************************************/
 BEGIN
   Declare @DSql nVarchar(Max),@DSql1 nVarchar(Max), @DSql_SearchBy nVarchar(2000)
@@ -122,13 +124,22 @@ BEGIN
 		SET @DSql += 'INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE '
 	end
 	SET @DSql += 'WHERE cnt_contactType IN(''EM'') '
+	-- Rev 7.0
+	--IF (@Employees <>'')
+	--BEGIN
+	--	SET @Employees = '''' + replace(@Employees,',',''',''')  + ''''
+	--	SET @DSql += 'AND cnt_internalId in ('+@Employees+')'
+	--END
+	-- End of Rev 7.0
+	Exec sp_executesql @Dsql
+	-- End of Rev 6.0
+
+	-- Rev 7.0
 	IF (@Employees <>'')
 	BEGIN
 		SET @Employees = '''' + replace(@Employees,',',''',''')  + ''''
-		SET @DSql += 'AND cnt_internalId in ('+@Employees+')'
 	END
-	Exec sp_executesql @Dsql
-	-- End of Rev 6.0
+	-- End of Rev 7.0
 
   --This Query Will Be Inserted in Main Queries Where There is Any Filtering Option Like EN--Employee Name or EC--Employee Code
   Set @DSql_SearchBy=''
@@ -277,7 +288,14 @@ BEGIN
 	,Ltrim(Rtrim(phf.phf_phoneNumber)) PhoneMobile_Numbers,femrel_memberName FatherName,crg_Number PanCardNumber,a.cnt_OtherID
 	,CTC.AdditionalReportingHead as AdditionalReportingHead,CTC.Colleague as Colleague,CTC.Colleague1 as Colleague1,CTC.Colleague2 as Colleague2
 	From tbl_master_employee a WITH (NOLOCK) 
-	INNER JOIN #TEMPCONTACT b WITH (NOLOCK) ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM''
+	INNER JOIN #TEMPCONTACT b WITH (NOLOCK) ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM'' '
+	-- Rev 7.0
+	IF (@Employees <>'')
+	BEGIN
+		Set @DSql += 'AND b.cnt_internalId in ('+@Employees+') '
+	END
+	-- End of Rev 7.0
+	Set @DSql+='
 	--INNER JOIN tbl_master_User USR WITH (NOLOCK) ON a.emp_contactId=USR.USER_contactid
 	LEFT OUTER JOIN tbl_master_User USR WITH (NOLOCK) ON a.emp_contactId=USR.USER_contactid
 	INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON  B.cnt_branchid=BR.branch_id
@@ -309,8 +327,8 @@ BEGIN
 		LEFT JOIN tbl_master_employee Colleague2EMP WITH (NOLOCK) on EMPCTC.emp_colleague2=Colleague2EMP.emp_id
 		LEFT JOIN #TEMPCONTACT Colleague2CNT WITH (NOLOCK) ON Colleague2EMP.emp_contactId=Colleague2CNT.cnt_internalId and Colleague2CNT.cnt_contactType=''EM''
 
-		INNER JOIN #TEMPCONTACT CNT WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType=''EM''
-
+		INNER JOIN #TEMPCONTACT CNT WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType=''EM'' '
+		Set @DSql += '
 		INNER JOIN 
 		(
 			SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id,Ltrim(Rtrim(cost.cost_description))Department 
@@ -353,7 +371,7 @@ BEGIN
 	--		END
 	----Set @DSql=@DSql+'  '
 	--select @DSql
-   Exec sp_executesql @DSql
+	Exec sp_executesql @DSql
  
 --  Set @DSql='Insert into FTS_Final_Display
 --  (
