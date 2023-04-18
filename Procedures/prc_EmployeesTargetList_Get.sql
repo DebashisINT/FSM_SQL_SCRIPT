@@ -26,6 +26,10 @@ AS
 /*******************************************************************************************************************************************************************************************
 1.0		v2.0.36		Sanchita	10-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" then data in portal shall be populated based on Hierarchy Only.
 												Refer: 25504
+2.0		V2.0.39		Sanchita	18-04-2023		"Unable to upload Employee Target from Portal.
+												After importing the Target template from the portal, no data is showing in the listing page.	"
+												After analysis it was found that in the Download Format excel, the column "Stage" was missing.
+												This resulted in error. This has been resolved. Refer: 25837
 ********************************************************************************************************************************************************************************************/
  SET NOCOUNT ON ;
  BEGIN TRY 
@@ -327,6 +331,9 @@ BEGIN
 		MASC.cnt_firstName + ' '+ MASC.cnt_lastName AS ReportTo,repttodesg.deg_designation AS ReportToDesignation,
 
 		'EMP' AS [Type],convert(char(3), GETDATE(), 0) AS [MonthName],DATEPART(yyyy, GETDATE()) AS [Year], 0 as NewCounter, 0 as ReVisit, 0 as TargetValue, Convert(INT,'0') as TargetCollection
+		-- Rev 2.0
+		, 0 as Stage 
+		-- End of Rev 2.0
 		 FROM tbl_master_user AS musr
 		inner join tbl_master_contact CNT ON CNT.cnt_internalId = musr.user_contactId
 		inner join
@@ -366,6 +373,9 @@ BEGIN
 		0 AS ShopRevisit,
 		0 AS TargetValue,
 		Convert(INT,'0') AS TargetCollection
+		-- Rev 2.0
+		, 0 as Stage 
+		-- End of Rev 2.0
 		FROM tbl_master_shop MS INNER JOIN tbl_shoptype ST ON  MS.type = ST.typeID 
 		INNER JOIN tbl_master_state MST ON MST.id= MS.stateId
 		INNER JOIN tbl_master_user MUSR ON 
@@ -401,6 +411,9 @@ BEGIN
 		0 AS ShopRevisit,
 		0 AS TargetValue,
 		Convert(INT,'0') AS TargetCollection
+		-- Rev 2.0
+		, 0 as Stage 
+		-- End of Rev 2.0
 		FROM tbl_master_shop MS INNER JOIN tbl_shoptype ST ON  MS.type = ST.typeID 
 		INNER JOIN tbl_master_state MST ON MST.id= MS.stateId
 		INNER JOIN tbl_master_user MUSR ON 
