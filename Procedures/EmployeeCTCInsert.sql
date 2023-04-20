@@ -54,6 +54,8 @@ AS
 													The 'Office Type' Address of the respective employee to be updated as Branch Ad
 													Employee Master Branch Selection will be the same Branch to be mapped for this employee Branch Mapping
 													Refer: 25531, 25533
+3.0		Sanchita		V2.0.40		20-04-2023		Employee Office address shall be updated along with City Long Lat in employee 
+													address table. Refer: 25826
 ****************************************************************************************************************************************************/
 begin
 	declare @rowEffected int,@oldLeaveScheme int, @oldEffectiveDate datetime
@@ -62,6 +64,9 @@ begin
 	DECLARE @branch_address1 VARCHAR(500), @branch_address2 VARCHAR(500), @branch_address3 VARCHAR(500),
 		@branch_country INT, @branch_state int, @branch_pin varchar(50), @branch_city int, @branch_area int, @emp_userid bigint
 	-- End of Rev 2.0
+	-- Rev 3.0
+	DECLARE @City_Lat nvarchar(max)='0.0', @City_Long nvarchar(max)='0.0'
+	-- End of Rev 3.0
 
 	select @oldLeaveScheme=isnull(emp_totalLeavePA,'0'),@oldEffectiveDate=emp_LeaveSchemeAppliedFrom from tbl_trans_employeeCTC where ( emp_effectiveuntil is null or emp_effectiveuntil = '1/1/1900 12:00:00 AM' or emp_effectiveuntil = '1/1/1900')  and emp_cntId = @emp_cntId
 
@@ -104,16 +109,22 @@ begin
 	@branch_city=isnull(branch_city,0), @branch_area=branch_area from tbl_master_branch
 	where branch_id=@emp_branch
 
+	-- Rev 3.0
+	set @City_Lat = (select top 1 isnull(City_lat,'0.0') from tbl_master_city where city_id=@branch_city )
+	set @City_Long = (select top 1 isnull(City_Long,'0.0') from tbl_master_city where city_id=@branch_city )
+	-- End of Rev 3.0
+
 	select top 1 @emp_userid=user_id from tbl_master_user where user_contactid=@emp_cntId
 
 	if not exists(select * from tbl_master_address where add_cntId=@emp_cntId and add_entity='employee' and add_addressType='Office')
 	begin
+		-- Rev 3.0 [ columns City_lat and City_Long added in query ]
 		insert into tbl_master_address(Isdefault,contactperson,add_cntId,add_entity,add_addressType,add_address1,add_address2,
 		add_address3,add_city,add_landMark,add_country,add_state,add_area,add_pin,CreateDate,CreateUser,add_Phone,add_Email,add_Website,
-		add_Designation,add_address4) 
+		add_Designation,add_address4,City_lat,City_Long) 
 		values(0,'',@emp_cntId,'employee','Office',@branch_address1,@branch_address2,
 		@branch_address3,@branch_city,'',@branch_country,@branch_state,@branch_area,@branch_pin,getdate(),@userid,'','',''
-		,'','')
+		,'','',@City_Lat,@City_Long)
 	end
 
 	-- To be updated at the time of user add
