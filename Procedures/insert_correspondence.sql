@@ -55,14 +55,14 @@ Begin
 			add_address1=@Address1,add_address2=@Address2,
 			add_address3=@Address3,add_city=@City,add_landMark=@LandMark,add_country=@Country,add_state=@State,add_pin=@PinCode,add_area=@area,
 			CreateDate=getdate(),CreateUser=@CreateUser,add_Phone=@Phone,add_Email=@add_Email,add_Website=@add_Website,add_Designation=@add_Designation
-			,add_address4=@Address4,City_lat=@City_Lat,City_Long=@City_Long  where add_cntId=@insuId
+			,add_address4=@Address4,add_Lat=@City_Lat,add_Long=@City_Long  where add_cntId=@insuId
 	end
 	else
 	begin
 			-- Rev 1.0 [ columns City_lat and City_Long added in query ]
 			insert into tbl_master_address(Isdefault,contactperson,add_cntId,add_entity,add_addressType,add_address1,add_address2,
 			add_address3,add_city,add_landMark,add_country,add_state,add_area,add_pin,CreateDate,CreateUser,add_Phone,add_Email,add_Website,
-			add_Designation,add_address4,City_lat,City_Long) 
+			add_Designation,add_address4,add_Lat,add_Long) 
 			values(@Isdefault,@contactperson,@insuId,@contacttype,@Type,@Address1,@Address2,
 			@Address3,@City,@LandMark,@Country,@State,@area,@PinCode,getdate(),@CreateUser,@Phone,@add_Email,@add_Website
 			,@add_Designation,@Address4,@City_Lat,@City_Long)

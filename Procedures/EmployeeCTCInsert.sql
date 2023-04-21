@@ -118,10 +118,10 @@ begin
 
 	if not exists(select * from tbl_master_address where add_cntId=@emp_cntId and add_entity='employee' and add_addressType='Office')
 	begin
-		-- Rev 3.0 [ columns City_lat and City_Long added in query ]
+		-- Rev 3.0 [ columns add_Lat and add_Long added in query ]
 		insert into tbl_master_address(Isdefault,contactperson,add_cntId,add_entity,add_addressType,add_address1,add_address2,
 		add_address3,add_city,add_landMark,add_country,add_state,add_area,add_pin,CreateDate,CreateUser,add_Phone,add_Email,add_Website,
-		add_Designation,add_address4,City_lat,City_Long) 
+		add_Designation,add_address4,add_Lat,add_Long) 
 		values(0,'',@emp_cntId,'employee','Office',@branch_address1,@branch_address2,
 		@branch_address3,@branch_city,'',@branch_country,@branch_state,@branch_area,@branch_pin,getdate(),@userid,'','',''
 		,'','',@City_Lat,@City_Long)
