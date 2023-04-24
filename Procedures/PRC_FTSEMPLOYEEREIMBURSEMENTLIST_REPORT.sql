@@ -33,6 +33,8 @@ Module Functionality :
 4.0		Pratik							18/11/2021		Updated logic for approved amount
 5.0		Pratik							29/11/2021		Changed FTS_Reimbursement_Application_Verified join to left join.
 6.0		Pratik							11/07/2022		removed UpdatedBy from group by clause.refer:25034
+7.0		Sanchita			V2.0.40		20-04-2023		In TRAVELLING ALLOWANCE -- Approve/Reject Page: One Coloumn('Confirm/Reject') required 
+														before 'Approve/Reject' coloumn. refer: 25809
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -129,15 +131,18 @@ BEGIN
 			  STATUS NVARCHAR(20),
 			  UPDATEDBY NVARCHAR(50) NULL,
 			  LASTUPDATED_ON NVARCHAR(100) NULL
-
+			  -- Rev 7.0
+			  ,CONFIRMED_COUNT INT
+			  -- End of Rev 7.0
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSEMPLOYEEREIMBURSEMENTLIST_REPORT (SEQ)
 		END
 	DELETE FROM FTSEMPLOYEEREIMBURSEMENTLIST_REPORT WHERE USERID=@USERID
 
+	-- Rev 7.0 [ column CONFIRMED_COUNT added ]
 	SET @Strsql=''
 	SET @Strsql='INSERT INTO FTSEMPLOYEEREIMBURSEMENTLIST_REPORT(USERID,SEQ,USER_ID,USER_NAME,CNT_INTERNALID,EMPCODE,EMPNAME,EMPLOYEE_GRADE,CONTACT,STATEID,STATE,DEG_ID,DEG_DESIGNATION,REPORTTO'
-	SET @Strsql+=',REPORTCONTACT,RPTTODESGID,RPTTODESG,AMOUNT,APPROVED_AMOUNT,PENDING_COUNT,APPROVED_COUNT,REJECTED_COUNT,STATUS,UPDATEDBY,LASTUPDATED_ON)'
+	SET @Strsql+=',REPORTCONTACT,RPTTODESGID,RPTTODESG,AMOUNT,APPROVED_AMOUNT,PENDING_COUNT,APPROVED_COUNT,REJECTED_COUNT,STATUS,UPDATEDBY,LASTUPDATED_ON,CONFIRMED_COUNT)'
 
 	SET @Strsql+='SELECT '+STR(@USERID)+' AS USERID,ROW_NUMBER() OVER(ORDER BY CN.CNT_UCC) AS SEQ,H.USERID,U.USER_NAME,CN.CNT_INTERNALID,CN.CNT_UCC,'
 	SET @Strsql+=' ISNULL(CN.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CN.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CN.CNT_LASTNAME,'''') AS ''NAME'',grade.Employee_Grade,'
@@ -158,6 +163,12 @@ BEGIN
 	--SET @Strsql+=' ,U1.user_name as ''Updated By'',H.UpdatedOn as''Last Updated On	'' '
 	SET @Strsql+=' U1.user_name as ''Updated By'',HV.UpdatedOn as''Last Updated On	'' '
 	--End of Rev 1.0
+	-- Rev 7.0
+	SET @Strsql+=', (select count(0) as COUNT_CONF FROM FTS_Reimbursement_Application CONFAPP(NOLOCK) '
+	SET @Strsql+=' WHERE CONVERT(NVARCHAR(10),CONFAPP.Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
+	SET @Strsql+=' AND CONFAPP.Confirm_Reimbursement=1 AND CONFAPP.USERID=H.USERID ) as CONFIRMED_COUNT '
+	SET @Strsql+=' '
+	-- End of Rev 7.0
 	SET @Strsql+=' FROM #TEMPCONTACT CN INNER JOIN (SELECT EMP_CNTID FROM TBL_TRANS_EMPLOYEECTC  WHERE emp_effectiveuntil IS NULL) as CTC ON CN.CNT_INTERNALID=CTC.EMP_CNTID  '
 	SET @Strsql+=' INNER JOIN TBL_MASTER_USER U ON U.USER_CONTACTID=CN.CNT_INTERNALID '
 	--Rev 1.0
@@ -232,7 +243,7 @@ BEGIN
 		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=DE.DEG_ID) '
 	IF @EMPID<>''
 		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CN.CNT_INTERNALID) '
-
+		
 	--SELECT @Strsql
 	EXEC SP_EXECUTESQL @Strsql
 	--select * from FTSEMPLOYEEREIMBURSEMENTLIST_REPORT
