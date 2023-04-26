@@ -276,6 +276,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@ShowUpdateUserName INT=0
 ,@ShowWillRoomDBShareinLogin INT=0
 -- End of Rev 23.0
+-- Rev 28.0
+,@IsShowEmployeePerformance INT=0
+-- End of Rev 28.0
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -311,6 +314,8 @@ AS
 												Refer: 25532
 26.0	v2.0.39		13-02-2023		Sanchita	Need Audit functionality in User Master. Refer: 25648
 27.0	V2.0.39		16/02/2023		Sanchita	A setting required for 'User Account' Master module in FSM Portal. Refer: 25669
+28.0	V2.0.40		26/04/2023		Sanchita	A checkbox required for performance module,check box name is Show Employee Performance.
+												Refer: 25911
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -475,6 +480,9 @@ BEGIN
 			,UpdateUserName
 			,WillRoomDBShareinLogin
 			-- End of Rev 23.0
+			-- Rev 28.0
+			,IsShowEmployeePerformance
+			-- End of Rev 28.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -615,6 +623,9 @@ BEGIN
 			,isnull(@ShowUpdateUserName,0)
 			,isnull(@ShowWillRoomDBShareinLogin,0)
 			-- End of Rev 23.0
+			-- Rev 28.0
+			,isnull(@IsShowEmployeePerformance,0)
+			-- End of Rev 28.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1016,7 +1027,11 @@ BEGIN
 				 OR UpdateOtherID<>@ShowUpdateOtherID
 				 OR UpdateUserID<>@ShowUpdateUserID
 				 OR UpdateUserName<>@ShowUpdateUserName
-				 OR WillRoomDBShareinLogin<>@ShowWillRoomDBShareinLogin)
+				 OR WillRoomDBShareinLogin<>@ShowWillRoomDBShareinLogin
+				 -- Rev 28.0
+				 OR IsShowEmployeePerformance<>@IsShowEmployeePerformance
+				 -- End of Rev 28.0
+				 )
 				)
 			BEGIN
 				SET @DOC_ID = 1
@@ -1191,6 +1206,9 @@ BEGIN
             --,user_type=@Showuser_type
             ,WillRoomDBShareinLogin=@ShowWillRoomDBShareinLogin
 			-- End of Rev 23.0
+			-- Rev 28.0
+			,IsShowEmployeePerformance=@IsShowEmployeePerformance
+			-- End of Rev 28.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1429,6 +1447,9 @@ BEGIN
 			,ISNULL(UpdateUserName,0) as UpdateUserName
 			,ISNULL(WillRoomDBShareinLogin,0) as WillRoomDBShareinLogin
 			-- End of Rev 23.0
+			-- Rev 28.0
+			,ISNULL(IsShowEmployeePerformance,0) as IsShowEmployeePerformance
+			-- End of Rev 28.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1568,6 +1589,9 @@ BEGIN
 			,'UpdateUserName'
 			,'WillRoomDBShareinLogin'
 			-- End of Rev 23.0
+			-- Rev 28.0
+			,'IsShowEmployeePerformance'
+			-- End of Rev 28.0
 			)
 		END
 	-- Rev 18.0
