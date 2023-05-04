@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]
 @BRANCHID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 03/11/2021
@@ -22,6 +22,7 @@ Module	   : Employee Outlet Master.Refer: 0024448
 1.0		v2.0.27		Debashis	01/03/2022		Enhancement done.Refer: 0024715
 2.0		v2.0.30		Debashis	25/05/2022		Employee Outlet Master : There Date parameter shall be ignored. It will be treated like As on.Refer: 0024905
 3.0		v2.0.39		PRITI		13/02/2023		0025663:Last Visit fields shall be available in Outlet Reports
+4.0		v2.0.39		Debashis	02/05/2023		Employee Outlet Master -- logic need to be change.Refer: 0025994
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -212,13 +213,11 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id'
 	SET @Strsql+=') DESG ON DESG.emp_cntId=EMP.emp_contactId '
 	SET @Strsql+='WHERE EMPCTC.emp_effectiveuntil IS NULL) HRPTTO ON HRPTTO.emp_cntId=RPTTO.REPORTTOID '
-	SET @Strsql+='LEFT OUTER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
-
-	--Rev 3.0
-	SET @Strsql+=' LEFT OUTER JOIN tbl_master_user UserTBl ON CAST(UserTBl.user_id AS INT)=MS.Shop_CreateUser '
-	--REV 3.0	end
-
-
+	--Rev 4.0
+	--SET @Strsql+='LEFT OUTER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
+	SET @Strsql+='INNER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
+	--End of Rev 4.0
+	SET @Strsql+='LEFT OUTER JOIN tbl_master_user UserTBl ON CAST(UserTBl.user_id AS INT)=MS.Shop_CreateUser '
 	--Rev 1.0
 	--SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
 	SET @Strsql+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
