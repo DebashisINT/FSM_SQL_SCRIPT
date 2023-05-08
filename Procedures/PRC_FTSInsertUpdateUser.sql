@@ -279,6 +279,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 -- Rev 28.0
 ,@IsShowEmployeePerformance INT=0
 -- End of Rev 28.0
+-- Rev 29.0
+,@IsShowBeatInMenu INT=0
+-- End of Rev 29.0
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -316,6 +319,8 @@ AS
 27.0	V2.0.39		16/02/2023		Sanchita	A setting required for 'User Account' Master module in FSM Portal. Refer: 25669
 28.0	V2.0.40		26/04/2023		Sanchita	A checkbox required for performance module,check box name is Show Employee Performance.
 												Refer: 25911
+29.0	V2.0.40		08/05/2023		Sanchita	In user table a column exist as IsShowBeatInMenu. This will show in portal under user settings as "ShowBeatInMenu".
+												Refer: 25947
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -483,6 +488,9 @@ BEGIN
 			-- Rev 28.0
 			,IsShowEmployeePerformance
 			-- End of Rev 28.0
+			-- Rev 29.0
+			,IsShowBeatInMenu
+			-- End of Rev 29.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -626,6 +634,9 @@ BEGIN
 			-- Rev 28.0
 			,isnull(@IsShowEmployeePerformance,0)
 			-- End of Rev 28.0
+			-- Rev 29.0
+			,isnull(@IsShowBeatInMenu,0)
+			-- End of Rev 29.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1031,6 +1042,9 @@ BEGIN
 				 -- Rev 28.0
 				 OR IsShowEmployeePerformance<>@IsShowEmployeePerformance
 				 -- End of Rev 28.0
+				 -- Rev 29.0
+				OR IsShowBeatInMenu<>@IsShowBeatInMenu
+				 -- End of Rev 29.0
 				 )
 				)
 			BEGIN
@@ -1209,6 +1223,9 @@ BEGIN
 			-- Rev 28.0
 			,IsShowEmployeePerformance=@IsShowEmployeePerformance
 			-- End of Rev 28.0
+			-- Rev 29.0
+			,IsShowBeatInMenu=@IsShowBeatInMenu
+			-- End of Rev 29.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1450,6 +1467,9 @@ BEGIN
 			-- Rev 28.0
 			,ISNULL(IsShowEmployeePerformance,0) as IsShowEmployeePerformance
 			-- End of Rev 28.0
+			-- Rev 29.0
+			,ISNULL(IsShowBeatInMenu,0) as IsShowBeatInMenu
+			-- End of Rev 29.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
