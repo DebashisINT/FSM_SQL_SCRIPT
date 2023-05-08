@@ -24,23 +24,43 @@ ALTER PROCEDURE [dbo].[PRC_FSMAPILEADENQUIRYDETAILS]
 --End of Rev 1.0
 ) --WITH ENCRYPTION
 AS
-/****************************************************************************************************************
+/**********************************************************************************************************************************************************************
 Written By : Debashis Talukder On 02/03/2022
 Purpose : For New Lead Enquiry.Row 660 to 663
 1.0		07/04/2022		Debashis	A new column has been added.Row 676,677 & 678
-****************************************************************************************************************/
+2.0		08/05/2023		Debashis	IsTaskManagementAvailable if this global settings true enquiry_from is blank sended.from app end.Refer: 0026055
+**********************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	IF @ACTION='USERENQUIRYWISECUSTLIST'
 		BEGIN
-			SELECT vend_type AS enquiry_from,SalesmanId AS user_id,Crm_Id AS crm_id,ISNULL(Customer_Name,'') AS customer_name,ISNULL(MobileNo,'') AS mobile_no,ISNULL(Email,'') AS email,
-			ISNULL(Location,'') AS customer_addr,ISNULL(Qty,0.00) AS qty,ISNULL(UOM,'') AS UOM,ISNULL(Order_Value,0.00) AS order_value,ISNULL(Enq_Details,'') AS enquiry_details,
-			ISNULL(Product_Required,'') AS product_req,ISNULL(Contact_Person,'') AS contact_person,CONVERT(NVARCHAR(10),SalesmanAssign_dt,105) AS date,
-			CONVERT(NVARCHAR(10),SalesmanAssign_dt,108) AS time,ISNULL(vend_type,'') AS source_vend_type,ISNULL(Status,'') AS status
-			FROM tbl_CRM_Import
-			WHERE CONVERT(NVARCHAR(10),SalesmanAssign_dt,120) BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND CONVERT(NVARCHAR(10),@TODATE,120)
-			AND vend_type=@ENQUIRY_FROM AND SalesmanId=@USER_ID
+			--Rev 2.0
+			DECLARE @IsTaskManagementAvailable NVARCHAR(100)
+			SELECT @IsTaskManagementAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsTaskManagementAvailable' AND IsActive=1)
+			IF @IsTaskManagementAvailable='0'
+				BEGIN
+			--End of Rev 2.0
+					SELECT vend_type AS enquiry_from,SalesmanId AS user_id,Crm_Id AS crm_id,ISNULL(Customer_Name,'') AS customer_name,ISNULL(MobileNo,'') AS mobile_no,ISNULL(Email,'') AS email,
+					ISNULL(Location,'') AS customer_addr,ISNULL(Qty,0.00) AS qty,ISNULL(UOM,'') AS UOM,ISNULL(Order_Value,0.00) AS order_value,ISNULL(Enq_Details,'') AS enquiry_details,
+					ISNULL(Product_Required,'') AS product_req,ISNULL(Contact_Person,'') AS contact_person,CONVERT(NVARCHAR(10),SalesmanAssign_dt,105) AS date,
+					CONVERT(NVARCHAR(10),SalesmanAssign_dt,108) AS time,ISNULL(vend_type,'') AS source_vend_type,ISNULL(Status,'') AS status
+					FROM tbl_CRM_Import
+					WHERE CONVERT(NVARCHAR(10),SalesmanAssign_dt,120) BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND CONVERT(NVARCHAR(10),@TODATE,120)
+					AND vend_type=@ENQUIRY_FROM AND SalesmanId=@USER_ID
+			--Rev 2.0
+				END
+			ELSE IF @IsTaskManagementAvailable='1'
+				BEGIN
+					SELECT vend_type AS enquiry_from,SalesmanId AS user_id,Crm_Id AS crm_id,ISNULL(Customer_Name,'') AS customer_name,ISNULL(MobileNo,'') AS mobile_no,ISNULL(Email,'') AS email,
+					ISNULL(Location,'') AS customer_addr,ISNULL(Qty,0.00) AS qty,ISNULL(UOM,'') AS UOM,ISNULL(Order_Value,0.00) AS order_value,ISNULL(Enq_Details,'') AS enquiry_details,
+					ISNULL(Product_Required,'') AS product_req,ISNULL(Contact_Person,'') AS contact_person,CONVERT(NVARCHAR(10),SalesmanAssign_dt,105) AS date,
+					CONVERT(NVARCHAR(10),SalesmanAssign_dt,108) AS time,ISNULL(vend_type,'') AS source_vend_type,ISNULL(Status,'') AS status
+					FROM tbl_CRM_Import
+					WHERE CONVERT(NVARCHAR(10),SalesmanAssign_dt,120) BETWEEN CONVERT(NVARCHAR(10),@FROMDATE,120) AND CONVERT(NVARCHAR(10),@TODATE,120)
+					AND SalesmanId=@USER_ID
+				END
+			--End of Rev 2.0
 		END
 	IF @ACTION='SAVEACTIVITY'
 		BEGIN

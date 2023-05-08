@@ -168,6 +168,11 @@ BEGIN
 	150.0		Debashis	22-03-2023	ADD SETTINGS @Action=GlobalCheck' ShowApproxDistanceInNearbyShopList.Row 815
 	151.0		Debashis	06-04-2023	ADD SETTINGS @Action=UserCheck' IsAssignedDDAvailableForAllUser.Row 816
 	152.0		Debashis	06-04-2023	ADD SETTINGS @Action=GlobalCheck' IsAssignedDDAvailableForAllUser.Row 817
+	153.0		Debashis	24-04-2023	ADD SETTINGS @Action=UserCheck' IsShowEmployeePerformance.Row 823
+	154.0		Debashis	24-04-2023	ADD SETTINGS @Action=GlobalCheck' IsShowEmployeePerformance.Row 824
+	155.0		Debashis	08-05-2023	ADD SETTINGS @Action=GlobalCheck' IsShowPrivacyPolicyInMenu,IsAttendanceCheckedforExpense,IsShowLocalinExpense,IsShowOutStationinExpense,
+																		  IsTAAttachment1Mandatory,IsTAAttachment2Mandatory,IsSingleDayTAApplyRestriction,
+																		  NameforConveyanceAttachment1,NameforConveyanceAttachment2 & IsTaskManagementAvailable.Row 825,826 & 827
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -353,6 +358,21 @@ BEGIN
 	--Rev 152.0
 	,@IsAssignedDDAvailableForAllUser BIT
 	--End of Rev 152.0
+	--Rev 154.0
+	,@IsShowEmployeePerformance BIT
+	--End of Rev 154.0
+	--Rev 155.0
+	,@IsShowPrivacyPolicyInMenu BIT
+	,@IsAttendanceCheckedforExpense BIT
+	,@IsShowLocalinExpense BIT
+	,@IsShowOutStationinExpense BIT
+	,@IsTAAttachment1Mandatory BIT
+	,@IsTAAttachment2Mandatory BIT
+	,@IsSingleDayTAApplyRestriction BIT
+	,@NameforConveyanceAttachment1 NVARCHAR(200)
+	,@NameforConveyanceAttachment2 NVARCHAR(200)
+	,@IsTaskManagementAvailable BIT
+	--End of Rev 155.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -589,6 +609,21 @@ BEGIN
 		--Rev 152.0
 		SET @IsAssignedDDAvailableForAllUser  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAssignedDDAvailableForAllUser' AND IsActive=1)
 		--End of Rev 152.0
+		--Rev 154.0
+		SET @IsShowEmployeePerformance  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowEmployeePerformance' AND IsActive=1)
+		--End of Rev 154.0
+		--Rev 155.0
+		SET @IsShowPrivacyPolicyInMenu  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowPrivacyPolicyInMenu' AND IsActive=1)
+		SET @IsAttendanceCheckedforExpense  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAttendanceCheckedforExpense' AND IsActive=1)
+		SET @IsShowLocalinExpense  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowLocalinExpense' AND IsActive=1)
+		SET @IsShowOutStationinExpense  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowOutStationinExpense' AND IsActive=1)
+		SET @IsTAAttachment1Mandatory  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsTAAttachment1Mandatory' AND IsActive=1)
+		SET @IsTAAttachment2Mandatory  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsTAAttachment2Mandatory' AND IsActive=1)
+		SET @IsSingleDayTAApplyRestriction  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSingleDayTAApplyRestriction' AND IsActive=1)
+		SET @NameforConveyanceAttachment1  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NameforConveyanceAttachment1' AND IsActive=1)
+		SET @NameforConveyanceAttachment2  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='NameforConveyanceAttachment2' AND IsActive=1)
+		SET @IsTaskManagementAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsTaskManagementAvailable' AND IsActive=1)
+		--End of Rev 155.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -804,6 +839,21 @@ BEGIN
 			--Rev 152.0
 			,@IsAssignedDDAvailableForAllUser  AS IsAssignedDDAvailableForAllUser
 			--End of Rev 152.0
+			--Rev 154.0
+			,@IsShowEmployeePerformance  AS IsShowEmployeePerformance
+			--End of Rev 154.0
+			--Rev 155.0
+			,@IsShowPrivacyPolicyInMenu  AS IsShowPrivacyPolicyInMenu
+			,@IsAttendanceCheckedforExpense  AS IsAttendanceCheckedforExpense
+			,@IsShowLocalinExpense  AS IsShowLocalinExpense
+			,@IsShowOutStationinExpense  AS IsShowOutStationinExpense
+			,@IsTAAttachment1Mandatory  AS IsTAAttachment1Mandatory
+			,@IsTAAttachment2Mandatory AS IsTAAttachment2Mandatory
+			,@IsSingleDayTAApplyRestriction AS IsSingleDayTAApplyRestriction
+			,@NameforConveyanceAttachment1 AS NameforConveyanceAttachment1
+			,@NameforConveyanceAttachment2 AS NameforConveyanceAttachment2
+			,@IsTaskManagementAvailable AS IsTaskManagementAvailable
+			--End of Rev 155.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1746,6 +1796,11 @@ BEGIN
 		SELECT 'IsAssignedDDAvailableForAllUser' AS [Key],CONVERT(NVARCHAR(15),USR.IsAssignedDDAvailableForAllUser) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 151.0
+		--Rev 153.0
+		UNION ALL
+		SELECT 'IsShowEmployeePerformance' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowEmployeePerformance) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 153.0
 	END
 
 	SET NOCOUNT OFF
