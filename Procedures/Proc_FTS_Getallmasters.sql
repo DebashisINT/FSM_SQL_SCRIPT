@@ -10,14 +10,17 @@ ALTER Proc [dbo].[Proc_FTS_Getallmasters]
 @ExpenseID varchar(50)=1,
 @Tcid varchar(200)=NULL
 As
-/*1.0 Priti		V2.0.36 23-01-2022		0025583: Portal Changes Required in Module : CONFIGURE TRAVELLING ALLOWANCE*/
+/***********************************************************************************************************************
+1.0		Priti		V2.0.36		23-01-2022		0025583: Portal Changes Required in Module : CONFIGURE TRAVELLING ALLOWANCE
+2.0		Sanchita	V2.0.40		09-05-2023		26063: BP Poddar Expense Feature Modification
+***************************************************************************************************************************/
 Begin
 Declare @Variable_Value varchar(50)=null
 SELECT @Variable_Value=Value FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='isExpenseFeatureAvailable'
 
 if(@Action ='VisitLocation')
 Begin
- --- REV 1.0
+	--- REV 1.0
 	if(@Variable_Value='1')
 	Begin
 		SELECT  Id as ID ,Visit_Location as Name FROM FTS_Visit_Location  
@@ -35,21 +38,35 @@ End
 
 else if(@Action ='Expense')
 Begin
- --- REV 1.0
-if(@Variable_Value='1')
-Begin
-	SELECT  Id as ID ,Expense_Type as Name FROM FTS_Expense_Type 
-	where Id NOT IN(2,3,4,5,6,7)
-	order by Expense_Type
-End
-Else
-Begin
-	SELECT  Id as ID ,Expense_Type as Name FROM FTS_Expense_Type 
-	where Expense_Type<>'Other'
-	order by Expense_Type
+	-- Rev 2.0
+	DECLARE @IsExpenseFeatureAvailable VARCHAR(10)
+	SET @IsExpenseFeatureAvailable = (select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsExpenseFeatureAvailable')
 	
-END
- ---END REV 1.0
+	IF(@IsExpenseFeatureAvailable='1')
+	BEGIN
+		SELECT  Id as ID ,Expense_Type as Name FROM FTS_Expense_Type where Expense_Type='Allowance'
+	END
+	ELSE
+	BEGIN
+	-- End of Rev 2.0
+		--- REV 1.0
+		if(@Variable_Value='1')
+		Begin
+			SELECT  Id as ID ,Expense_Type as Name FROM FTS_Expense_Type 
+			where Id NOT IN(2,3,4,5,6,7)
+			order by Expense_Type
+		End
+		Else
+		Begin
+			SELECT  Id as ID ,Expense_Type as Name FROM FTS_Expense_Type 
+			where Expense_Type<>'Other'
+			order by Expense_Type
+	
+		END
+		 ---END REV 1.0
+	-- Rev 2.0
+	END
+	-- End of Rev 2.0
 End
 
 else if(@Action ='TravelMode')
