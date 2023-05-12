@@ -22,7 +22,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALEMPLOYEEPERFORMANCESUMDET_FETCH]
 --Rev 3.0
 @FIRSTTIME BIT=NULL
 --End of Rev 3.0
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 09/05/2022
@@ -35,6 +35,7 @@ Module	   : Horizontal Performance Summary & Detail.Refer: 0024858
 												For 1 month date range taking huge time.
 												Please optimize upto possible extent.
 												Checked in Eurobond live data.Refer: 0025004
+4.0		V2.0.40		Sanchita	11/05/2023		Feedback column is required in Horizontal Performance Summary & Detail Report. Refer: 25786
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -594,6 +595,9 @@ BEGIN
 			SET @Strsql='SELECT ROW_NUMBER() OVER(ORDER BY CONVERT(NVARCHAR(10),SHOPACT.visited_time,108) DESC) AS SEQ,MU.USER_ID,CNT.CNT_INTERNALID,MS.Shop_Name AS CUSTNAME,MS.ADDRESS,'
 			SET @Strsql+='MS.Shop_Owner_Contact AS MOBILENO,ST.NAME AS SHOPTYPE,CONVERT(NVARCHAR(10),SHOPACT.visited_time,105) AS VISITDATE,CONVERT(NVARCHAR(10),SHOPACT.visited_time,108) AS VISITTIME,'
 			SET @Strsql+='SHOPACT.spent_duration AS SPENTDURATION '
+			-- Rev 4.0
+			SET @Strsql+=' ,SHOPACT.REMARKS AS FEEDBACK, GROUPBEAT.BEAT AS BEAT '
+			-- End of Rev 4.0
 			SET @Strsql+='FROM tbl_shoptype ST '
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
 			SET @Strsql+='INNER JOIN tbl_master_user MU ON MS.Shop_CreateUser=MU.USER_ID AND MU.user_inactive=''N'' '
@@ -605,6 +609,14 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state STAT ON STAT.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN tbl_trans_shopActivitysubmit SHOPACT ON MU.user_id=SHOPACT.User_Id AND MS.Shop_Code=SHOPACT.Shop_Id '
+			-- Rev 4.0
+			SET @Strsql+='LEFT OUTER JOIN ( '
+			SET @Strsql+='select DISTINCT MAP.USER_ID, '
+			SET @Strsql+='		ISNULL((SELECT  LTRIM(STUFF(((SELECT DISTINCT '', '' + NAME FROM 	'
+			SET @Strsql+='		(SELECT BEAT.NAME FROM FSM_GROUPBEAT_USERMAP BEAT_MAP INNER JOIN FSM_GROUPBEAT BEAT ON BEAT_MAP.BEAT_ID=BEAT.ID AND BEAT_MAP.USER_ID=MAP.USER_ID '
+			SET @Strsql+='		) AS BEAT FOR XML PATH(''''))),1,2,'' ''))),'''') AS BEAT from FSM_GROUPBEAT_USERMAP MAP '
+			SET @Strsql+=') GROUPBEAT ON GROUPBEAT.USER_ID=MU.USER_ID '
+			-- End of Rev 4.0
 			SET @Strsql+='WHERE ST.IsActive=1 AND SHOPACT.ISMEETING=0 '
 			IF @VISITTYPE='NEWSHOP_VISITED'
 				SET @Strsql+='AND SHOPACT.Is_Newshopadd=1 '
