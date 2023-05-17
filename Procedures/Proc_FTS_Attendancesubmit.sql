@@ -53,6 +53,10 @@ ALTER PROCEDURE [dbo].[Proc_FTS_Attendancesubmit]
 --Rev 14.0
 @IsDistributorwiseNearbyShopVisit NVARCHAR(10)=NULL,
 --End of Rev 14.0
+--Rev 15.0
+@VISIT_LOCATION_ID INT=NULL,
+@AREA_LOCATION_ID INT=NULL,
+--End of Rev 15.0
 @FUNDPLAN UDT_FUNDPLAN READONLY
 )--WITH ENCRYPTION
 AS
@@ -71,6 +75,7 @@ AS
 12.0	v2.0.37		Debashis	12-12-2022		New columns have been added.Row: 776
 13.0	v2.0.37		Debashis	12-12-2022		An App Config setting :'IsDatatableUpdateForDashboardAttendanceTab' Default Value shall be '1'.Refer: 0025427
 14.0	v2.0.38		Debashis	24-01-2023		New column has been added.Row: 807
+15.0	v2.0.39		Debashis	17-05-2023		Two columns have been added.Row: 840
 ************************************************************************************************************************************************************************************************/ 
 BEGIN
 	SET NOCOUNT ON
@@ -158,6 +163,7 @@ BEGIN
 					--Rev 11.0 &&Added a new column as Beat_ID
 					--Rev 12.0 &&Added some new columns as IsJointVisit,JointVisitTeam_MemberName & JointVisitTeam_Member_User_ID
 					--Rev 14.0 &&Added a new column as IsDistributorwiseNearbyShopVisit
+					--Rev 15.0 &&Added Two new columns as VISIT_LOCATION_ID & AREA_LOCATION_ID
 					insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 					Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 					--REV 9.0 START
@@ -166,7 +172,7 @@ BEGIN
 					--REV 10.0 START
 					,StaticDistance
 					--REV 10.0 END	
-					,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID,IsDistributorwiseNearbyShopVisit
+					,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID,IsDistributorwiseNearbyShopVisit,VISIT_LOCATION_ID,AREA_LOCATION_ID
 					) 
 					values(@user_id,null,null,@wlatitude,@wlongitude,@wtype,@wdesc,@Waddress,@datefetch,@Isonleave,@add_attendence_time,@leave_type,@leave_from_date,@leave_to_date,
 					@Distributor_Name,@Market_Worked,
@@ -179,7 +185,7 @@ BEGIN
 					--REV 10.0 START
 					,@STATICDISTANCE
 					--REV 10.0 END	
-					,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID,@IsDistributorwiseNearbyShopVisit
+					,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID,@IsDistributorwiseNearbyShopVisit,@VISIT_LOCATION_ID,@AREA_LOCATION_ID
 					)	
 					SET @identity=SCOPE_IDENTITY()
 
@@ -332,6 +338,7 @@ BEGIN
 						--Rev 11.0 &&Added a new column as Beat_ID
 						--Rev 12.0 &&Added some new columns as IsJointVisit,JointVisitTeam_MemberName & JointVisitTeam_Member_User_ID
 						--Rev 14.0 &&Added a new column as IsDistributorwiseNearbyShopVisit
+						--Rev 15.0 &&Added Two new columns as VISIT_LOCATION_ID & AREA_LOCATION_ID
 						insert into tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_Type,Work_Desc,
 						Work_Address,Work_datetime,Isonleave,Attendence_time,Leave_Type,Leave_FromDate,Leave_ToDate,Distributor_Name,Market_Worked,LeaveReason
 						--REV 9.0 START
@@ -340,7 +347,7 @@ BEGIN
 						--REV 10.0 START
 						,StaticDistance
 						--REV 10.0 END
-						,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID,IsDistributorwiseNearbyShopVisit
+						,Beat_ID,IsJointVisit,JointVisitTeam_MemberName,JointVisitTeam_Member_User_ID,IsDistributorwiseNearbyShopVisit,VISIT_LOCATION_ID,AREA_LOCATION_ID
 						) 
 						values(@user_id,@Wdatetime,null,@wlatitude,@wlongitude,@wtype,@wdesc,@Waddress,@Wdatetime,@Isonleave,@add_attendence_time,@leave_type,@leave_from_date,@leave_to_date,
 						@Distributor_Name,@Market_Worked,
@@ -353,7 +360,7 @@ BEGIN
 						--REV 10.0 START
 						,@STATICDISTANCE
 						--REV 10.0 END
-						,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID,@IsDistributorwiseNearbyShopVisit
+						,@beat_id,CAST(@IsJointVisit AS BIT),@JointVisitTeam_MemberName,@JointVisitTeam_Member_User_ID,@IsDistributorwiseNearbyShopVisit,@VISIT_LOCATION_ID,@AREA_LOCATION_ID
 						)
 						SET @identity=SCOPE_IDENTITY()
 
