@@ -175,6 +175,7 @@ BEGIN
 																		  NameforConveyanceAttachment1,NameforConveyanceAttachment2 & IsTaskManagementAvailable.Row 825,826 & 827
 	156.0		Debashis	16-05-2023	ADD SETTINGS @Action=GlobalCheck' IsAttachmentAvailableForCurrentStock.Row 833
 	157.0		Debashis	16-05-2023	ADD SETTINGS @Action=GlobalCheck' IsShowReimbursementTypeInAttendance.Row 838
+	158.0		Debashis	19-05-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatPlanAvailable.Row 841
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -381,6 +382,9 @@ BEGIN
 	--Rev 157.0
 	,@IsShowReimbursementTypeInAttendance BIT
 	--End of Rev 157.0
+	--Rev 158.0
+	,@IsBeatPlanAvailable BIT
+	--End of Rev 158.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -638,6 +642,9 @@ BEGIN
 		--Rev 157.0
 		SET @IsShowReimbursementTypeInAttendance  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowReimbursementTypeInAttendance' AND IsActive=1)
 		--End of Rev 157.0
+		--Rev 158.0
+		SET @IsBeatPlanAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatPlanAvailable' AND IsActive=1)
+		--End of Rev 158.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -874,6 +881,9 @@ BEGIN
 			--Rev 157.0
 			,@IsShowReimbursementTypeInAttendance AS IsShowReimbursementTypeInAttendance
 			--End of Rev 157.0
+			--Rev 158.0
+			,@IsBeatPlanAvailable AS IsBeatPlanAvailable
+			--End of Rev 158.0
 	END
 
 	else if(@Action='UserCheck')
