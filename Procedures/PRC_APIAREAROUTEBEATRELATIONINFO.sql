@@ -14,6 +14,7 @@ AS
 /*******************************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 18/01/2023
 Purpose : For New Area/Route/Beat informations.Row 794 to 795
+1.0		v2.0.39		Debashis	19/05/2023		A new @ACTION='BEATAREAROUTELIST' has been added.Row: 842
 *******************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -49,6 +50,18 @@ BEGIN
 			LEFT OUTER JOIN FSM_GROUPBEAT BEAT_ROUTE ON BEAT.ROUTE_CODE=BEAT_ROUTE.ID AND BEAT_ROUTE.CODE_TYPE='ROUTE'
 			WHERE BM.USER_ID=@USER_ID
 		END
+	--Rev 1.0
+	IF @ACTION='BEATAREAROUTELIST'
+		BEGIN
+			SELECT BEATPLAN.PLAN_USERID AS user_id,BEATPLAN.PLAN_ASSNBEATID,BEAT.[NAME] AS PLAN_ASSNBEATName,BEATPLAN.PLAN_ASSNAREAID,AREA.[NAME] AS PLAN_ASSNAREAName,
+			BEATPLAN.PLAN_ASSNROUTEID,ROUT.[NAME] AS PLAN_ASSNROUTEName
+			FROM FSM_GROUPBEAT_PLAN BEATPLAN
+			LEFT OUTER JOIN FSM_GROUPBEAT BEAT ON BEATPLAN.PLAN_ASSNBEATID=BEAT.ID AND BEAT.CODE_TYPE='BEAT'
+			LEFT OUTER JOIN FSM_GROUPBEAT ROUT ON BEATPLAN.PLAN_ASSNROUTEID=ROUT.ID AND ROUT.CODE_TYPE='AREA'
+			LEFT OUTER JOIN FSM_GROUPBEAT AREA ON BEATPLAN.PLAN_ASSNAREAID=AREA.ID AND AREA.CODE_TYPE='ROUTE'
+			WHERE BEATPLAN.PLAN_USERID=@USER_ID
+		END
+	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END
