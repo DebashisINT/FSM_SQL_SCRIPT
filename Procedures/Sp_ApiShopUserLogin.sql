@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopUserLogin]
 @version_name NVARCHAR(MAX)=NULL,
 @Weburl NVARCHAR(MAX)=NULL,
 @device_token NVARCHAR(300)=NULL
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************************************
 REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
@@ -33,8 +33,10 @@ REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
 9.0			14-02-2022		V 2.0.27		Debashis			Added two new fields as IsOnLeaveForToday & OnLeaveForTodayStatus.Row: 646
 10.0		14-10-2022		V2.0.35			Debashis			Code Optimized.
 11.0		21-03-2023		V2.0.39			Sanchita			Some alarms [for viewing the Performance Summary report] are ringing in the BreezeFSM apps 
-																if the designation is set as ASM, ZM,BM & SO - alarm made based on system settings
+																if the designation is set as ASM, ZM,BM & SO
 																Refer: 25738
+12.0		24-04-2023		V2.0.39			Debashis			Added two new fields as add_Lat & add_Long.Row: 819
+13.0		19-05-2023		V2.0.39			Debashis			Added some new fields as visit_location_id,area_location_id & area_location_name.Row: 843
 ****************************************************************************************************************************************************************************************************/
 BEGIN
 	--BEGIN  TRAN
@@ -60,17 +62,16 @@ BEGIN
 	DECLARE @isFieldWorkVisible NVARCHAR(10)
 	DECLARE @Spent_Duration int=0
 	DECLARE @distributor_name NVARCHAR(200),@market_worked NVARCHAR(200)
-
 	declare @Intime NVARCHAR(50)=NULL
 	declare @Outtime NVARCHAR(50)=NULL
-
 	declare @versions int
-
 	-- Rev 11.0
 	DECLARE @IsDesignationwiseAlarmforApp NVARCHAR(10)
 	SELECT @IsDesignationwiseAlarmforApp=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDesignationwiseAlarmforApp'
 	-- End of Rev 11.0
-
+	--Rev 13.0
+	DECLARE @visit_location_id INT
+	--End of Rev 13.0
 	--Rev Debashis
 	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
 	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
@@ -168,10 +169,11 @@ BEGIN
 
 				--set @isOnLeave=(select  Isonleave from tbl_fts_UserAttendanceLoginlogout where User_Id=@UserId and Login_datetime is not null and cast(Login_datetime as date)=cast(GETDATE() as date))
 				--set @add_attendence_time=(select top 1 Attendence_time from tbl_fts_UserAttendanceLoginlogout where User_Id=@UserId and Login_datetime is not null and cast(Login_datetime as date)=cast(GETDATE() as date) order by Id desc)
-
-				select top 1 @isOnLeave=Isonleave,@add_attendence_time=Attendence_time from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@UserId and Login_datetime is not null and cast(Login_datetime as date)=cast(GETDATE() as date) order by Id desc
-
-
+				--Rev 13.0
+				--select top 1 @isOnLeave=Isonleave,@add_attendence_time=Attendence_time from tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) where User_Id=@UserId and Login_datetime is not null and cast(Login_datetime as date)=cast(GETDATE() as date) order by Id desc
+				SELECT TOP 1 @isOnLeave=Isonleave,@add_attendence_time=Attendence_time,@visit_location_id=VISIT_LOCATION_ID FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) 
+				WHERE User_Id=@UserId AND Login_datetime IS NOT NULL AND CAST(Login_datetime AS DATE)=CAST(GETDATE() AS DATE) ORDER BY Id DESC
+				--End of Rev 13.0
 			END
 
 			
@@ -382,8 +384,14 @@ BEGIN
 						,@distributor_name as distributor_name
 						,@market_worked as market_worked,
 						--Rev 9.0
-						ULA.IsOnLeaveForToday,ULA.OnLeaveForTodayStatus
+						ULA.IsOnLeaveForToday,ULA.OnLeaveForTodayStatus,
 						--End of Rev 9.0
+						--Rev 12.0
+						addr.add_Lat AS profile_latitude,addr.add_Long AS profile_longitude
+						--End of Rev 12.0
+						--Rev 13.0
+						,@visit_location_id AS visit_location_id,area_id AS area_location_id,area_name AS area_location_name
+						--End of Rev 13.0
 						FROM tbl_master_user as usr WITH(NOLOCK) 
 						LEFT OUTER JOIN [Master_AppVersionUsages] ver WITH(NOLOCK) on  usr.user_id=ver.UserId
 						--Rev Debashis
@@ -408,6 +416,9 @@ BEGIN
 						WHERE USER_ID=@UserId AND CAST(GETDATE() AS DATE) BETWEEN CAST(LEAVE_START_DATE AS DATE) AND CAST(LEAVE_END_DATE AS DATE)
 						) ULA ON usr.user_id=ULA.USER_ID 
 						--End of Rev 9.0
+						--Rev 13.0
+						LEFT OUTER JOIN tbl_master_area area WITH(NOLOCK) ON addr.add_area=area.area_id
+						--End of Rev 13.0
 						--v2.0
 
 						--Inner Join    tbl_trans_employeeCTC as ct2   on ct2.emp_cntId=cont.cnt_internalId
