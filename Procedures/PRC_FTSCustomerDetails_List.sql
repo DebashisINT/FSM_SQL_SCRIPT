@@ -1,4 +1,5 @@
-EXEC PRC_FTSCustomerDetails_List '2023-01-01','2023-01-31','','',378
+
+
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSCustomerDetails_List]') AND type in (N'P', N'PC'))
 BEGIN
@@ -148,60 +149,65 @@ BEGIN
 	EXEC SP_EXECUTESQL @Strsql
 	-- end of Rev 4.0
 
-	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTS_CustomerDetailsReport') AND TYPE IN (N'U'))
-	BEGIN
-	--Rev Debashis && Increase the field length of ContactNo from NVARCHAR(20) to NVARCHAR(100)
-	CREATE TABLE FTS_CustomerDetailsReport
-	(
-		USERID BIGINT,
-		SEQ	BIGINT,
-		shop_code NVARCHAR(100),
-		Shop_CreateTime	DATETIME,
-		cnt_internalId NVARCHAR(100),
-		EmpCode	NVARCHAR(100),
-		Employee NVARCHAR(300),
-		Supervisor NVARCHAR(300),
-		Designation	NVARCHAR(300),
-		DEPARTMENT NVARCHAR(300),
-		CustomerName NVARCHAR(300),
-		CustomerAddress	NVARCHAR(500),
-		ContactNo NVARCHAR(100),
-		MailId NVARCHAR(100),
-		Model NVARCHAR(300),
-		PrimaryApplication NVARCHAR(300),
-		SecondaryApplication NVARCHAR(300),
-		BookingAmount DECIMAL(18,2),
-		LeadType NVARCHAR(300),
-		Stage NVARCHAR(300),
-		FunnelStage	NVARCHAR(300),
-		Feedback NVARCHAR(500),
-		deg_id NVARCHAR(10),
-		emp_Department NVARCHAR(10),
-		stateId NVARCHAR(10),
-		Party_Type NVARCHAR(300),
-		DD_Type NVARCHAR(300),
-		Shop_Type NVARCHAR(300),
-		Entity_Type NVARCHAR(300),
-		Party_Status NVARCHAR(300),
-		Group_Beat NVARCHAR(300),
-		Account_Holder NVARCHAR(300),
-		Bank_Name NVARCHAR(300),
-		Account_No NVARCHAR(300),
-		IFSC_Code NVARCHAR(300),
-		UPI_ID NVARCHAR(300),
-		Type NVARCHAR(300),
-		Assoc_Customer NVARCHAR(300),
-		--Rev 3.0 
-		STATE_NAME NVARCHAR(200),
-		DISTRICT NVARCHAR(200),
-		--End of Rev 3.0 
-		LASTVISITDATE NVARCHAR(100),--REV 5.0	
-		LASTVISITTIME NVARCHAR(100),--REV 5.0	
-		LASTVISITEDBY NVARCHAR(200)--REV 5.0	
+	--REV 5.0
+	--NOT REQUIRED CREATE TABLE STATEMENT DUE TO MVC PAGE RenderAction CALL THE TABLE IN PAGE LOAD.IF ANY FIELD ADD OR DELETE THEN NEED DROP TABLE AS WELL AS NEW CREATE TABLE STATEMENT IN MIGRATION SHEET.
+	
+	--IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTS_CustomerDetailsReport') AND TYPE IN (N'U'))
+	--BEGIN
+	----Rev Debashis && Increase the field length of ContactNo from NVARCHAR(20) to NVARCHAR(100)
+	--CREATE TABLE FTS_CustomerDetailsReport
+	--(
+	--	USERID BIGINT,
+	--	SEQ	BIGINT,
+	--	shop_code NVARCHAR(100),
+	--	Shop_CreateTime	DATETIME,
+	--	cnt_internalId NVARCHAR(100),
+	--	EmpCode	NVARCHAR(100),
+	--	Employee NVARCHAR(300),
+	--	Supervisor NVARCHAR(300),
+	--	Designation	NVARCHAR(300),
+	--	DEPARTMENT NVARCHAR(300),
+	--	CustomerName NVARCHAR(300),
+	--	CustomerAddress	NVARCHAR(500),
+	--	ContactNo NVARCHAR(100),
+	--	MailId NVARCHAR(100),
+	--	Model NVARCHAR(300),
+	--	PrimaryApplication NVARCHAR(300),
+	--	SecondaryApplication NVARCHAR(300),
+	--	BookingAmount DECIMAL(18,2),
+	--	LeadType NVARCHAR(300),
+	--	Stage NVARCHAR(300),
+	--	FunnelStage	NVARCHAR(300),
+	--	Feedback NVARCHAR(500),
+	--	deg_id NVARCHAR(10),
+	--	emp_Department NVARCHAR(10),
+	--	stateId NVARCHAR(10),
+	--	Party_Type NVARCHAR(300),
+	--	DD_Type NVARCHAR(300),
+	--	Shop_Type NVARCHAR(300),
+	--	Entity_Type NVARCHAR(300),
+	--	Party_Status NVARCHAR(300),
+	--	Group_Beat NVARCHAR(300),
+	--	Account_Holder NVARCHAR(300),
+	--	Bank_Name NVARCHAR(300),
+	--	Account_No NVARCHAR(300),
+	--	IFSC_Code NVARCHAR(300),
+	--	UPI_ID NVARCHAR(300),
+	--	Type NVARCHAR(300),
+	--	Assoc_Customer NVARCHAR(300),
+	--	--Rev 3.0 
+	--	STATE_NAME NVARCHAR(200),
+	--	DISTRICT NVARCHAR(200),
+	--	--End of Rev 3.0 
+	--REV 5.0
+	--	LASTVISITDATE NVARCHAR(100),	
+	--	LASTVISITTIME NVARCHAR(100),	
+	--	LASTVISITEDBY NVARCHAR(200)
+	--REV 5.0 END
 
-		)
-	END
-
+	--	)
+	--END
+	--REV 5.0 END
 	DELETE FROM FTS_CustomerDetailsReport where USERID=@USERID
 
 	SET @Strsql=''

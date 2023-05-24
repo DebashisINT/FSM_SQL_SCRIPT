@@ -9,7 +9,10 @@ ALTER PROCEDURE [dbo].[EmployeeInsert]
 	--@cnt_id		int,
 	@cnt_ucc 		varchar(10),
 	@cnt_salutation		int,
-	@cnt_firstName		varchar(50),
+	-- Rev 5.0
+	--@cnt_firstName		varchar(50),
+	@cnt_firstName		varchar(150),
+	-- End of Rev 5.0
 	@cnt_middleName	varchar(50),
 	@cnt_lastName		varchar(50),
 	@cnt_shortName	varchar(30),
@@ -49,10 +52,12 @@ ALTER PROCEDURE [dbo].[EmployeeInsert]
 -- with encryption
 AS
 /***********************************************************************************************************************************
-1.0		03-02-2020		Tanmoy		insert date of joining in tbl_master_employee 
-2.0		19-02-2020		Tanmoy		move settings master_contact to master_user 
-3.0		Sanchita		v2.0.27		17/12/2021		Resolve issue in Employee Import. Refer: 24554
-4.0		Sanchita		v2.0.26		Three new multi select window in General Tab - Channel, Section, Circle . Refer: 24646
+1.0		03-02-2020		Tanmoy						insert date of joining in tbl_master_employee 
+2.0		19-02-2020		Tanmoy						move settings master_contact to master_user 
+3.0		17/12/2021		Sanchita		v2.0.27		Resolve issue in Employee Import. Refer: 24554
+4.0						Sanchita		v2.0.26		Three new multi select window in General Tab - Channel, Section, Circle . Refer: 24646
+5.0		22-05-2023		Sanchita		V2.0.40		The first name field of the employee master should consider 150 character from the application end.  
+													Refer: 26187
 ***********************************************************************************************************************************/
 begin
 declare @uniqueCode varchar(50)
