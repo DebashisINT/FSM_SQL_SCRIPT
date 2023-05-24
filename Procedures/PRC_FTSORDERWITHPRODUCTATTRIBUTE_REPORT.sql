@@ -15,7 +15,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSORDERWITHPRODUCTATTRIBUTE_REPORT]
 @DESIGNID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 19/10/2021

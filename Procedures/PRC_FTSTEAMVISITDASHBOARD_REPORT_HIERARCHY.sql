@@ -54,6 +54,8 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 												Refer: 25468
 												NEW SP WRITTEN
 13.0	v2.0.38		Sanchita	04-01-2023		Dashboard showing wrong data when clicked on Employee Strength in Visit tab. refer: 25567
+14.0	V2.0.40		Sanchita	05-04-2023		ITC user dashboard is taking too much time to respond for AE & AM users login credentials.
+												Hierarchy tab optimized. Refer: 25781
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -400,6 +402,19 @@ BEGIN
 	) DESG ON DESG.emp_cntId=EMP.emp_contactId 
 	WHERE CNT.cnt_contactType IN('EM')
 	--End of Rev 7.0
+
+	-- Rev 14.0
+	CREATE TABLE #TMPEmployeeBranchMap
+		(
+			Emp_Contactid NVARCHAR(200) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			BranchId BIGINT 
+		)
+	CREATE NONCLUSTERED INDEX IX_Contactid ON #TMPEmployeeBranchMap(Emp_Contactid ASC)
+
+	INSERT INTO #TMPEmployeeBranchMap
+	SELECT Emp_Contactid, BranchId FROM FTS_EmployeeBranchMap BMAP WITH (NOLOCK)
+	INNER JOIN #EMPHR_EDIT ON BMAP.Emp_Contactid=EMPCODE
+	-- End of Rev 14.0
 				
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSTEAMVISITDASHBOARD_REPORT_HIERARCHY') AND TYPE IN (N'U'))
 		BEGIN
@@ -448,6 +463,7 @@ BEGIN
 		END
 	DELETE FROM FTSTEAMVISITDASHBOARD_REPORT_HIERARCHY WHERE USERID=@USERID
 
+	-- Rev 14.0 [ In the full query below all FTS_EmployeeBranchMap have been replaced by #TMPEmployeeBranchMap
 	SET @Strsql=''
 	IF @ACTION='ALL' AND @RPTTYPE='Summary'
 		BEGIN
@@ -463,7 +479,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
@@ -484,9 +500,9 @@ BEGIN
 				BEGIN
 					-- Rev 9.0
 					--IF @STATEID<>'' 
-					--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					--IF @STATEID=''
-					--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					IF @STATEID<>'' 
 						SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId ) '
 					IF @STATEID=''
@@ -527,7 +543,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -547,7 +563,7 @@ BEGIN
 			IF(@ActivateEmployeeBranchHierarchy = 0)
 				BEGIN
 					-- Rev 9.0
-					--SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--SET @Strsql+='and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 					-- End of Rev 9.0
 				END
@@ -577,7 +593,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' ' 
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -599,7 +615,7 @@ BEGIN
 			IF(@ActivateEmployeeBranchHierarchy = 0)
 				BEGIN
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 					-- End of Rev 9.0
 				END
@@ -630,7 +646,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST WITH (NOLOCK) ON ST.id=ADDR.add_state '
@@ -652,9 +668,9 @@ BEGIN
 				BEGIN
 					-- Rev 9.0
 					--IF @STATEID<>''
-					--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--	SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					--IF @STATEID=''
-					--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					IF @STATEID<>''
 						SET @Strsql+='WHERE EXISTS (SELECT State_Id FROM #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 					IF @STATEID=''
@@ -690,7 +706,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -710,7 +726,7 @@ BEGIN
 			IF(@ActivateEmployeeBranchHierarchy = 0)
 				BEGIN
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 					-- End of Rev 9.0
 				END
@@ -735,7 +751,7 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			-- Rev 9.0
 			if @ActivateEmployeeBranchHierarchy=0
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON CNT.cnt_internalId=BMAP.Emp_Contactid '
 			-- End of Rev 9.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_contactId=CNT.cnt_internalId '
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR WITH (NOLOCK) ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -756,7 +772,7 @@ BEGIN
 			IF(@ActivateEmployeeBranchHierarchy = 0)
 				BEGIN
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 					-- End of Rev 9.0
 				END
@@ -793,7 +809,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -823,7 +839,7 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 				SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 				-- End of Rev 9.0
 			end
@@ -881,8 +897,8 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--ET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN FTS_EmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				--ET @Strsql+='INNER JOIN (select ROW_NUMBER() OVER (PARTITION BY BM.Emp_Contactid ORDER BY BM.Emp_Contactid,B.BRANCH_ID) row_num, B.BRANCH_ID, B.BRANCH_DESCRIPTION, BM.Emp_Contactid from tbl_master_branch B INNER JOIN #TMPEmployeeBranchMap BM on B.BRANCH_ID=BM.BranchId ) BR on BR.Emp_Contactid=EMP.emp_contactId and row_num=1 '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 				-- End of Rev 9.0
 			end
@@ -950,7 +966,7 @@ BEGIN
 				IF @STATEID<>''
 				begin
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join #TMPEmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BRANCH_ID) '
 					-- End of Rev 9.0
 				end
@@ -1005,7 +1021,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1102,7 +1118,7 @@ BEGIN
 			begin
 				IF @STATEID<>''
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join #TMPEmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BRANCH_ID) '
 					-- End of Rev 9.0
 			end
@@ -1141,7 +1157,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1207,7 +1223,7 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join #TMPEmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
 				SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BRANCH_ID) '
 				-- End of Rev 9.0
 			END
@@ -1252,7 +1268,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1320,7 +1336,7 @@ BEGIN
 			begin
 				IF @STATEID<>''
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join #TMPEmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BRANCH_ID) '
 					-- End of Rev 9.0
 			END
@@ -1347,7 +1363,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1371,7 +1387,7 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 				SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 				-- End of Rev 9.0
 			END
@@ -1391,7 +1407,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1416,7 +1432,7 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 				SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 				-- End of Rev 9.0
 			END
@@ -1454,7 +1470,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1516,7 +1532,7 @@ BEGIN
 			begin
 				IF @STATEID<>''
 					-- Rev 9.0
-					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join FTS_EmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
+					--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR inner join #TMPEmployeeBranchMap BMAP on BR.Branch_Id=BMAP.BranchId and BMAP.Emp_Contactid=DB.EMPCODE ) '
 					SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=DB.BRANCH_ID) '
 					-- End of Rev 9.0
 			END
@@ -1554,7 +1570,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1583,7 +1599,7 @@ BEGIN
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
 				-- Rev 9.0
-				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM FTS_EmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
+				--SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE EXISTS(SELECT BMAP.BranchId FROM #TMPEmployeeBranchMap BMAP WHERE BR.Branch_Id=BMAP.BranchId) ) '
 				SET @Strsql+=' AND EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=BMAP.BranchId) '
 				-- End of Rev 9.0
 			END
@@ -1654,7 +1670,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1762,7 +1778,7 @@ BEGIN
 			--SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
 			if(@ActivateEmployeeBranchHierarchy = 0)
 			begin
-				SET @Strsql+='INNER JOIN FTS_EmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
+				SET @Strsql+='INNER JOIN #TMPEmployeeBranchMap BMAP WITH (NOLOCK) ON EMP.emp_contactId=BMAP.Emp_Contactid '
 				SET @Strsql+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON BMAP.BranchId=BR.branch_id '
 			end
 			else
@@ -1926,6 +1942,9 @@ BEGIN
 	--Rev 7.0
 	DROP TABLE #TEMPCONTACTREPORTTO
 	--End of Rev 7.0
+	-- Rev 14.0
+	DROP TABLE #TMPEmployeeBranchMap
+	-- End of Rev 14.0
 
 	SET NOCOUNT OFF
 END

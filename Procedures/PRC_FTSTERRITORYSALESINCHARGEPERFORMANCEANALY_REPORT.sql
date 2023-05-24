@@ -13,7 +13,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSTERRITORYSALESINCHARGEPERFORMANCEANALY_REPORT]
 @STATEID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 25/11/2022
