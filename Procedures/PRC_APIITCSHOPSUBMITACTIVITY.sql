@@ -19,6 +19,8 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 												used Global Temporary table instead of Temporary table and resolved the issue.Refer: 0025740
 2.0		v2.0.39		Debashis	04-04-2023		Visit & Revisit data of ITC are not sync in Trans_ShopActivitySubmit_TodayData table due to Deadlock.
 												Now it has been taken care of.Refer: 0025776
+3.0		v2.0.40		Debashis	25-05-2023		When Shopsubmission/ITCShopVisited this revisit/visit sync api is called tbl_Master_shop -> Lastvisit_date this column 
+												should also update with specific date-time.Refer: 0026228
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 2.0
@@ -156,6 +158,12 @@ BEGIN
 					WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 				END
+				--Rev 3.0
+				UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
+				FROM [tbl_Master_shop] MS
+				INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+				ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+				--End of Rev 3.0
 		COMMIT TRAN
 	END TRY
 
