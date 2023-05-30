@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]
 @ISPAGELOAD NVARCHAR(1)=NULL,
 --End of Rev 5.0
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 03/11/2021
@@ -27,6 +27,7 @@ Module	   : Employee Outlet Master.Refer: 0024448
 3.0		v2.0.39		PRITI		13/02/2023		0025663:Last Visit fields shall be available in Outlet Reports
 4.0		v2.0.39		Debashis	02/05/2023		Employee Outlet Master -- logic need to be change.Refer: 0025994
 5.0		v2.0.39		Debashis	12/05/2023		Optimization required for Employee Outlet Master.Refer: 0026020
+6.0		V2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -165,7 +166,8 @@ BEGIN
 			  OUTLETLANG NVARCHAR(MAX),
 			  LASTVISITDATE NVARCHAR(100),--REV 3.0	
 			  LASTVISITTIME NVARCHAR(100),--REV 3.0	
-			  LASTVISITEDBY NVARCHAR(200)--REV 3.0	
+			  LASTVISITEDBY NVARCHAR(200),--REV 3.0	
+			  OUTLETSTATUS	NVARCHAR(10) -- Rev 6.0
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSEMPLOYEEOUTLETMASTER_REPORT (SEQ)
 		END
@@ -178,7 +180,10 @@ BEGIN
 			--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSEMPLOYEEOUTLETMASTER_REPORT(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTOUID,REPORTTO,'
-			SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG,LASTVISITDATE,LASTVISITTIME,LASTVISITEDBY) '
+			SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG,LASTVISITDATE,LASTVISITTIME,LASTVISITEDBY, '
+			-- Rev 6.0
+			SET @Strsql+='OUTLETSTATUS) '
+			-- End of Rev 6.0
 			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY CNT.cnt_internalId) AS SEQ,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
@@ -187,6 +192,9 @@ BEGIN
 			--Rev 3.0
 			SET @Strsql+=' ,CONVERT(NVARCHAR(10),MS.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),MS.Lastvisit_date,108)LASTVISITTIME,UserTBl.user_name LASTVISITEDBY '
 			--REV 3.0	end
+			-- Rev 6.0
+			SET @Strsql+=' , CASE WHEN ISNULL(MS.Entity_Status,0)=0 THEN ''Inactive'' ELSE ''Active'' END AS OUTLETSTATUS '
+			-- End of Rev 6.0
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
