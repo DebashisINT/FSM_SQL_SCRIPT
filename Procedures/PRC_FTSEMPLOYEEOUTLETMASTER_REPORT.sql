@@ -28,6 +28,7 @@ Module	   : Employee Outlet Master.Refer: 0024448
 4.0		v2.0.39		Debashis	02/05/2023		Employee Outlet Master -- logic need to be change.Refer: 0025994
 5.0		v2.0.39		Debashis	12/05/2023		Optimization required for Employee Outlet Master.Refer: 0026020
 6.0		V2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
+7.0		V2.0.41		Sanchita	02/06/2023		Employee Outlet Master : Report, Outlet ID shall be showing Internal ID. Refer: 26239
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -187,7 +188,10 @@ BEGIN
 			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY CNT.cnt_internalId) AS SEQ,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 			SET @Strsql+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
-			SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,MS.EntityCode AS OUTLETID,'
+			-- Rev 7.0
+			--SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,MS.EntityCode AS OUTLETID,'
+			SET @Strsql+='USR.user_loginId AS CONTACTNO,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,HRPTTO.HREPORTTOID,HRPTTO.HREPORTTOUID,HRPTTO.HREPORTTO,HRPTTO.HRPTTODESG,MS.Shop_ID AS OUTLETID,'
+			-- End of Rev 7.0
 			SET @Strsql+='MS.Shop_Name AS OUTLETNAME,MS.Address AS OUTLETADDRESS,MS.Shop_Owner_Contact AS OUTLETCONTACT,MS.Shop_Lat AS OUTLETLAT,MS.Shop_Long AS OUTLETLANG '
 			--Rev 3.0
 			SET @Strsql+=' ,CONVERT(NVARCHAR(10),MS.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),MS.Lastvisit_date,108)LASTVISITTIME,UserTBl.user_name LASTVISITEDBY '
