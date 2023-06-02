@@ -176,6 +176,9 @@ BEGIN
 	156.0		Debashis	16-05-2023	ADD SETTINGS @Action=GlobalCheck' IsAttachmentAvailableForCurrentStock.Row 833
 	157.0		Debashis	16-05-2023	ADD SETTINGS @Action=GlobalCheck' IsShowReimbursementTypeInAttendance.Row 838
 	158.0		Debashis	19-05-2023	ADD SETTINGS @Action=GlobalCheck' IsBeatPlanAvailable.Row 841
+	159.0		Debashis	01-06-2023	ADD SETTINGS @Action=UserCheck' IsShowWorkType,IsShowMarketSpendTimer,IsShowUploadImageInAppProfile,IsShowCalendar,
+																		IsShowCalculator,IsShowInactiveCustomer & IsShowAttendanceSummary.Row 844
+	160.0		Debashis	02-06-2023	ADD SETTINGS @Action=GlobalCheck' IsUpdateVisitDataInTodayTable.Row 848
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -385,6 +388,9 @@ BEGIN
 	--Rev 158.0
 	,@IsBeatPlanAvailable BIT
 	--End of Rev 158.0
+	--Rev 160.0
+	,@IsUpdateVisitDataInTodayTable BIT
+	--End of Rev 160.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -645,6 +651,9 @@ BEGIN
 		--Rev 158.0
 		SET @IsBeatPlanAvailable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsBeatPlanAvailable' AND IsActive=1)
 		--End of Rev 158.0
+		--Rev 160.0
+		SET @IsUpdateVisitDataInTodayTable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsUpdateVisitDataInTodayTable' AND IsActive=1)
+		--End of Rev 160.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -884,6 +893,9 @@ BEGIN
 			--Rev 158.0
 			,@IsBeatPlanAvailable AS IsBeatPlanAvailable
 			--End of Rev 158.0
+			--Rev 160.0
+			,@IsUpdateVisitDataInTodayTable AS IsUpdateVisitDataInTodayTable
+			--End of Rev 160.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1831,6 +1843,29 @@ BEGIN
 		SELECT 'IsShowEmployeePerformance' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowEmployeePerformance) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 153.0
+		--Rev 159.0
+		UNION ALL
+		SELECT 'IsShowWorkType' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowWorkType) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowMarketSpendTimer' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowMarketSpendTimer) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowUploadImageInAppProfile' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowUploadImageInAppProfile) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowCalendar' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowCalendar) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowCalculator' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowCalculator) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowInactiveCustomer' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowInactiveCustomer) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsShowAttendanceSummary' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowAttendanceSummary) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 159.0
 	END
 
 	SET NOCOUNT OFF
