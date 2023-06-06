@@ -1,6 +1,6 @@
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSInsertUpdateNewParty]') AND type in (N'P', N'PC'))
 BEGIN
-EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateNewParty] AS' 
+	EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateNewParty] AS' 
 END
 GO
 
@@ -74,7 +74,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
 -- Ebd of Rev 9.0
 ) 
 AS
-/******************************************************************************************************************************
+/*****************************************************************************************************************************
 1.0			Tanmoy		08-05-2020			create sp
 2.0			Tanmoy		22-05-2020			Insert dd_code and add  @ACTION='DeleteParty'
 3.0			Tanmoy		25-05-2020			Add new column 
@@ -91,6 +91,7 @@ AS
 													selected while creating/editing Shop. Refer: 25593
 14.0		v2.0.38		Sanchita	27-01-2023		Bulk modification feature is required in Parties menu. Refer: 25609
 15.0		v2.0.38		Sanchita	27-01-2023		Assign to DD is not showing while making shop from Portal. Refer: 25606
+16.0		V2.0.41		Sanchita	05-06-2023		Inactive DD/PP is showing in the Assign to PP/DD list while creating any Shop. Refer: 26262
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -412,9 +413,28 @@ BEGIN
 		set @ShopType = (select top 1 id from tbl_shoptypeDetails where name='Distributor')
 
 		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
-			where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
+			-- Rev 16.0
+			--where (type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
+			where Entity_Status=1 and (
+				(type=@ShopType and Shop_Name like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
+			-- End of Rev 16.0
 				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id) 
 				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' and isnull(dealer_id,0)=@dealer_id)
+				)
 	END
 	-- End of Rev 12.0
+	-- Rev 16.0
+	IF @ACTION='GetPPShop'
+	BEGIN
+		--set @ShopType = (select top 1 id from tbl_shoptypeDetails where name='Distributor')
+		set @ShopType = 2
+
+		select top(10)Shop_Code,Entity_Location,Replace(Shop_Name,'''','&#39;') as Shop_Name,EntityCode,Shop_Owner_Contact from tbl_Master_shop 
+			where Entity_Status=1 and (
+				(type=@ShopType and Shop_Name like '%' + @SearchKey + '%') 
+				or  (type=@ShopType and EntityCode like '%' + @SearchKey + '%' ) 
+				or (type=@ShopType and Shop_Owner_Contact like '%' + @SearchKey + '%' )
+				)
+	END
+	-- End of Rev 16.0
 END
