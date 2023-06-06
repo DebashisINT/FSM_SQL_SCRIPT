@@ -15,13 +15,19 @@ ALTER PROCEDURE  [dbo].[Sp_API_DaywiseShop]
 @Action  int=NULL
 ) --WITH ENCRYPTION
 AS
-/****************************************************************************************************************************************
+/*********************************************************************************************************************************************************************
 1.0					TANMOY		22-01-2020		ONLY SHOP SHOW ISMEETING=0 
 2.0					TANMOY		24-06-2021		add new parameter
 3.0					TANMOY		30-07-2021		Parameter name change
 4.0		v2.0.26		Debashis	13-12-2021		Some new fields has been added.
 5.0		v2.0.37		Debashis	10-01-2023		Some new fields have been added.Row: 787
-****************************************************************************************************************************************/
+6.0		v2.0.37		Debashis	21-04-2023		Added two new fields as DistFromProfileAddrKms & StationCode.Row: 821v2.0.3
+7.0		v2.0.39		Debashis	06-06-2023		http://3.7.30.86:8072/API/Daywiseshop/Records [^]
+												For the above api a list is coming as date_list->shop_list
+												Under the above list a parameter comes as visited_date which now fetching value as
+												2023-06-04T00:00:00,But it requires time along with the date such as 2023-06-06T10:30:41
+												Refer: 0026299
+*********************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
@@ -46,7 +52,10 @@ BEGIN
 
 					select distinct cast(visited_date as varchar(50)) as [date],cast(lastactivty.Shop_Id as varchar(50)) as shopid,
 					cast(spent_duration as varchar(50)) as duration_spent
-					,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_date as visited_date
+					--Rev 7.0
+					--,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_date as visited_date
+					,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_time as visited_date
+					--End of Rev 7.0
 					,ISNULL(device_model,'') device_model,ISNULL(android_version,'') android_version,ISNULL(battery,'') battery,ISNULL(net_status,'') net_status,ISNULL(net_type,'') net_type
 					,ISNULL(CheckIn_Time,'') in_time, ISNULL(CheckOut_Time,'') out_time,ISNULL(start_timestamp,'') start_timestamp
 					,ISNULL(CheckIn_Address,'') in_location, ISNULL(CheckOut_Address,'') out_location
@@ -59,6 +68,9 @@ BEGIN
 					--Rev 5.0
 					,Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number
 					--End of Rev 5.0
+					--Rev 6.0
+					 ,DistFromProfileAddrKms AS distFromProfileAddrKms,StationCode AS stationCode
+					 --End of Rev 6.0
 					 from  [tbl_trans_shopActivitysubmit]  as lastactivty WITH(NOLOCK) 
 					 INNER JOIN tbl_Master_shop as shop WITH(NOLOCK) on shop.Shop_Code=lastactivty.Shop_Id
 					where visited_date between @from_date and @to_date
@@ -86,7 +98,10 @@ BEGIN
 
 					select distinct cast(visited_date as varchar(50)) as [date],cast(lastactivty.Shop_Id as varchar(50)) as shopid,
 					cast(spent_duration as varchar(50)) as duration_spent
-					,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_date as visited_date
+					--Rev 7.0
+					--,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_date as visited_date
+					,shop.Shop_Name as shop_name,shop.Address as shop_address,visited_time as visited_date
+					--End of Rev 7.0
 					,ISNULL(device_model,'') device_model,ISNULL(android_version,'') android_version,ISNULL(battery,'') battery,ISNULL(net_status,'') net_status,ISNULL(net_type,'') net_type
 					,ISNULL(CheckIn_Time,'') in_time, ISNULL(CheckOut_Time,'') out_time,ISNULL(start_timestamp,'') start_timestamp
 					,ISNULL(CheckIn_Address,'') in_location, ISNULL(CheckOut_Address,'') out_location
@@ -99,6 +114,9 @@ BEGIN
 					--Rev 5.0
 					,Multi_Contact_Name AS multi_contact_name,Multi_Contact_Number AS multi_contact_number
 					--End of Rev 5.0
+					--Rev 6.0
+					 ,DistFromProfileAddrKms AS distFromProfileAddrKms,StationCode AS stationCode
+					 --End of Rev 6.0
 					 from  [tbl_trans_shopActivitysubmit]  as lastactivty WITH(NOLOCK) 
 					 INNER JOIN tbl_Master_shop as shop WITH(NOLOCK) on shop.Shop_Code=lastactivty.Shop_Id
 					where visited_date between  DateAdd(DAY,-30,convert(date,GETDATE())) and convert(date,GETDATE())

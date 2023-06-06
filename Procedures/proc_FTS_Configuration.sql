@@ -179,6 +179,7 @@ BEGIN
 	159.0		Debashis	01-06-2023	ADD SETTINGS @Action=UserCheck' IsShowWorkType,IsShowMarketSpendTimer,IsShowUploadImageInAppProfile,IsShowCalendar,
 																		IsShowCalculator,IsShowInactiveCustomer & IsShowAttendanceSummary.Row 844
 	160.0		Debashis	02-06-2023	ADD SETTINGS @Action=GlobalCheck' IsUpdateVisitDataInTodayTable.Row 848
+	161.0		Debashis	06-06-2023	ADD SETTINGS @Action=UserCheck' IsMenuShowAIMarketAssistant.Row 849
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -1866,6 +1867,11 @@ BEGIN
 		SELECT 'IsShowAttendanceSummary' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowAttendanceSummary) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 159.0
+		--Rev 161.0
+		UNION ALL
+		SELECT 'IsMenuShowAIMarketAssistant' AS [Key],CONVERT(NVARCHAR(15),USR.IsMenuShowAIMarketAssistant) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 161.0
 	END
 
 	SET NOCOUNT OFF
