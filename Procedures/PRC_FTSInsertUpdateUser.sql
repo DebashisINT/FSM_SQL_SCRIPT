@@ -282,6 +282,15 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 -- Rev 29.0
 ,@IsShowBeatInMenu INT=0
 -- End of Rev 29.0
+-- Rev 30.0
+,@IsShowWorkType INT=0
+,@IsShowMarketSpendTimer INT=0
+,@IsShowUploadImageInAppProfile INT=0
+,@IsShowCalendar INT=0
+,@IsShowCalculator INT=0
+,@IsShowInactiveCustomer INT=0
+,@IsShowAttendanceSummary INT=0
+-- End of Rev 30.0
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -321,6 +330,7 @@ AS
 												Refer: 25911
 29.0	V2.0.40		08/05/2023		Sanchita	In user table a column exist as IsShowBeatInMenu. This will show in portal under user settings as "ShowBeatInMenu".
 												Refer: 25947
+30.0	V2.0.41		07/06/2023		Sanchita	Required below System settings + user wise settings in portal. Refer: 26245
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -491,6 +501,10 @@ BEGIN
 			-- Rev 29.0
 			,IsShowBeatInMenu
 			-- End of Rev 29.0
+			-- Rev 30.0
+			,IsShowWorkType,IsShowMarketSpendTimer,IsShowUploadImageInAppProfile,IsShowCalendar,IsShowCalculator
+			,IsShowInactiveCustomer,IsShowAttendanceSummary
+			-- End of Rev 30.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -637,6 +651,10 @@ BEGIN
 			-- Rev 29.0
 			,isnull(@IsShowBeatInMenu,0)
 			-- End of Rev 29.0
+			-- Rev 30.0
+			,isnull(@IsShowWorkType,1),isnull(@IsShowMarketSpendTimer,0),isnull(@IsShowUploadImageInAppProfile,0),isnull(@IsShowCalendar,0),isnull(@IsShowCalculator,0)
+			,isnull(@IsShowInactiveCustomer,0),isnull(@IsShowAttendanceSummary,0)
+			-- End of Rev 30.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1043,8 +1061,17 @@ BEGIN
 				 OR IsShowEmployeePerformance<>@IsShowEmployeePerformance
 				 -- End of Rev 28.0
 				 -- Rev 29.0
-				OR IsShowBeatInMenu<>@IsShowBeatInMenu
+				 OR IsShowBeatInMenu<>@IsShowBeatInMenu
 				 -- End of Rev 29.0
+				 -- Rev 30.0
+				 OR IsShowWorkType<>@IsShowWorkType
+				 OR IsShowMarketSpendTimer<>@IsShowMarketSpendTimer
+				 OR IsShowUploadImageInAppProfile<>@IsShowUploadImageInAppProfile
+				 OR IsShowCalendar<>@IsShowCalendar
+				 OR IsShowCalculator<>@IsShowCalculator
+				 OR IsShowInactiveCustomer<>@IsShowInactiveCustomer
+				 OR IsShowAttendanceSummary<>@IsShowAttendanceSummary
+				 -- End of Rev 30.0
 				 )
 				)
 			BEGIN
@@ -1189,6 +1216,9 @@ BEGIN
             ,IsTeamAttenWithoutPhoto=@ShowIsTeamAttenWithoutPhoto
             ,IsWhatsappNoForCustomer=@ShowIsWhatsappNoForCustomer
             ,Leaveapprovalfromsupervisorinteam=@ShowLeaveapprovalfromsupervisorinteam
+			-- Rev 30.0
+			,Leaveapprovalfromsupervisor = @ShowLeaveapprovalfromsupervisor
+			-- End of Rev 30.0
             ,LogoutWithLogFile=@ShowLogoutWithLogFile
             ,MarkAttendNotification=@ShowMarkAttendNotification
             ,PartyUpdateAddrMandatory=@ShowPartyUpdateAddrMandatory
@@ -1226,6 +1256,15 @@ BEGIN
 			-- Rev 29.0
 			,IsShowBeatInMenu=@IsShowBeatInMenu
 			-- End of Rev 29.0
+			-- Rev 30.0
+			,IsShowWorkType=@IsShowWorkType
+			,IsShowMarketSpendTimer=@IsShowMarketSpendTimer
+			,IsShowUploadImageInAppProfile=@IsShowUploadImageInAppProfile
+			,IsShowCalendar=@IsShowCalendar
+			,IsShowCalculator=@IsShowCalculator
+			,IsShowInactiveCustomer=@IsShowInactiveCustomer
+			,IsShowAttendanceSummary=@IsShowAttendanceSummary
+			-- End of Rev 30.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1470,6 +1509,15 @@ BEGIN
 			-- Rev 29.0
 			,ISNULL(IsShowBeatInMenu,0) as IsShowBeatInMenu
 			-- End of Rev 29.0
+			-- Rev 30.0
+			,ISNULL(IsShowWorkType,0) as IsShowWorkType
+			,ISNULL(IsShowMarketSpendTimer,0) as IsShowMarketSpendTimer
+			,ISNULL(IsShowUploadImageInAppProfile,0) as IsShowUploadImageInAppProfile
+			,ISNULL(IsShowCalendar,0) as IsShowCalendar
+			,ISNULL(IsShowCalculator,0) as IsShowCalculator
+			,ISNULL(IsShowInactiveCustomer,0) as IsShowInactiveCustomer
+			,ISNULL(IsShowAttendanceSummary,0) as IsShowAttendanceSummary
+			-- End of Rev 30.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1612,6 +1660,10 @@ BEGIN
 			-- Rev 28.0
 			,'IsShowEmployeePerformance'
 			-- End of Rev 28.0
+			-- Rev 30.0
+			,'IsShowWorkType','IsShowMarketSpendTimer','IsShowUploadImageInAppProfile','IsShowCalendar','IsShowCalculator'
+			,'IsShowInactiveCustomer','IsShowAttendanceSummary', 'willActivityShow'
+			-- End of Rev 30.0
 			)
 		END
 	-- Rev 18.0
