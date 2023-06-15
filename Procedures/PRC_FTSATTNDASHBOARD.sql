@@ -13,9 +13,11 @@ ALTER PROCEDURE [dbo].[PRC_FTSATTNDASHBOARD]
 @YEAR VARCHAR(30)=NULL,
 @YYYYMM VARCHAR(30)=null,
 @CREATE_USERID BIGINT=NULL
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 /****************************************************************************************************************************************************************************
 1.0		v2.0.28		Debashis	28/03/2022		Error occured in @ACTION='GETABSENTTODAY'.Refer: 0024774
+2.0		V2.0.41		Sanchita	15/06/2023		FSM dashboard -Attendance - Monthly Attendance Summary graph - Date coming with comma separation. 
+												It should come separated by space. refer: 26347
 ****************************************************************************************************************************************************************************/
 AS 
 BEGIN
@@ -214,7 +216,10 @@ BEGIN
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@CREATE_USERID)=1)
 		BEGIN
 			SELECT month_name, count(0) cnt,ord from(
-		   SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+','+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+		   -- Rev 2.0
+		   --SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+','+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+		   SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+' '+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+		   -- End of Rev 2.0
 		   FROM tbl_fts_UserAttendanceLoginlogout
 			INNER JOIN TBL_MASTER_USER USR ON tbl_fts_UserAttendanceLoginlogout.USER_ID=USR.USER_ID
 			INNER JOIN #EMPHR_EDIT TMP ON USR.user_contactId=TMP.EMPCODE
@@ -225,7 +230,10 @@ BEGIN
 		ELSE
 		BEGIN
 				SELECT month_name, count(0) cnt,ord from(
-			   SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+','+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+			   -- Rev 2.0	
+			   --SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+','+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+			   SELECT LEFT(DATENAME(MONTH,CAST(Work_datetime AS date)),3)+' '+CAST(YEAR(Work_datetime) AS VARCHAR(10)) month_name,( cast(YEAR(Work_datetime) as varchar(10))+caSE WHEN MONTH(CAST(Work_datetime AS date))<10 THEN '0'+CAST(MONTH(CAST(Work_datetime AS date)) AS VARCHAR(10)) ELSE cast(MONTH(CAST(Work_datetime AS date))  as varchar(10)) END) ord 
+			   -- End of Rev 2.0
 			   FROM tbl_fts_UserAttendanceLoginlogout
 				WHERE CAST(Work_datetime AS date)
 			   >= CAST(CAST(YEAR(DATEADD(MONTH,-5,GETDATE())) AS VARCHAR(10)) +'-'+ CAST(MONTH(DATEADD(MONTH,-5,GETDATE())) AS VARCHAR(10))+'-'+'01' AS DATE) AND Isonleave='FALSE' 
