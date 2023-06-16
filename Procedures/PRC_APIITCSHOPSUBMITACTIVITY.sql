@@ -163,7 +163,7 @@ BEGIN
 					WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 				END
-			--Rev Debashis
+			--Rev 4.0
 			ELSE
 				BEGIN
 					UPDATE TDSHS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
@@ -198,7 +198,7 @@ BEGIN
 					WHERE EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 				END
-			--End of Rev Debashis
+			--End of Rev 4.0
 				--Rev 3.0
 				UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
 				FROM [tbl_Master_shop] MS
