@@ -21,6 +21,11 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 												Now it has been taken care of.Refer: 0025776
 3.0		v2.0.40		Debashis	25-05-2023		When Shopsubmission/ITCShopVisited this revisit/visit sync api is called tbl_Master_shop -> Lastvisit_date this column 
 												should also update with specific date-time.Refer: 0026228
+4.0		v2.0.40		Debashis	16-06-2023		Shopsubmission/ITCShopVisited
+												Case : If IsUpdateVisitDataInTodayTable this settings is true then with Addshop api the data insert in both tbl_Master_shop & 
+												Trans_ShopActivitySubmit_TodayData table.
+												At app logout Shopsubmission/ITCShopVisited this api is called with some updated data for the shop & needs to be updated in 
+												Trans_ShopActivitySubmit_TodayData this table through Shopsubmission/ITCShopVisited this api.Refer: 0026359
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 2.0
@@ -158,6 +163,42 @@ BEGIN
 					WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 				END
+			--Rev Debashis
+			ELSE
+				BEGIN
+					UPDATE TDSHS SET spent_duration=XMLproduct.value('(spent_duration/text())[1]','nvarchar(100)') ,
+					distance_travelled=XMLproduct.value('(distance_travelled/text())[1]','nvarchar(100)')
+					,REMARKS=XMLproduct.value('(feedback/text())[1]','varchar(500)')
+					,early_revisit_reason=XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
+					,device_model=XMLproduct.value('(device_model/text())[1]','varchar(100)')
+					,android_version=XMLproduct.value('(android_version/text())[1]','varchar(100)')
+					,battery=XMLproduct.value('(battery/text())[1]','varchar(100)')
+					,net_status=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+					,net_type=XMLproduct.value('(net_type/text())[1]','varchar(100)')
+					,CheckIn_Time=XMLproduct.value('(in_time/text())[1]','varchar(100)')
+					,CheckOut_Time=XMLproduct.value('(out_time/text())[1]','varchar(100)')
+					,start_timestamp=XMLproduct.value('(start_timestamp/text())[1]','varchar(100)')
+					,CheckIn_Address=XMLproduct.value('(in_location/text())[1]','varchar(100)')
+					,CheckOut_Address=XMLproduct.value('(out_location/text())[1]','varchar(100)')
+					,Revisit_Code=XMLproduct.value('(shop_revisit_uniqKey/text())[1]','varchar(100)')
+					,Pros_Id=XMLproduct.value('(pros_id/text())[1]','bigint')
+					,Updated_by=XMLproduct.value('(updated_by/text())[1]','bigint')
+					,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
+					,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
+					,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
+					FROM tbl_trans_shopActivitysubmit TDSHS
+					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+					ON TDSHS.Shop_Id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND TDSHS.visited_date=XMLproduct.value('(visited_date/text())[1]','date')
+					AND TDSHS.spent_duration='00:00:00' AND TDSHS.User_Id=@user_id
+
+					SELECT
+					XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')	AS shopid,
+					'Updated' AS STRMESSAGE
+					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					WHERE EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
+				END
+			--End of Rev Debashis
 				--Rev 3.0
 				UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
 				FROM [tbl_Master_shop] MS
