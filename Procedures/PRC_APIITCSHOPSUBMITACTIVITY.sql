@@ -186,7 +186,7 @@ BEGIN
 					,Updated_on=XMLproduct.value('(updated_on/text())[1]','datetime')
 					,Agency_Name=XMLproduct.value('(agency_name/text())[1]','varchar(500)')
 					,Approximate_1st_Billing_Value=XMLproduct.value('(approximate_1st_billing_value/text())[1]','decimal(18,2)')
-					FROM tbl_trans_shopActivitysubmit TDSHS
+					FROM Trans_ShopActivitySubmit_TodayData TDSHS
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON TDSHS.Shop_Id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND TDSHS.visited_date=XMLproduct.value('(visited_date/text())[1]','date')
 					AND TDSHS.spent_duration='00:00:00' AND TDSHS.User_Id=@user_id
