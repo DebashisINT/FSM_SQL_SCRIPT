@@ -30,6 +30,7 @@ Rev 5.0		V2.0.38		Sanchita		13-01-2023		Add Area, Add Route, Add Beat button req
 														Refer: 25536, 25535, 25542,25543, 25544
 Rev 6.0		v2.0.38		Priti			31-01-2023		0025589:Separate column required for Area, Route, Beat ,add column BEATNAME,AREANAME,ROUTENAME
 	                                                    Action:ADD,EDIT,ADDAREA,UPDATEAREA 
+Rev 7.0		V2.0.41		Sanchita		20-06-2023		In User Beat Mapping Module, please show only active users instead of all users. Refer: 26390
 ******************************************************************************************************************************/
 BEGIN
 
@@ -301,6 +302,9 @@ BEGIN
 		BEGIN
 			SET @Strsql+=' INNER JOIN #TEMPCONTACT CNT ON CNT.USER_ID=U.USER_ID '
 		END
+		-- Rev 7.0
+		SET @Strsql+=' WHERE U.user_inactive=''N'' '
+		-- End of Rev 7.0
 		EXEC SP_EXECUTESQL @Strsql
 
 		DROP TABLE #TEMPCONTACT
