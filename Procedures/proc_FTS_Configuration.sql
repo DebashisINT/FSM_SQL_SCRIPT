@@ -180,6 +180,7 @@ BEGIN
 																		IsShowCalculator,IsShowInactiveCustomer & IsShowAttendanceSummary.Row 844
 	160.0		Debashis	02-06-2023	ADD SETTINGS @Action=GlobalCheck' IsUpdateVisitDataInTodayTable.Row 848
 	161.0		Debashis	06-06-2023	ADD SETTINGS @Action=UserCheck' IsMenuShowAIMarketAssistant.Row 849
+	162.0		Debashis	30-06-2023	ADD SETTINGS @Action=GlobalCheck' ConsiderInactiveShopWhileLogin.Row 851
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -392,6 +393,9 @@ BEGIN
 	--Rev 160.0
 	,@IsUpdateVisitDataInTodayTable BIT
 	--End of Rev 160.0
+	--Rev 162.0
+	,@ConsiderInactiveShopWhileLogin BIT
+	--End of Rev 162.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -655,6 +659,9 @@ BEGIN
 		--Rev 160.0
 		SET @IsUpdateVisitDataInTodayTable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsUpdateVisitDataInTodayTable' AND IsActive=1)
 		--End of Rev 160.0
+		--Rev 162.0
+		SET @ConsiderInactiveShopWhileLogin  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ConsiderInactiveShopWhileLogin' AND IsActive=1)
+		--End of Rev 162.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -897,6 +904,9 @@ BEGIN
 			--Rev 160.0
 			,@IsUpdateVisitDataInTodayTable AS IsUpdateVisitDataInTodayTable
 			--End of Rev 160.0
+			--Rev 162.0
+			,@ConsiderInactiveShopWhileLogin AS ConsiderInactiveShopWhileLogin
+			--End of Rev 162.0
 	END
 
 	else if(@Action='UserCheck')
