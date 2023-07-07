@@ -316,22 +316,21 @@ BEGIN
 											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
 									--Rev 23.0
 										END
+									ELSE IF @IsUpdateVisitDataInTodayTable='1'
+										BEGIN
 									--Rev 24.0
-									--ELSE IF @IsUpdateVisitDataInTodayTable='1'
-									--	BEGIN
 									--		INSERT INTO [Trans_ShopActivitySubmit_TodayData] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,
 									--		Createddate,Is_Newshopadd,Revisit_Code)
 									--		values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1,@shop_revisit_uniqKey)
-
-									--		select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
-									--		,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
-									--		,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
-									--		,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
-									--		@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
-									--		@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
-									--	END
-									--End of Rev 23.0
 									--End of Rev 24.0
+											select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
+											,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
+											,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
+											,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
+											@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
+											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
+										END
+									--End of Rev 23.0									
 
 									INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 									VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
@@ -470,22 +469,21 @@ BEGIN
 													@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
 											--Rev 23.0
 												END
+											ELSE IF @IsUpdateVisitDataInTodayTable='1'
+												BEGIN
 											--Rev 24.0
-											--ELSE IF @IsUpdateVisitDataInTodayTable='1'
-											--	BEGIN
 											--		INSERT INTO [Trans_ShopActivitySubmit_TodayData] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,
 											--		Createddate,Is_Newshopadd,Revisit_Code)
 											--		values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1,@shop_revisit_uniqKey)
-
-											--		select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
-											--		,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
-											--		,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
-											--		,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
-											--		@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
-											--		@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
-											--	END
-											----End of Rev 23.0
 											--End of Rev 24.0
+													select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
+													,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
+													,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
+													,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
+													@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
+													@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number
+												END
+											----End of Rev 23.0											
 
 											--1.0 Rev start
 											INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
