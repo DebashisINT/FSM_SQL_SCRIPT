@@ -28,6 +28,8 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 												Trans_ShopActivitySubmit_TodayData this table through Shopsubmission/ITCShopVisited this api.Refer: 0026359
 5.0		v2.0.40		Debashis	10-07-2023		Optimization required for ITC data sync.Refer: 0026536
 6.0		v2.0.40		Debashis	10-07-2023		A new parameter has been added.Row: 855
+7.0		v2.0.40		Debashis	10-07-2023		After revisit a shop Last Visit Time is getting updated as '00:00:00' in shop master table.Now it has been taken care of.
+												Refer: 0026541
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 5.0
@@ -249,12 +251,18 @@ BEGIN
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 				END
 			--End of Rev 4.0
-				--Rev 3.0
-				UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
-				FROM [tbl_Master_shop] MS
-				INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
-				ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
-				--End of Rev 3.0
+			--Rev 3.0
+			--Rev 7.0
+			--UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
+			--FROM [tbl_Master_shop] MS
+			--INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			--ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+			UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_time/text())[1]','datetime')
+			FROM [tbl_Master_shop] MS
+			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+			--End of Rev 7.0
+			--End of Rev 3.0
 		COMMIT TRAN
 	END TRY
 

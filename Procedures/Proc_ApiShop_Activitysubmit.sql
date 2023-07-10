@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[Proc_ApiShop_Activitysubmit]
 @JsonXML XML=NULL
 ) --WITH ENCRYPTION
 AS
-/*****************************************************************************************************************************************
+/****************************************************************************************************************************************************************************
 1.0					Tanmoy		14-02-2020		add visit remarks 
 2.0					Indranil	                Distance ,IsFirstShop,IsOutside column added
 3.0					Indranil				    Same day visit allowed for different user
@@ -31,7 +31,10 @@ AS
 9.0		v2.0.37		Debashis	20/01/2023		The feedback provided from the app is not showing fully in the Performance Summary report.
 												Refer: 0025605
 10.0	v2.0.39		Debashis	27/03/2023		A new parameter has been added.Row: 814 & Refer: 0025749
-*****************************************************************************************************************************************/
+11.0	v2.0.37		Debashis	21-04-2023		Added two new fields as DistFromProfileAddrKms & StationCode.Row: 820
+12.0	v2.0.40		Debashis	10-07-2023		After revisit a shop Last Visit Time is getting updated as '00:00:00' in shop master table.Now it has been taken care of.
+												Refer: 0026541
+****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
@@ -64,6 +67,9 @@ BEGIN
 					 --Rev 8.0
 					 ,Multi_Contact_Name,Multi_Contact_Number
 					 --End of Rev 8.0
+					 --Rev 11.0
+					 ,DistFromProfileAddrKms,StationCode
+					 --End of Rev 11.0
 					 )
 	
 					SELECT DISTINCT @user_id,
@@ -111,6 +117,10 @@ BEGIN
 					,XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
 					,XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
 					--End of Rev 8.0
+					--Rev 11.0
+					,XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
+					,XMLproduct.value('(stationCode/text())[1]','int')
+					--End of Rev 11.0
 
 					from
 					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
@@ -146,6 +156,10 @@ BEGIN
 					,Multi_Contact_Name=XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
 					,Multi_Contact_Number=XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
 					--End of Rev 8.0
+					--Rev 11.0
+					,DistFromProfileAddrKms=XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
+					,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
+					--End of Rev 11.0
 					from tbl_trans_shopActivitysubmit TTSAS
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	 and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
@@ -164,6 +178,9 @@ BEGIN
 							--Rev 8.0
 							,Multi_Contact_Name,Multi_Contact_Number
 							--End of Rev 8.0
+							--Rev 11.0
+							,DistFromProfileAddrKms,StationCode
+							--End of Rev 11.0
 							)
 	
 							SELECT DISTINCT @user_id,
@@ -202,6 +219,10 @@ BEGIN
 							,XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
 							,XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
 							--End of Rev 8.0
+							--Rev 11.0
+							,XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
+							,XMLproduct.value('(stationCode/text())[1]','int')
+							--End of Rev 11.0
 							from
 							@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 							INNER JOIN tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
@@ -237,6 +258,10 @@ BEGIN
 							,Multi_Contact_Name=XMLproduct.value('(multi_contact_name/text())[1]','nvarchar(300)')
 							,Multi_Contact_Number=XMLproduct.value('(multi_contact_number/text())[1]','nvarchar(100)')
 							--End of Rev 8.0
+							--Rev 11.0
+							,DistFromProfileAddrKms=XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
+							,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
+							--End of Rev 11.0
 							from tbl_trans_shopActivitysubmit TTSAS
 							INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
 							ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND visited_date=XMLproduct.value('(visited_date/text())[1]','date')
@@ -248,11 +273,17 @@ BEGIN
 				END
 			--End of Rev 6.0
 
-			--Rev 5.0
-			UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
+			--Rev 5.
+			--Rev 12.0
+			--UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_date/text())[1]','date')
+			--FROM [tbl_Master_shop] MS
+			--INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			--ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+			UPDATE MS SET Lastvisit_date=XMLproduct.value('(visited_time/text())[1]','datetime')
 			FROM [tbl_Master_shop] MS
 			INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 			ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')
+			--End of Rev 12.0
 			--End of Rev 5.0
 			--Rev 10.0
 			--select
