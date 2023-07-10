@@ -26,8 +26,13 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 												Trans_ShopActivitySubmit_TodayData table.
 												At app logout Shopsubmission/ITCShopVisited this api is called with some updated data for the shop & needs to be updated in 
 												Trans_ShopActivitySubmit_TodayData this table through Shopsubmission/ITCShopVisited this api.Refer: 0026359
+5.0		v2.0.40		Debashis	10-07-2023		Optimization required for ITC data sync.Refer: 0026536
+6.0		v2.0.40		Debashis	10-07-2023		A new parameter has been added.Row: 855
 ****************************************************************************************************************************************************************************/
 BEGIN
+	--Rev 5.0
+	SET DEADLOCK_PRIORITY LOW
+	--End of Rev 5.0
 	--Rev 2.0
 	--SET NOCOUNT ON
 	SET NOCOUNT, XACT_ABORT ON
@@ -93,11 +98,50 @@ BEGIN
 			--IF NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) 
 			--INNER JOIN ##TEMP_TABLE A ON SHPACT.Shop_Id=A.Shop_Id AND SHPACT.visited_date=A.visited_date
 			--WHERE SHPACT.User_Id=@user_id)
-			IF NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) 
-			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) ON SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+			--Rev 5.0
+			--IF NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) 
+			--INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) ON SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+			--AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
+			----End of Rev 2.0
+			----End of Rev 1.0
+			IF OBJECT_ID('tempdb..#TEMP_TABLE') IS NOT NULL
+				DROP TABLE #TEMP_TABLE
+
+			CREATE TABLE #TEMP_TABLE
+			([User_Id] BIGINT,[Shop_Id] NVARCHAR(100),visited_date DATE,visited_time DATETIME,spent_duration NVARCHAR(100),total_visit_count INT,Createddate DATETIME,Is_Newshopadd BIT,
+			distance_travelled DECIMAL(18,2),IsFirstVisit BIT,device_model NVARCHAR(200),android_version NVARCHAR(200),battery NVARCHAR(200),net_status NVARCHAR(200),net_type NVARCHAR(200),
+			start_timestamp NVARCHAR(200))
+			CREATE NONCLUSTERED INDEX IX1 ON #TEMP_TABLE(Shop_Id ASC,visited_date ASC)
+
+			INSERT INTO #TEMP_TABLE([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
+			android_version,battery,net_status,net_type,start_timestamp)			
+
+			SELECT DISTINCT @user_id,
+			XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(visited_date/text())[1]','date'),
+			XMLproduct.value('(visited_time/text())[1]','datetime'),
+			XMLproduct.value('(spent_duration/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(total_visit_count/text())[1]','int'),
+			--Rev 6.0
+			--GETDATE(),0,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
+			GETDATE(),
+			XMLproduct.value('(isNewShop/text())[1]','bit'),
+			XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
+			--End of Rev 6.0
+			CASE WHEN XMLproduct.value('(isFirstShopVisited/text())[1]','NVARCHAR(40)')='true' THEN  1 ELSE 0 END,
+			XMLproduct.value('(device_model/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(android_version/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(battery/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(net_status/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(net_type/text())[1]','NVARCHAR(100)'),
+			XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)')
+			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+			INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
+			WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
 			AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
-			--End of Rev 2.0
-			--End of Rev 1.0
+
+			IF (SELECT COUNT(0) FROM #TEMP_TABLE)>0
+			--End of Rev 5.0
 				BEGIN
 					INSERT INTO Trans_ShopActivitySubmit_TodayData (ActivityId,[User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
 					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
@@ -123,22 +167,28 @@ BEGIN
 					--WHERE EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=A.Shop_Id 
 					--AND SHPACT.visited_date=A.visited_date AND SHPACT.User_Id=@user_id)
 					----End of Rev 1.0
-					SELECT DISTINCT @Guid,@user_id,
-					XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(visited_date/text())[1]','date'),
-					XMLproduct.value('(visited_time/text())[1]','datetime'),
-					XMLproduct.value('(spent_duration/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(total_visit_count/text())[1]','int'),
-					GETDATE(),0,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
-					CASE WHEN XMLproduct.value('(isFirstShopVisited/text())[1]','NVARCHAR(40)')='true' THEN  1 ELSE 0 END,
-					XMLproduct.value('(device_model/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(android_version/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(battery/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(net_status/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(net_type/text())[1]','NVARCHAR(100)'),
-					XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)')
-					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
-					INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
+					--Rev 5.0
+					--SELECT DISTINCT @Guid,@user_id,
+					--XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(visited_date/text())[1]','date'),
+					--XMLproduct.value('(visited_time/text())[1]','datetime'),
+					--XMLproduct.value('(spent_duration/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(total_visit_count/text())[1]','int'),
+					--GETDATE(),0,XMLproduct.value('(distance_travelled/text())[1]','decimal(18,2)'),
+					--CASE WHEN XMLproduct.value('(isFirstShopVisited/text())[1]','NVARCHAR(40)')='true' THEN  1 ELSE 0 END,
+					--XMLproduct.value('(device_model/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(android_version/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(battery/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(net_status/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(net_type/text())[1]','NVARCHAR(100)'),
+					--XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)')
+					--FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+					--INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
+
+					SELECT @Guid,[User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,android_version,
+					battery,net_status,net_type,start_timestamp
+					FROM #TEMP_TABLE
+					--End of Rev 5.0
 
 					SELECT
 					XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')	AS shopid,
@@ -219,6 +269,9 @@ BEGIN
 	--DROP TABLE ##TEMP_TABLE
 	--End of Rev 2.0
 	--End of Rev 1.0
+	--Rev 5.0
+	DROP TABLE #TEMP_TABLE
+	--End of Rev 5.0
 
 	SET NOCOUNT OFF
 END
