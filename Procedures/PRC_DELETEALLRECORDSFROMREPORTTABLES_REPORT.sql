@@ -5,13 +5,14 @@ END
 GO 
 
 ALTER PROCEDURE [dbo].[PRC_DELETEALLRECORDSFROMREPORTTABLES_REPORT]
-WITH ENCRYPTION
+--WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 11/01/2023
 Module	   : Delete all records from reports related tables.
 
 1.0		06/02/2023		Sanchita	V2.0.39		FSM User Master - To implement Show button FSM User Master. refer: 25641
+2.0		13/07/2023		Debashis	V2.0.41		A New Report Required for ITC under Report > MIS > Outlet Revisit Details.Refer: 0026473
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -342,6 +343,12 @@ BEGIN
 			DELETE FROM FSMEmployee_Master
 		END
 	-- End of Rev 1.0
+	--Rev 2.0
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSOUTLETREVISITDETAILS_REPORT') AND TYPE IN (N'U'))
+        BEGIN
+			DELETE FROM FTSOUTLETREVISITDETAILS_REPORT
+		END
+	--End of Rev 2.0
 
 	SET NOCOUNT OFF
 END
