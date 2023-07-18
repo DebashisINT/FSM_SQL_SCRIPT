@@ -181,6 +181,8 @@ BEGIN
 	160.0		Debashis	02-06-2023	ADD SETTINGS @Action=GlobalCheck' IsUpdateVisitDataInTodayTable.Row 848
 	161.0		Debashis	06-06-2023	ADD SETTINGS @Action=UserCheck' IsMenuShowAIMarketAssistant.Row 849
 	162.0		Debashis	30-06-2023	ADD SETTINGS @Action=GlobalCheck' ConsiderInactiveShopWhileLogin.Row 851
+	163.0		Debashis	17-07-2023	ADD SETTINGS @Action=GlobalCheck' ShopSyncIntervalInMinutes.Row 856
+	164.0		Debashis	17-07-2023	ADD SETTINGS @Action=UserCheck'	IsUsbDebuggingRestricted.Row 858
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -396,6 +398,9 @@ BEGIN
 	--Rev 162.0
 	,@ConsiderInactiveShopWhileLogin BIT
 	--End of Rev 162.0
+	--Rev 163.0
+	,@ShopSyncIntervalInMinutes NVARCHAR(200)
+	--End of Rev 163.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -662,6 +667,9 @@ BEGIN
 		--Rev 162.0
 		SET @ConsiderInactiveShopWhileLogin  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ConsiderInactiveShopWhileLogin' AND IsActive=1)
 		--End of Rev 162.0
+		--Rev 163.0
+		SET @ShopSyncIntervalInMinutes  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShopSyncIntervalInMinutes' AND IsActive=1)
+		--End of Rev 163.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -907,6 +915,9 @@ BEGIN
 			--Rev 162.0
 			,@ConsiderInactiveShopWhileLogin AS ConsiderInactiveShopWhileLogin
 			--End of Rev 162.0
+			--Rev 163.0
+			,@ShopSyncIntervalInMinutes AS ShopSyncIntervalInMinutes
+			--End of Rev 163.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1882,6 +1893,11 @@ BEGIN
 		SELECT 'IsMenuShowAIMarketAssistant' AS [Key],CONVERT(NVARCHAR(15),USR.IsMenuShowAIMarketAssistant) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 161.0
+		--Rev 164.0
+		UNION ALL
+		SELECT 'IsUsbDebuggingRestricted' AS [Key],CONVERT(NVARCHAR(15),USR.IsUsbDebuggingRestricted) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 164.0
 	END
 
 	SET NOCOUNT OFF
