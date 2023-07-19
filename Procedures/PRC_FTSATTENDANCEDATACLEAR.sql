@@ -13,6 +13,10 @@ AS
 Written by : Debashis Talukder on 31/08/2022
 Module	   : Attendance data Archive from main tables
 1.0		v2.0.38		Debashis	25-01-2023		Increase month by 3 from 2.
+2.0		v2.0.41		Debashis	19-07-2023		Following table records shall be kept for 2 months.
+												Shopsubmit
+												Daystart Dayend
+												Attendance Login Logout.Refer: 0026597
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -114,13 +118,19 @@ BEGIN
 		Market_Worked,LeaveReason,From_AreaId,To_AreaId,Distance,StaticDistance FROM tbl_fts_UserAttendanceLoginlogout
 		--Rev 1.0
 		--WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
-		WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--Rev 2.0
+		--WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		--End of Rev 2.0
 		--End of Rev 1.0
 		SET IDENTITY_INSERT tbl_fts_UserAttendanceLoginlogout_ARCH OFF
 
 		--Rev 1.0
 		--DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
-		DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--Rev 2.0
+		--DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		DELETE FROM tbl_fts_UserAttendanceLoginlogout WHERE CONVERT(NVARCHAR(10),Work_datetime,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		--End of Rev 2.0
 		--End of Rev 1.0
 
 		SET IDENTITY_INSERT FSMUSERWISEDAYSTARTEND_ARCH ON
@@ -130,13 +140,19 @@ BEGIN
 		FROM FSMUSERWISEDAYSTARTEND
 		--Rev 1.0
 		--WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
-		WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120) 
+		--Rev 2.0
+		--WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120) 
+		WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
+		--End of Rev 2.0
 		--End of Rev 1.0
 		SET IDENTITY_INSERT FSMUSERWISEDAYSTARTEND_ARCH OFF
 
 		--Rev 1.0
 		--DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120) 
-		DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		--Rev 2.0
+		--DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -3, GETDATE()),120)
+		DELETE FROM FSMUSERWISEDAYSTARTEND WHERE CONVERT(NVARCHAR(10),STARTENDDATE,120) < CONVERT(NVARCHAR(10),DATEADD(month, -2, GETDATE()),120)
+		--End of Rev 2.0
 		--End of Rev 1.0
 
 	SET NOCOUNT OFF
