@@ -36,9 +36,7 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 --Rev 14.0
 @ISREVISITCONTACTDETAILS INT=NULL
 --End of Rev 14.0
-
-) WITH ENCRYPTION
-
+) --WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
 1.0					Tanmoy		30-07-2019     change left outer join to inner join
@@ -56,10 +54,8 @@ AS
 12.0	V2.0.37		Pallab	    15/11/2022		Multiple photo attachments columns are required in the Shops report refer: 25448
 13.0	V2.0.37		Pallab	    23/11/2022		It is showing Show image in the Shoplist report if there is no image refer: 25464
 14.0	v2.0.38		Debashis	23/01/2023		Multiple contact information to be displayed in the Shops report.Refer: 0025585
-
 15.0	v2.0.39		PRITI		13/02/2023		0025663:Last Visit fields shall be available in Outlet Reports
-
-
+16.0	V2.0.41		Sanchita	19/07/2023		Add Branch parameter in Listing of Master -> Shops report. Refer: 26135
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -567,11 +563,12 @@ BEGIN
 					SET @sql+='NULL AS CONTACT_NAME5,NULL AS CONTACT_NUMBER5,NULL AS CONTACT_EMAIL5,NULL AS CONTACT_DOA5,NULL AS CONTACT_DOB5,NULL AS CONTACT_NAME6,NULL AS CONTACT_NUMBER6,NULL AS CONTACT_EMAIL6,NULL AS CONTACT_DOA6,NULL AS CONTACT_DOB6 '
 				END
 			--End of Rev 14.0
-
 			--REV 15.0
 			SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY '	
 			--REV 15.0 End
-
+			-- Rev 16.0
+			SET @sql+=',BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC '
+			-- End of Rev 16.0
 			SET @sql+='FROM tbl_Master_shop as shop '
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
@@ -582,6 +579,9 @@ BEGIN
 			--Rev 4.0
 			SET @sql+='LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id '
 			--End of Rev 4.0
+			--Rev 16.0
+			SET @sql+='INNER JOIN tbl_master_branch BR ON usr.user_branchId=BR.branch_id '
+			--End of Rev 16.0
 			IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Create_UserId)=1)
 				BEGIN
 					SET @sql+='INNER JOIN #EMPHR_EDIT HY ON usr.user_contactId=HY.EMPCODE '
@@ -609,6 +609,10 @@ BEGIN
 					---set @sql +='and shop.stateId='+@StateId+''
 					SET @sql +='  AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=shop.stateId) '
 				END
+			--Rev 16.0
+			IF @BRANCHID<>''
+				SET @sql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+			--End of Rev 16.0
 			--Rev work start 7.0
 				--if(isnull(@Shoptype,'')<>'')
 				--BEGIN
