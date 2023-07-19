@@ -243,7 +243,7 @@ BEGIN
 					FROM #TEMP_TABLE
 					ORDER BY [User_Id]
 					OFFSET 2 ROWS
-					FETCH NEXT 600 ROWS ONLY
+					FETCH NEXT 1000 ROWS ONLY
 					--End of Rev 11.0
 
 					SELECT

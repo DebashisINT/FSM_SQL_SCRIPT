@@ -18,6 +18,10 @@ Module	   : Big data handle
 												Cannot insert duplicate key in object 'dbo.TBL_TRANS_SHOPUSER_ARCH'. 
 												The duplicate key value is (51944738). [SQLSTATE 23000] (Error 2627)  The statement has been terminated. 
 												[SQLSTATE 01000] (Error 3621).  The step failed.Now solved.
+4.0		v2.0.41		Debashis	19-07-2023		Following table records shall be kept for 2 months.
+												Shopsubmit
+												Daystart Dayend
+												Attendance Login Logout.Refer: 0026597
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -58,11 +62,12 @@ BEGIN
 
 	DELETE FROM tbl_trans_shopuser WHERE CONVERT(NVARCHAR(10),SDate,120) < CONVERT(NVARCHAR(10),GETDATE(),120)
 
-
-	DECLARE @DateTime DateTime=DateAdd(month,-3,GETDATE())
+	--Rev 4.0
+	--DECLARE @DateTime DateTime=DateAdd(month,-3,GETDATE())
+	DECLARE @DateTime DateTime=DateAdd(month,-2,GETDATE())
+	--End of Rev 4.0
 
 	--SELECT @DateTime
-
 
 	INSERT INTO tbl_trans_shopActivitysubmit_Archive
 	(User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,
