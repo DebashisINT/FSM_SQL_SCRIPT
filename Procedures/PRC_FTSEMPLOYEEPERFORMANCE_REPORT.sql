@@ -17,8 +17,11 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEPERFORMANCE_REPORT]
 --Rev 26.0
 @ISREVISITCONTACTDETAILS INT=NULL,
 --End of Rev 26.0
+-- Rev 28.0
+@BRANCHID NVARCHAR(MAX)=NULL,
+-- End of Rev 28.0
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 31/12/2018
@@ -60,6 +63,7 @@ Module	   : Employee Performance Details
 25.0	v2.0.38		Debashis	27/12/2022		Beat Column required in Performance Summary report.Refer: 0025524
 26.0	v2.0.38		Debashis	20/01/2023		Revisit Contact information is required in the Performance Summary report.Refer: 0025586
 27.0	v2.0.38		Debashis	17/02/2023		Optimization of Performance Summary Report.Refer: 0025681
+28.0	V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -69,6 +73,9 @@ BEGIN
 	DECLARE @isRevisitTeamDetail NVARCHAR(100)
 	SELECT @isRevisitTeamDetail=[Value] FROM fts_app_config_settings WHERE [Key]='isRevisitTeamDetail' AND [Description]='Revisit from Team Details in Portal'
 	--End of Rev 11.0
+	--Rev 28.0
+	DECLARE @SqlTable NVARCHAR(MAX)
+	--End of Rev 28.0
 
 	--Rev 10.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
@@ -146,6 +153,21 @@ BEGIN
 	--SELECT @sqlStrTable
 	EXEC SP_EXECUTESQL @sqlStrTable
 	--End of Rev 27.0
+
+	-- Rev 28.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @SqlTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @SqlTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlTable
+		END
+	-- End of Rev 28.0
 
 	--Rev 17.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
@@ -579,6 +601,10 @@ BEGIN
 	--Rev 14.0
 	SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 	--End of Rev 14.0
+	--Rev 28.0
+	IF @BRANCHID<>''
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+	--End of Rev 28.0
 	SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 	--Rev 17.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
@@ -863,7 +889,10 @@ BEGIN
 			--End of Rev 13.0
 			--Rev 14.0
 			--SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,'
-			SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,'''' AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
+			-- Rev 28.0
+			--SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,'''' AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
+			SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,BR.branch_description AS BRANCHDESC,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
+			-- End of Rev 28.0
 			SET @Strsql+='USR.user_loginId AS CONTACTNO,'
 			--End of Rev 14.0
 			--Rev 12.0
@@ -926,6 +955,10 @@ BEGIN
 			--Rev 14.0
 			SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
 			--End of Rev 14.0
+			--Rev 28.0
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+			--End of Rev 28.0
 			SET @Strsql+='INNER JOIN tbl_master_user USR ON USR.user_contactId=EMP.emp_contactId AND USR.user_inactive=''N'' '
 			--Rev 27.0
 			--SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
@@ -1028,6 +1061,9 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATEID_LIST
 	DROP TABLE #TEMPCONTACT
+	--Rev 28.0
+	DROP TABLE #BRANCH_LIST
+	--End of Rev 28.0
 	--Rev 4.0
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
 	BEGIN
