@@ -13,8 +13,11 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEACTIVITYDETAILS_REPORT]
 @TODATE NVARCHAR(50)=NULL,
 @stateID NVARCHAR(MAX)=NULL,
 @DESIGNID NVARCHAR(MAX)=NULL,
-@USERID BIGINT
-) --WITH ENCRYPTION
+@USERID BIGINT,
+--Rev 3.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--Rev 3.0 End
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 11/03/2021
@@ -22,11 +25,27 @@ Module	   : Employee Activity Details Report for Track.Refer: 0023846
 1.0					22-04-2021		TANMOY			Electrician type and Electrician name  correction Ref:0023987
 2.0		v2.0.24		30-07-2021		Debashis		Employee Activity Employee Activity Details This report shall not be showing distance subtotal of Visit /Revisit.
 													Refer: 0024198
+3.0	    V2.0.42		20/07/2023      Priti	        Branch Parameter is required for various FSM reports.Refer:0026135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @sqlStrTable NVARCHAR(MAX),@Strsql NVARCHAR(MAX),@sqlStateStrTable NVARCHAR(MAX)
+
+	--Rev 3.0
+	 IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+	 DROP TABLE #BRANCH_LIST
+	 CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	 CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+     IF @BRANCHID<>''
+		BEGIN
+			SET @sqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+	  END
+	  --Rev 3.0 End
+---------------------------------------------------------------------------------------------------
 
 	IF OBJECT_ID('tempdb..#EMPLOYEE_LIST') IS NOT NULL
 		DROP TABLE #EMPLOYEE_LIST
@@ -195,13 +214,24 @@ BEGIN
 		SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=T.STATE_ID) '
 	IF @DESIGNID<>''
 		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=T.deg_id) '
-	--SELECT @Strsql
+
+
+	--Rev 3.0
+	IF @BRANCHID<>''
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=T.branch_id) '
+    --Rev 3.0 End
+
+		--SELECT @Strsql
 	EXEC sp_executesql @Strsql
 	
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #STATEID_LIST
 	DROP TABLE #DESIGNATION_LIST
 	DROP TABLE #TEMPCONTACT
+	--Rev 3.0
+    DROP TABLE #BRANCH_LIST
+    --Rev 3.0 End
+
 
 	SET NOCOUNT OFF
  END

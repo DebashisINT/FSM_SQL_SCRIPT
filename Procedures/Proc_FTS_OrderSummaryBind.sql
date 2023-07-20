@@ -11,8 +11,11 @@ ALTER PROCEDURE [dbo].[Proc_FTS_OrderSummaryBind]
 @end_date  varchar(MAX)=NULL,
 @stateID varchar(MAX)=NULL,
 @shop_id  varchar(MAX)=NULL,
-@LOGIN_ID BIGINT=null
-) --WITH ENCRYPTION
+@LOGIN_ID BIGINT=null,
+--Rev 6.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--Rev 6.0 End
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0		v2.0.11		Debashis	12/05/2020		FTS reports with more fields.Refer: 0022323
@@ -20,6 +23,7 @@ AS
 3.0		v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
 4.0		v2.0.24		Tanmoy		30/07/2021		Employee hierarchy wise filter
 5.0		v2.0.26		Debashis	24/01/2022		Paitent Details has been added.Refer: 0024580
+6.0		V2.0.42		Priti	    19/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -28,7 +32,9 @@ BEGIN
 	DECLARE @isRevisitTeamDetail NVARCHAR(100)
 	SELECT @isRevisitTeamDetail=[Value] FROM fts_app_config_settings WHERE [Key]='isRevisitTeamDetail' AND [Description]='Revisit from Team Details in Portal'
 	--End of Rev 2.0
-
+	--Rev 6.0
+	DECLARE @SqlStrTable NVARCHAR(MAX)
+	--Rev 6.0 End
 	----------------------------------EMPLOYEE---------------------------
 	--Rev 1.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPLOYEE_LIST') AND TYPE IN (N'U'))
@@ -43,7 +49,19 @@ BEGIN
 			SET @sqlEmpStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@Employee_id+')'
 			EXEC SP_EXECUTESQL @sqlEmpStrTable
 		END
-
+     --Rev 6.0
+	 IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+	 DROP TABLE #BRANCH_LIST
+	 CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	 CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+     IF @BRANCHID<>''
+		BEGIN
+			SET @SqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+	  END
+	  --Rev 6.0 End
 	-------------------------------STATE----------------------------------------------------
 	--Rev 1.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATE_LIST') AND TYPE IN (N'U'))
@@ -166,6 +184,10 @@ BEGIN
 	LEFT OUTER JOIN tbl_master_state as STAT on STAT.id=S.add_state
 	where usr.user_id  is not null	'
 
+	--Rev 6.0
+	IF @BRANCHID<>''
+		SET @SQL+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=BR.branch_id) '
+    --Rev 6.0 End
 	if(isnull(@Employee_id,'')<>'')
 		--SET  @SQL+=' and  cnt_internalId='''+@Employee_id+''''
 		SET @SQL+=' AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST WHERE emp_contactId=cnt_internalId) '
@@ -188,6 +210,9 @@ BEGIN
 	DROP TABLE #EMPLOYEE_LIST
 	DROP TABLE #SHOP_LIST
 	--Rev 4.0
+	--Rev 6.0
+	DROP TABLE #BRANCH_LIST
+	--Rev 6.0 End
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@LOGIN_ID)=1)
 	BEGIN
 		DROP TABLE #EMPHR_EDIT
