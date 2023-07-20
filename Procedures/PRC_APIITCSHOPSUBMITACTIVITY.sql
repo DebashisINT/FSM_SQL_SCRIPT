@@ -242,7 +242,7 @@ BEGIN
 					android_version,battery,net_status,net_type,start_timestamp
 					FROM #TEMP_TABLE
 					ORDER BY [User_Id]
-					OFFSET 2 ROWS
+					OFFSET 0 ROWS
 					FETCH NEXT 1000 ROWS ONLY
 					--End of Rev 11.0
 
