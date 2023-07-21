@@ -24,6 +24,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_REPORT]
 ,@ISONLYLOGINDATA INT=NULL,
 @ISONLYLOGOUTDATA INT=NULL
 --End of rev work 2.0
+-- Rev 4.0
+,@BRANCHID NVARCHAR(MAX)=NULL
+-- End of Rev 4.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -32,6 +35,7 @@ AS
 3.0		v2.0.37		Sanchita	16-11-2022		Attendance Register Report- Multiple rows generating against a singular User ID if the user logs out multiple times.
 												Also the distance travelled is showing zero though the total distance travelled showing data.
 												Refer: 25444
+4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
 ****************************************************************************************************************************************************************************/
 BEGIN
 
@@ -43,6 +47,10 @@ BEGIN
 	DECLARE @days AS INT,@FIRSTDATEOFMONTH DATETIME,@CURRENTDATEOFMONTH DATETIME,@EMP_IDs NVARCHAR(MAX)
 	SELECT @FIRSTDATEOFMONTH = @FROM_DATE
 	SELECT @CURRENTDATEOFMONTH = @TO_DATE
+
+	--Rev 4.0
+	DECLARE @SqlTable NVARCHAR(MAX)
+	--End of Rev 4.0
 
 	;WITH CTE AS (SELECT 1 AS DAYID,@FIRSTDATEOFMONTH AS FROMDATE,DATENAME(DW, @FIRSTDATEOFMONTH) AS DAYNAME
 	UNION ALL
@@ -95,7 +103,11 @@ BEGIN
 	IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#HorizontalAttendance') AND TYPE IN (N'U'))
 			DROP TABLE #HorizontalAttendance
 	
-	CREATE TABLE #HorizontalAttendance (Empid NVARCHAR(200),EmpCode NVARCHAR(200),EMP_Name NVARCHAR(300),LoginID NVARCHAR(100),Department NVARCHAR(200))
+	-- Rev 4.0
+	--CREATE TABLE #HorizontalAttendance (Empid NVARCHAR(200),EmpCode NVARCHAR(200),EMP_Name NVARCHAR(300),LoginID NVARCHAR(100),Department NVARCHAR(200))
+	CREATE TABLE #HorizontalAttendance (Empid NVARCHAR(200),EmpCode NVARCHAR(200),EMP_Name NVARCHAR(300),
+					LoginID NVARCHAR(100),Department NVARCHAR(200), Branch NVARCHAR(200) )
+	-- End of Rev 4.0
 
 	--FOR REPORT HEADER
 	INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID)
@@ -108,9 +120,18 @@ BEGIN
 	SELECT 4,'Login ID','LoginID',1
 	UNION ALL
 	SELECT 5,'Department','Department',1
+	-- Rev 4.0
+	UNION ALL
+	SELECT 6,'Branch','Branch',1
+	-- End of Rev 4.0
+
 	--FOR REPORT HEADER
-	SET @SLHEADID=5
-	SET @PARENTID=5
+	-- Rev 4.0
+	--SET @SLHEADID=5
+	--SET @PARENTID=5
+	SET @SLHEADID=6
+	SET @PARENTID=6
+	-- End of Rev 4.0
 
 	DECLARE @emp_contactId NVARCHAR(100)
 	SET @COLUMN_DATE =@FROM_DATE
@@ -120,6 +141,9 @@ BEGIN
 	CREATE TABLE #TMPATTENDACE(EmpCode NVARCHAR(100),EMP_NAME NVARCHAR(300),LoginID NVARCHAR(30),Department NVARCHAR(200),user_id BIGINT,
 		LOGGEDIN NVARCHAR(30),LOGEDOUT NVARCHAR(30),ATTEN_STATUS NVARCHAR(300),duration_HR NVARCHAR(30),duration_MIN NVARCHAR(30),cnt_internalId NVARCHAR(100)
 		,DISTANCE_COVERED NVARCHAR(30),IDEAL_TIME NVARCHAR(30),ORDERVALUE NVARCHAR(30),IMAGE_NAME NVARCHAR(max)	
+		-- Rev 4.0
+		, Branch NVARCHAR(200)
+		-- End of Rev 4.0
 		)
 		--Rev work 2.0
 		IF @ISONLYLOGINDATA=1
@@ -145,7 +169,11 @@ BEGIN
 		IF OBJECT_ID('tempdb..#TMPATTENDACESUMMARY') IS NOT NULL
 			DROP TABLE #TMPATTENDACESUMMARY
 	CREATE TABLE #TMPATTENDACESUMMARY(EmpCode NVARCHAR(100),EMP_NAME NVARCHAR(300),LoginID NVARCHAR(50),Department NVARCHAR(200),user_id BIGINT,
-		LOGGEDIN NVARCHAR(30),LOGEDOUT NVARCHAR(30),ATTEN_STATUS NVARCHAR(300),duration_HR NVARCHAR(30),duration_MIN INT,cnt_internalId NVARCHAR(100))
+		LOGGEDIN NVARCHAR(30),LOGEDOUT NVARCHAR(30),ATTEN_STATUS NVARCHAR(300),duration_HR NVARCHAR(30),duration_MIN INT,cnt_internalId NVARCHAR(100)
+		-- Rev 4.0
+		, Branch NVARCHAR(200)
+		-- End of Rev 4.0
+		)
 
 		IF OBJECT_ID('tempdb..#TMPATTENDACESTATUS') IS NOT NULL
 			DROP TABLE #TMPATTENDACESTATUS
@@ -154,6 +182,21 @@ BEGIN
 	IF OBJECT_ID('tempdb..#TMPATTENDACEESTIMATESUMMARY') IS NOT NULL
 			DROP TABLE #TMPATTENDACEESTIMATESUMMARY
 	CREATE TABLE #TMPATTENDACEESTIMATESUMMARY(Estimate int,cnt_internalId NVARCHAR(100))
+
+	-- Rev 4.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @SqlTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @SqlTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlTable
+		END
+	-- End of Rev 4.0
 
 	SET @LOOPCOUNT=1
 	IF @DAYCOUNT>0
@@ -207,11 +250,15 @@ BEGIN
 				END
 				--select @sqlStrTable
 				EXEC SP_EXECUTESQL @sqlStrTable
-
+					
 					--Rev work 2.0	
 					INSERT INTO #TMPATTENDACE 
+					-- Rev 4.0
+					--EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
+					--,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA
 					EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
-					,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA
+					,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID
+					-- End of Rev 4.0
 					--End of Rev work 2.0
 
 					INSERT INTO #TMPATTENDACESTATUS
@@ -219,7 +266,10 @@ BEGIN
 					IF @FIRSTTIME=1
 					BEGIN
 						SET @sqlStrTable=''
-						SET @sqlStrTable = 'INSERT INTO #HorizontalAttendance ( Empid,EmpCode,EMP_Name,LoginID,Department,'
+						-- Rev 4.0
+						--SET @sqlStrTable = 'INSERT INTO #HorizontalAttendance ( Empid,EmpCode,EMP_Name,LoginID,Department,'
+						SET @sqlStrTable = 'INSERT INTO #HorizontalAttendance ( Empid,EmpCode,EMP_Name,LoginID,Department,Branch,'
+						-- End of Rev 4.0
 						SET @sqlStrTable += '[In_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '],'
 						--Rev work 2.0
 						IF @ISONLYLOGINDATA=1
@@ -260,7 +310,10 @@ BEGIN
 						SET @sqlStrTable += ' ,[ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '] '
 						END
 						SET @sqlStrTable += ' ) '
-						SET @sqlStrTable += ' SELECT cnt_internalId,EmpCode,EMP_NAME,LoginID,Department,LOGGEDIN, '
+						-- Rev 4.0
+						--SET @sqlStrTable += ' SELECT cnt_internalId,EmpCode,EMP_NAME,LoginID,Department,LOGGEDIN, '
+						SET @sqlStrTable += ' SELECT cnt_internalId,EmpCode,EMP_NAME,LoginID,Department,Branch,LOGGEDIN, '
+						-- End of Rev 4.0
 						--Rev work 2.0
 						IF @ISONLYLOGINDATA=1
 							Begin
@@ -511,7 +564,11 @@ BEGIN
 	ALTER TABLE #HorizontalAttendance ADD Actual NVARCHAR(100)
 	ALTER TABLE #HorizontalAttendance ADD Remaining NVARCHAR(100)
 
-	INSERT INTO #TMPATTENDACESUMMARY EXEC [PRC_FTSHORIZONTALATTENDANCESUMMARY_FETCH] @FROM_DATE=@FROM_DATE,@TO_DATE=@TO_DATE,@EMPID=@EMPID,@Userid=@Userid
+	-- Rev 4.0 
+	--INSERT INTO #TMPATTENDACESUMMARY EXEC [PRC_FTSHORIZONTALATTENDANCESUMMARY_FETCH] @FROM_DATE=@FROM_DATE,@TO_DATE=@TO_DATE,@EMPID=@EMPID,@Userid=@Userid
+	INSERT INTO #TMPATTENDACESUMMARY EXEC [PRC_FTSHORIZONTALATTENDANCESUMMARY_FETCH] @FROM_DATE=@FROM_DATE,@TO_DATE=@TO_DATE,
+				@EMPID=@EMPID,@Userid=@Userid,@BRANCHID=@BRANCHID
+	-- End of Rev 4.0
 
 	--SELECT SUM(duration_MIN),COUNT(ATTEN_STATUS) AS ATTEN_STATUS,cnt_internalId FROM #TMPATTENDACESUMMARY GROUP BY ATTEN_STATUS,cnt_internalId
 

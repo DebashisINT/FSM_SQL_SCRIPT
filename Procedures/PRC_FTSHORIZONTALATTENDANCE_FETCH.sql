@@ -18,6 +18,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_FETCH]
 @ISONLYLOGINDATA INT=NULL,
 @ISONLYLOGOUTDATA INT=NULL
 --End of rev work 2.0
+-- Rev 4.0
+,@BRANCHID NVARCHAR(MAX)=NULL
+-- End of Rev 4.0
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -26,6 +29,7 @@ AS
 3.0		v2.0.37		Sanchita	16-11-2022		Attendance Register Report- Multiple rows generating against a singular User ID if the user logs out multiple times.
 												Also the distance travelled is showing zero though the total distance travelled showing data.
 												Refer: 25444
+4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -131,6 +135,20 @@ BEGIN
 		INNER JOIN TBL_TRANS_EMPLOYEECTC ctc ON wo.Id=ctc.emp_workinghours
 	 END
 	--End of Rev work 2.0
+	-- Rev 4.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @sqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+	-- End of Rev 4.0
 	-- Rev 3.0
 	If @ISONLYLOGINDATA=1 or @ISONLYLOGOUTDATA=1
 	begin
@@ -236,6 +254,9 @@ BEGIN
 		SET @sqlStr+=' ,(case when duration>=T.FullDayWorkingHour then 1 else 0 end) AS FullDay '	
 	 End
 	--End of Rev work 2.0
+	-- Rev 4.0
+	 SET @sqlStr+=' ,Branch '
+	-- End of Rev 4.0
 
 	SET @sqlStr+=' FROM ( '
 	SET @sqlStr+=' SELECT CNT.cnt_UCC AS EmpCode, '
@@ -265,11 +286,19 @@ BEGIN
 		SET @sqlStr+=' ,CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(CTCEMP.HalfDayWorkingHour,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(CTCEMP.HalfDayWorkingHour,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS HalfDayWorkingHour '
 	 End
 	--End of Rev work 2.0
+	-- Rev 4.0
+	SET @sqlStr+=' , BR.branch_description as Branch '
+	-- End of Rev 4.0
 
 	SET @sqlStr+='  FROM tbl_master_user USR '
 	SET @sqlStr+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 	SET @sqlStr+=' INNER JOIN TBL_TRANS_EMPLOYEECTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
 	SET @sqlStr+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON CTC.emp_Department=DEPT.cost_id AND DEPT.cost_costCenterType=''Department'' '
+	-- Rev 4.0
+	SET @sqlStr+='INNER JOIN tbl_master_branch BR ON CTC.emp_branch=BR.branch_id '
+	IF @BRANCHID<>''
+		SET @sqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+	-- End of Rev 4.0
 	--Rev work 2.0
 	IF @ShowFullday=1
 	 Begin
