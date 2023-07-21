@@ -272,7 +272,7 @@ BEGIN
 									where usr.user_id=@user_id)
 								END
 							--Rev 22.0 && A new field added as GSTN_Number
-							INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
+							INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 										,Entered_By,Entered_On,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount,PartyType_id,Entity_Id,Party_Status_id,retailer_id
@@ -290,7 +290,7 @@ BEGIN
 
 							IF(ISNULL(@stage_id,'')<>'')
 							BEGIN
-								INSERT INTO FTS_STAGEMAP WITH(TABLOCK) (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+								INSERT INTO FTS_STAGEMAP (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
 								VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
 							END
 
@@ -301,7 +301,7 @@ BEGIN
 									IF @IsUpdateVisitDataInTodayTable='0'
 										BEGIN
 									--End of Rev 23.0
-											INSERT INTO [tbl_trans_shopActivitysubmit] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
+											INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
 											,Revisit_Code
 											)
 											values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
@@ -332,10 +332,10 @@ BEGIN
 										END
 									--End of Rev 23.0									
 
-									INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
+									INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 									VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
 
-									INSERT INTO FTS_DOCTOR_DETAILS WITH(TABLOCK) (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
+									INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
 									Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
 									VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
 											@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
@@ -370,7 +370,7 @@ BEGIN
 									--Rev 19.0 @@One field added as IsShopDuplicate
 									--Rev 20.0 @@One field added as Purpose
 									--Rev 22.0 && A new field added as GSTN_Number
-									INSERT INTO [tbl_Master_shop] WITH(TABLOCK) ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
+									INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 											   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 												,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 												--Rev 4.0 Start
@@ -437,7 +437,7 @@ BEGIN
 
 									IF(ISNULL(@stage_id,'')<>'')
 									BEGIN
-										INSERT INTO FTS_STAGEMAP WITH(TABLOCK) (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
+										INSERT INTO FTS_STAGEMAP (SHOP_ID,STAGE_ID,USER_ID,UPDATE_DATE)
 										VALUES (@shop_id,@stage_id,@Entered_by,GETDATE())
 									END
 
@@ -448,7 +448,7 @@ BEGIN
 											IF @IsUpdateVisitDataInTodayTable='0'
 												BEGIN
 											--End of Rev 23.0
-													INSERT INTO [tbl_trans_shopActivitysubmit] WITH(TABLOCK) ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
+													INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd
 													,Revisit_Code
 													)
 													values(@user_id,@shop_id,cast(@added_date as date),@added_date,'00:00:00',1,@added_date,1
@@ -486,12 +486,12 @@ BEGIN
 											----End of Rev 23.0											
 
 											--1.0 Rev start
-											INSERT INTO FTS_ShopMoreDetails WITH(TABLOCK) (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
+											INSERT INTO FTS_ShopMoreDetails (SHOP_ID,FamilyMember_DOB,Addtional_DOB,Addtional_DOA,Director_Name,KeyPerson_Name,phone_no,Create_date)
 											VALUES (@COUNT,@family_member_dob,@addtional_dob,@addtional_doa,@director_name,@key_person_name,@phone_no,GETDATE())
 											--1.0 Rev End
 
 											--2.0 Rev start
-											INSERT INTO FTS_DOCTOR_DETAILS WITH(TABLOCK) (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
+											INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,FAMILY_MEMBER_DOB,SPECIALIZATION,AVG_PATIENT_PER_DAY,CATEGORY,DOC_ADDRESS,PINCODE,DEGREE,IsChamberSameHeadquarter,
 											Remarks,CHEMIST_NAME,CHEMIST_ADDRESS,CHEMIST_PINCODE,ASSISTANT_NAME,ASSISTANT_CONTACT_NO,ASSISTANT_DOB,ASSISTANT_DOA,ASSISTANT_FAMILY_DOB,CREATE_DATE,CREATE_USER)
 											VALUES (@COUNT,@DOC_FAMILY_MEMBER_DOB,@SPECIALIZATION,@AVG_PATIENT_PER_DAY,@CATEGORY,@DOC_ADDRESS,@DOC_PINCODE,@DEGREE,@IsChamberSameHeadquarter,@Remarks,@CHEMIST_NAME,
 													@CHEMIST_ADDRESS,@CHEMIST_PINCODE,@ASSISTANT_NAME,@ASSISTANT_CONTACT_NO,@ASSISTANT_DOB,@ASSISTANT_DOA,@ASSISTANT_FAMILY_DOB,GETDATE(),@user_id)
