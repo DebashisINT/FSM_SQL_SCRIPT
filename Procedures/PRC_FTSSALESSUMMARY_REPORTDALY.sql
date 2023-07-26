@@ -13,13 +13,17 @@ ALTER PROCEDURE [dbo].[PRC_FTSSALESSUMMARY_REPORTDALY]
 @STATEID NVARCHAR(MAX)=NULL,
 @DESIGNID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
-@USERID INT
+@USERID INT,
+--Rev 3.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--Rev 3.0 End
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0		v2.0.13		Debashis	24/06/2020		Branch column required in the various FSM reports.Refer: 0022610
 2.0		v2.0.38		Sanchita	12-01-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
 												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
+3.0		V2.0.42		Priti	    19/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -143,6 +147,20 @@ BEGIN
 	SET @Strsql+=' WHERE CNT.cnt_contactType IN(''EM'') '
 	EXEC SP_EXECUTESQL @Strsql
 	-- End of Rev 2.0
+
+	 --Rev 3.0
+	 IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+	 DROP TABLE #BRANCH_LIST
+	 CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	 CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+     IF @BRANCHID<>''
+		BEGIN
+			SET @SqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+	  END
+	  --Rev 3.0 End
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSSALESDETAILSDAYWISE_REPORT') AND TYPE IN (N'U'))
 	BEGIN
@@ -333,6 +351,11 @@ BEGIN
 	SET @Strsql+=' GROUP BY COLLEC.user_id,CAST(COLLEC.collection_date AS DATE)  '
 	SET @Strsql+=' ) COLLEC ON COLLEC.user_id=USR.user_id AND COLLEC.COLDATE=LOginDate  '
 	SET @Strsql+=' WHERE LOginDate between '''+@FROMDATE+'''  AND '''+@TODATE+'''  '
+	--Rev 3.0
+	IF @BRANCHID<>''
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=BR.branch_id) '
+    --Rev 3.0 End
+
 	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
 		SET @Strsql+=' AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=STAT.id) '
 	ELSE IF @STATEID='' AND @DESIGNID<>'' AND @EMPID=''
@@ -379,6 +402,8 @@ BEGIN
 		DROP TABLE #EMPHR_EDIT
 	END
 	-- End of Rev 2.0
-
+  --Rev 3.0
+  DROP TABLE #BRANCH_LIST
+  --Rev 3.0 End
   SET NOCOUNT OFF
 END

@@ -13,6 +13,7 @@ As
 /***********************************************************************************************************************
 1.0		Priti		V2.0.36		23-01-2022		0025583: Portal Changes Required in Module : CONFIGURE TRAVELLING ALLOWANCE
 2.0		Sanchita	V2.0.40		09-05-2023		26063: BP Poddar Expense Feature Modification
+3.0		Priti	    V2.0.40		20-05-2023		0026145: Modification in the ‘Configure Travelling Allowance’ page.
 ***************************************************************************************************************************/
 Begin
 Declare @Variable_Value varchar(50)=null
@@ -122,6 +123,9 @@ EligibleDistance,	EligibleRate	,EligibleAmtday
 ,fueltype.FuelType as FuelTypes
 ,conv.FuelID as fuelID
 ,CONVERT(CHAR(10),Sysdate,103) + ' ' +  CONVERT(CHAR(26),Sysdate,108) as DateConveyance
+--Rev 1.0
+,branch_description BranchName,area_name AreaName
+--Rev 1.0 End
  from FTS_Travel_Conveyance as conv
 INNER JOIN FTS_Visit_Location as vst_loc on conv.VisitlocId=vst_loc.Id
 INNER JOIN FTS_Expense_Type as expnsetype on conv.ExpenseId=expnsetype.Id
@@ -131,6 +135,13 @@ INNER JOIN FTS_Employee_Grade as grad on conv.EmpgradeId=grad.Id
 INNER JOIN tbl_master_state as stat on conv.StateId=stat.id
 LEFT OUTER JOIN  tbl_FTS_FuelTypes as fueltype on conv.FuelID=fueltype.id
 
+--Rev 1.0
+left outer join FTS_TravelConveyanceBranchMap  BranchMap on BranchMap.TravelConveyanceID=TCId
+left outer join  FTS_TravelConveyanceAreaMap AreaMap on AreaMap.BranchMapid=BranchMap.BranchMapid
+
+left outer join TBL_MASTER_BRANCH on BranchMap.MapBranchId=TBL_MASTER_BRANCH.branch_id
+left outer join  tbl_master_area on AreaMap.MapAreaId=tbl_master_area.area_id
+--Rev 1.0 End
 
 )T order by T.Slno desc
 end
@@ -146,8 +157,18 @@ ExpenseId as ExpenseId ,DesignationId as DesignationId,StateId as StateIdfetch,T
 cast(EligibleDistance as decimal(18,2)) as EligibleDistance,	EligibleRate	,EligibleAmtday ,FuelID as fuelID,cast(trvmod.fueladjust as bit) as fueladjust
 ,case when IsActive=1 then 'Active' else 'Inactive' end as IsActivename,
 IsActive
+,StateId,BranchMap.MapBranchId BranchId,MapAreaId AreaId
+--Rev 1.0
+,branch_description BranchName,area_name AreaName
+--Rev 1.0 End
  from FTS_Travel_Conveyance as conv
  LEFT OUTER JOIN FTS_Travel_Mode as trvmod on conv.TravelId=trvmod.Id
+  --Rev 1.0
+ LEFT OUTER JOIN FTS_TravelConveyanceBranchMap BranchMap on TravelConveyanceID=TCId
+ LEFT OUTER JOIN FTS_TravelConveyanceAreaMap AreaMap on BranchMap.BranchMapid=AreaMap.BranchMapid
+left outer join TBL_MASTER_BRANCH on BranchMap.MapBranchId=TBL_MASTER_BRANCH.branch_id
+left outer join  tbl_master_area on AreaMap.MapAreaId=tbl_master_area.area_id
+--Rev 1.0 End
  where TCId=@Tcid
 
 

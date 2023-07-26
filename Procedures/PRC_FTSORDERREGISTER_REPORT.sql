@@ -12,8 +12,11 @@ ALTER PROCEDURE [dbo].[PRC_FTSORDERREGISTER_REPORT]
 @SHOPID NVARCHAR(MAX)=NULL,
 --@USERLIST NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
-@USERID INT 
-) --WITH ENCRYPTION
+@USERID INT ,
+--Rev 9.0
+@BRANCHID NVARCHAR(MAX)=NULL
+--Rev 9.0 End
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 27/11/2018 CHANGE TANMOY GHOSH 07/05/2019 NEW ADD PP NAME AND DD NAME 08/05/19 ADD EMPLOYEE ID
@@ -26,10 +29,11 @@ Module	   : FTS Order Register
 6.0		v2.0.26		Debashis	10/01/2022		DD name column is showing PP name in Order Register report.Refer: 0024607
 7.0		v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
 8.0		v2.0.39		Debashis	07/02/2023		Order Register Report is not working.Increased the field length of SHOPNAME.Refer: 0025651
+9.0		V2.0.42		Priti	    19/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
-
+	
 	DECLARE @Strsql NVARCHAR(MAX), @sqlStrTable NVARCHAR(MAX)
 	--Rev 2.0
 	DECLARE @isRevisitTeamDetail NVARCHAR(100)
@@ -91,7 +95,19 @@ BEGIN
 			SET @sqlStrTable=' INSERT INTO #EMPLOYEE_LIST SELECT emp_contactId from tbl_master_employee where emp_contactId in('+@EMPID+')'
 			EXEC SP_EXECUTESQL @sqlStrTable
 		END
-
+     --Rev 9.0
+	 IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+	 DROP TABLE #BRANCH_LIST
+	 CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	 CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+     IF @BRANCHID<>''
+		BEGIN
+			SET @SqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @SqlStrTable
+	  END
+	  --Rev 9.0 End
 	--Rev 1.0
 	--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 	IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
@@ -278,6 +294,13 @@ BEGIN
 	--	SET @Strsql+='AND EXISTS (SELECT user_id FROM #USERID_LIST AS US WHERE US.user_id=USR.USER_ID) '
 	ELSE IF @EMPID<>''
 		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EM WHERE EM.emp_contactId=EMP.emp_contactId) '
+
+    --Rev 9.0
+	IF @BRANCHID<>''
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=BR.branch_id) '
+    --Rev 9.0 End
+
+
 	SET @Strsql=@Strsql+'ORDER BY CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,105),ORDHEAD.ORDERCODE'
 	--SELECT @Strsql
 	EXEC SP_EXECUTESQL @Strsql
@@ -295,6 +318,10 @@ BEGIN
 		DROP TABLE #EMPHR
 	END
 	--End of Rev 4.0
+	--Rev 9.0
+	DROP TABLE #BRANCH_LIST
+	--Rev 9.0 End
+
 
 	SET NOCOUNT OFF
 END 
