@@ -23,6 +23,7 @@ As
 * Created by Sanchita for V2.0.40 on 04-05-2023. Work done in Controller, View and Model
  * A New Expense Report is Required for BP Poddar. Refer: 25833
  * Rev 1.0		Sanchita	V2.0.40		Need to implement Branch and Area in the Expense Register Report. Refer: 26185
+ * Rev 2.0		Sanchita	V2.0.42		In Station and Out Station expense data is not showing in the Expense Register Report. Refer: 26618
 ****************************************************************************************************************************************************************************/
 Begin
 	if (@ACTION='LIST')
@@ -44,6 +45,7 @@ Begin
 				VISIT_LOCATION NVARCHAR(500),
 				STATEID BIGINT,
 				EMPGRADEID BIGINT,
+				AREA_LOCATION_ID INT,
 				USERID BIGINT)
 
 
@@ -143,15 +145,15 @@ Begin
 		--  CREATE TEMP TABLE FOR shopActivitysubmit ---
 		SET @STR = ''
 		SET @STR=@STR+ 'INSERT INTO #TEMP_shopActivitysubmit (REIMBURSEMENT_DATE, HQ_NAME, EMPID, EMP_NAME, EMP_DESIGNATION, '
-		SET @STR=@STR+ 'REPORTTO_NAME, VISIT_LOCATION, USERID, STATEID, EMPGRADEID) '
+		SET @STR=@STR+ 'REPORTTO_NAME, VISIT_LOCATION, USERID, STATEID, EMPGRADEID, AREA_LOCATION_ID) '
 
 		SET @STR=@STR+ 'SELECT VISITED_DATE, city_name, EMPID,EMP_NAME,DESIGNATION,SUPERVISOR_NAME,'
 		SET @STR=@STR+ '(CASE WHEN MAX(StationCode)=0 THEN ''In Station'' WHEN  MAX(StationCode)=1 THEN ''Ex Station'' ELSE ''Out Station'' END ) VISIT_LOCATION, '
-		SET @STR=@STR+ 'USERID,STATEID,EMPGRADEID  FROM ( '
+		SET @STR=@STR+ 'USERID,STATEID,EMPGRADEID,AREA_LOCATION_ID  FROM ( '
 		SET @STR=@STR+ 'SELECT  VISITED_DATE, CT.city_name,EMP.emp_uniqueCode AS EMPID,  '
 		SET @STR=@STR+ '(ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''')) AS EMP_NAME, '
 		SET @STR=@STR+ 'DESG.deg_designation DESIGNATION,  ISNULL(CNT_REP.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT_REP.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT_REP.CNT_LASTNAME,'''') SUPERVISOR_NAME, ' 
-		SET @STR=@STR+ 'SA.StationCode , U.user_id AS USERID, AD.add_state AS STATEID, CTC.Emp_Grade AS EMPGRADEID '
+		SET @STR=@STR+ 'SA.StationCode , U.user_id AS USERID, AD.add_state AS STATEID, CTC.Emp_Grade AS EMPGRADEID, ATTN.AREA_LOCATION_ID '
 		SET @STR=@STR+ 'FROM tbl_trans_shopActivitysubmit SA '
 		SET @STR=@STR+ 'INNER JOIN tbl_fts_UserAttendanceLoginlogout ATTN ON SA.User_Id=ATTN.user_id AND CONVERT(DATE,visited_date)=CONVERT(DATE,WORK_DATETIME) AND Isonleave=''false'' AND Login_datetime IS NOT NULL '
 		SET @STR=@STR+ 'INNER JOIN TBL_MASTER_USER U ON SA.User_Id=U.user_id '
@@ -169,7 +171,7 @@ Begin
 		SET @STR=@STR+ 'AND EXISTS (SELECT 1 FROM #TEMP_EXPENSETYPE ET WHERE ET.expid=EXPT.VST_ID) '
 		SET @STR=@STR+ 'WHERE CONVERT(nvarchar(10),SA.visited_date ,120) BETWEEN '''+CONVERT(nvarchar(10),@fromdate,120)+'''  AND '''+CONVERT(nvarchar(10),@todate,120)+ ''' '
 		SET @STR=@STR+ ' ) SHOP_ACT '
-		SET @STR=@STR+ 'GROUP BY SHOP_ACT.VISITED_DATE, city_name, EMPID,EMP_NAME,DESIGNATION,SUPERVISOR_NAME,USERID,STATEID,EMPGRADEID '
+		SET @STR=@STR+ 'GROUP BY SHOP_ACT.VISITED_DATE, city_name, EMPID,EMP_NAME,DESIGNATION,SUPERVISOR_NAME,USERID,STATEID,EMPGRADEID,AREA_LOCATION_ID '
 		
 		EXEC (@STR)
 		--  END CREATE TEMP TABLE FOR shopActivitysubmit ---
@@ -205,7 +207,7 @@ Begin
 			SET @STR+='SELECT SUM(ISNULL(TCON.EligibleAmtday,0)) AS DAILY_AMOUNT,VLOC.Visit_Location Visit_Location, TCON.EmpgradeId,TCON.ExpenseId ,TCON.StateId, '
 			
 			IF (@IsShowReimbursementTypeInAttendance='1')
-				SET @STR+=' ISNULL(BR.branch_description,'''') BRANCHNAME,ISNULL(AR.area_name,'''') AREANAME '
+				SET @STR+=' ISNULL(BR.branch_description,'''') BRANCHNAME,ISNULL(AR.area_name,'''') AREANAME, AR.area_id '
 			ELSE
 				SET @STR+=' '''' BRANCHNAME,'''' AREANAME '
 
@@ -219,7 +221,7 @@ Begin
 					SET @STR+='left outer join  FTS_TravelConveyanceAreaMap AreaMap on AreaMap.BranchMapid=BranchMap.BranchMapid '
 					SET @STR+='left outer join TBL_MASTER_BRANCH BR on BranchMap.MapBranchId=BR.branch_id '
 					SET @STR+='left outer join  tbl_master_area AR on AreaMap.MapAreaId=AR.area_id '
-					SET @STR+='GROUP BY VLOC.Visit_Location, TCON.EmpgradeId,TCON.ExpenseId ,TCON.StateId, BR.branch_description, AR.area_name ) CONFIG '
+					SET @STR+='GROUP BY VLOC.Visit_Location, TCON.EmpgradeId,TCON.ExpenseId ,TCON.StateId, BR.branch_description, AR.area_name, AR.area_id ) CONFIG '
 				END
 				ELSE
 				BEGIN
@@ -228,6 +230,11 @@ Begin
 
 		SET @STR+='ON LTRIM(RTRIM(UPPER(REPLACE(CONFIG.Visit_Location,'' '',''''))))=LTRIM(RTRIM(UPPER(REPLACE(SHOP_ACT.VISIT_LOCATION,'' '','''')))) AND '
 		SET @STR+=' CONFIG.EmpgradeId=SHOP_ACT.EMPGRADEID AND CONFIG.StateId=SHOP_ACT.STATEID  '
+		IF (@IsShowReimbursementTypeInAttendance='1')
+			-- Rev 2.0
+			--SET @STR+=' AND CONFIG.area_id=SHOP_ACT.AREA_LOCATION_ID '
+			SET @STR+=' AND ( (SHOP_ACT.VISIT_LOCATION =''In Station'' OR SHOP_ACT.VISIT_LOCATION =''Ex Station'') OR (CONFIG.area_id=SHOP_ACT.AREA_LOCATION_ID ) ) '
+			-- End of Rev 2.0
 		-- End of Rev 1.0
 		
 		-- ATTACHMENT IMAGE EXIST CHECK

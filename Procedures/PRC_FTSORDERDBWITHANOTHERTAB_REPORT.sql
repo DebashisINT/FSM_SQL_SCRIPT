@@ -523,12 +523,12 @@ BEGIN
 					SET @Strsql+='LEFT OUTER JOIN tbl_master_address ADDR ON ADDR.add_cntId=USR.user_contactId AND ADDR.add_addressType=''Office'' '
 					SET @Strsql+='LEFT OUTER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 					SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
-					--IF @STATEID<>''
-					--	SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
-					--IF  @STATEID<>'' and @BRANCHID<>''
-					--	SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '					
-					--SET @Strsql+='GROUP BY CAST(ORDHEAD.ORDER_DATE AS DATE)) ORDVDT '
-					SET @Strsql+='GROUP BY CAST(ORDHEAD.ORDERDATE AS DATE)) ORDBV '
+					IF @STATEID<>''
+						SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS STA WHERE STA.State_Id=ST.id) '
+					IF  @STATEID<>'' and @BRANCHID<>''
+						SET @Strsql+=' and EXISTS (SELECT Branch_Id from #BRANCHID_LIST AS BR WHERE BR.Branch_Id=USR.user_branchId) '					
+					SET @Strsql+='GROUP BY CAST(ORDHEAD.ORDERDATE AS DATE)) ORDVDT '
+					--SET @Strsql+='GROUP BY CAST(ORDHEAD.ORDERDATE AS DATE)) ORDBV '
 					-- End of Rev 3.0
 			--Rev 2.0
 				END
