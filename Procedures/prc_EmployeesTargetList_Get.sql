@@ -30,6 +30,8 @@ AS
 												After importing the Target template from the portal, no data is showing in the listing page.	"
 												After analysis it was found that in the Download Format excel, the column "Stage" was missing.
 												This resulted in error. This has been resolved. Refer: 25837
+3.0		V2.0.42		Sanchita	28-07-2023		Masters - Organization - Employees Target - when clicked on the Search button no data comming.
+												Error showing from SP - column Stage not found. Mantis : 26637
 ********************************************************************************************************************************************************************************************/
  SET NOCOUNT ON ;
  BEGIN TRY 
@@ -121,7 +123,9 @@ AS
 
 		,ISNULL(EMPST.ModifiedDate,GETDATE()) AS ModifiedDate
 
-		
+		-- Rev 3.0
+		, 0 as Stage 
+		-- End of Rev 3.0
 
 		from tbl_master_user as USR
 		INNER JOIN  #EMPLOYEELIST EMLIST ON EMLIST.user_id=usr.user_id and usr.user_id<>@USERID
