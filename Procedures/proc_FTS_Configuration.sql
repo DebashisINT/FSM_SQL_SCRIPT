@@ -183,6 +183,7 @@ BEGIN
 	162.0		Debashis	30-06-2023	ADD SETTINGS @Action=GlobalCheck' ConsiderInactiveShopWhileLogin.Row 851
 	163.0		Debashis	17-07-2023	ADD SETTINGS @Action=GlobalCheck' ShopSyncIntervalInMinutes.Row 856
 	164.0		Debashis	17-07-2023	ADD SETTINGS @Action=UserCheck'	IsUsbDebuggingRestricted.Row 858
+	165.0		Debashis	01-08-2023	ADD SETTINGS @Action=GlobalCheck' IsShowWhatsAppIconforVisit & IsAutomatedWhatsAppSendforRevisit.Row 860
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -401,6 +402,10 @@ BEGIN
 	--Rev 163.0
 	,@ShopSyncIntervalInMinutes NVARCHAR(200)
 	--End of Rev 163.0
+	--Rev 165.0
+	,@IsShowWhatsAppIconforVisit BIT
+	,@IsAutomatedWhatsAppSendforRevisit BIT
+	--End of Rev 165.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -670,6 +675,10 @@ BEGIN
 		--Rev 163.0
 		SET @ShopSyncIntervalInMinutes  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShopSyncIntervalInMinutes' AND IsActive=1)
 		--End of Rev 163.0
+		--Rev 165.0
+		SET @IsShowWhatsAppIconforVisit  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowWhatsAppIconforVisit' AND IsActive=1)
+		SET @IsAutomatedWhatsAppSendforRevisit  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAutomatedWhatsAppSendforRevisit' AND IsActive=1)
+		--End of Rev 165.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -918,6 +927,10 @@ BEGIN
 			--Rev 163.0
 			,@ShopSyncIntervalInMinutes AS ShopSyncIntervalInMinutes
 			--End of Rev 163.0
+			--Rev 165.0
+			,@IsShowWhatsAppIconforVisit AS IsShowWhatsAppIconforVisit
+			,@IsAutomatedWhatsAppSendforRevisit AS IsAutomatedWhatsAppSendforRevisit
+			--End of Rev 165.0
 	END
 
 	else if(@Action='UserCheck')
