@@ -19,12 +19,12 @@ ALTER Proc [PRC_FTSExpenseReport]
 	@USER_ID BIGINT=0
 )
 As
-/*******************************************************************************************************************************************************************************
+/****************************************************************************************************************************************************************************
 * Created by Sanchita for V2.0.40 on 04-05-2023. Work done in Controller, View and Model
  * A New Expense Report is Required for BP Poddar. Refer: 25833
  * Rev 1.0		Sanchita	V2.0.40		Need to implement Branch and Area in the Expense Register Report. Refer: 26185
  * Rev 2.0		Sanchita	V2.0.42		In Station and Out Station expense data is not showing in the Expense Register Report. Refer: 26618
-*******************************************************************************************************************************************************************************/
+****************************************************************************************************************************************************************************/
 Begin
 	if (@ACTION='LIST')
 	BEGIN
@@ -233,7 +233,7 @@ Begin
 		IF (@IsShowReimbursementTypeInAttendance='1')
 			-- Rev 2.0
 			--SET @STR+=' AND CONFIG.area_id=SHOP_ACT.AREA_LOCATION_ID '
-			SET @STR+=' AND ( (SHOP_ACT.VISIT_LOCATION =''In Station'' OR SHOP_ACT.VISIT_LOCATION =''Ex Station'') OR (CONFIG.area_id=SHOP_ACT.AREA_LOCATION_ID ) ) '
+			SET @STR+=' AND ( (SHOP_ACT.VISIT_LOCATION =''In Station'' OR SHOP_ACT.VISIT_LOCATION =''Out Station'') OR (CONFIG.area_id=SHOP_ACT.AREA_LOCATION_ID ) ) '
 			-- End of Rev 2.0
 		-- End of Rev 1.0
 		
