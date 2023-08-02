@@ -20,8 +20,9 @@ ALTER PROC [dbo].[PRC_DASHBOARDPARTYDETAIL]
 AS
 /***********************************************************************************************************************
 1.0			Tanmoy			19-08-2021			add hierarchy 
-2.0		Sanchita	v2.0.39		10/02/2023		View Party' option shall be available in FSM Dashboard along with Dashboard Setting rights. 
+2.0		Sanchita	v2.0.39		10/02/2023		'View Party' option shall be available in FSM Dashboard along with Dashboard Setting rights. 
 												Refer: 25661
+3.0		Sanchita	v2.0.42		02/08/2023		FSM Dashboard - View Party - Data not coming when State West Bengal is selected. Refer: 26652
 ***********************************************************************************************************************/
 BEGIN
 
@@ -101,6 +102,13 @@ BEGIN
 				BEGIN
 					SET @str=@str+' AND (retailer_id =' +  @TYPE_ID + ' OR dealer_id='+ @TYPE_ID +')'
 				END
+				-- Rev 3.0
+				ELSE
+				BEGIN
+					SET @str=@str+' AND ( EXISTS (select ID from tbl_shoptypeDetails WHERE ID=tbl_Master_shop.retailer_id) OR '
+					SET @str=@str+' EXISTS (select ID from tbl_shoptypeDetails WHERE ID=tbl_Master_shop.dealer_id)  ) '
+				END
+				-- End of Rev 3.0
 				IF (ISNULL(@PARTY_ID,0)<>0)
 				BEGIN
 					SET @str=@str+' AND Party_Status_id =' +  @PARTY_ID 
