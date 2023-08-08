@@ -1,4 +1,4 @@
---EXEC Proc_FTS_ConveyanceConfigurationListing '11708','10','2022','0'
+--EXEC Proc_FTS_ConveyanceConfigurationListing '11713','8','2023','0'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Proc_FTS_ConveyanceConfigurationListing]') AND TYPE in (N'P', N'PC'))
 BEGIN
@@ -17,6 +17,8 @@ AS
 /***************************************************************************************************************************************************************************************************
 1.0		v2.0.35		Debashis	20-10-2022		Reimbursement is showing wrong in Summary (Total Claim Amount).Refer: 0025396
 2.0		v2.0.39		Debashis	12-05-2023		Api should return the image_list sequentially.Refer: 0026106
+3.0		v2.0.40		Debashis	08-08-2023		total_claim_amount mismatch from api due to wrong checking.Now it has been taken care of.
+												Refer: 0026698
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -33,7 +35,10 @@ BEGIN
 	INNER JOIN tbl_FTS_MapEmployeeGrade AS grd ON usr.user_contactId=grd.Emp_Code
 	WHERE usr.user_id=@user_id)
 
-	IF(@visit_type<>0)
+	--Rev 3.0
+	--IF(@visit_type<>0)
+	IF(@visit_type<>'0')
+	--End of Rev 3.0
 		BEGIN
 			--Rev 1.0
 			--SET @totalclaim=(SELECT SUM(ISNULL(Amount,0)) AS total_claim_amount  from [FTS_Reimbursement_Application] where userId=@user_id   and DATEPART(mm,date)=@month  and Visit_type_id=@visit_type )
