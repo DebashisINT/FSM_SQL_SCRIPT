@@ -65,7 +65,7 @@ BEGIN
 			set @bodyText = 'Please find attached excel file for PERFORMANCE SUMMARY(MTD) REPORT AS ON '+ @ReportToDate
 			set @filename = 'PERFORMANCE SUMMARY MTD REPORT_'+ @ReportToDate+'.csv'
 
-			set @sqlQry = 'select * from Honeywell..PERFORMANCESUMMARY_MTD_MAIL '
+			set @sqlQry = 'SET NOCOUNT ON select * from Honeywell..PERFORMANCESUMMARY_MTD_MAIL '
 			--set @sqlQry = 'select 1 '
 			--set @sqlQry = 'SELECT TOP 10 user_id FROM Honeywell..TBL_MASTER_USER '
 
