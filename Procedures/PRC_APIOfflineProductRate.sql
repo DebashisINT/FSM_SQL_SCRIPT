@@ -33,10 +33,10 @@ BEGIN
 
 	SET @SHOP_STATE=(select TOP(1)adds.add_state from tbl_master_address adds 
 					INNER JOIN tbl_master_user USR ON USR.user_contactId=adds.add_cntId 
-					where adds.add_addressType='Office' AND USR.user_id=11984)
+					where adds.add_addressType='Office' AND USR.user_id=@user_id)
 	--REV 2.0 END
 
-	SET @shop_id=(select top(1)Shop_Code from tbl_master_shop where stateId=35 and type=4 and Shop_CreateUser=11984)
+	SET @shop_id=(select top(1)Shop_Code from tbl_master_shop where stateId=@SHOP_STATE and type=4 and Shop_CreateUser=@user_id)
 	
 	IF(SELECT type FROM tbl_Master_shop WHERE Shop_Code=@shop_id)=4
 	SET @isStockShow=1
