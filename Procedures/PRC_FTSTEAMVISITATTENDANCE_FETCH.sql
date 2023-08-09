@@ -1,5 +1,5 @@
 --EXEC PRC_FTSTEAMVISITATTENDANCE_FETCH '2022-02-20','2022-02-28','','EMS0000812','',378
---EXEC PRC_FTSTEAMVISITATTENDANCE_FETCH '2022-01-01','2022-10-10','','','1,4',378
+--EXEC PRC_FTSTEAMVISITATTENDANCE_FETCH '2023-07-01','2023-08-10','','','1,4',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSTEAMVISITATTENDANCE_FETCH]') AND type in (N'P', N'PC'))
 BEGIN
@@ -30,6 +30,7 @@ Module	   : Team Visit Attendance.Refer: 0024720
 												"Present/Absent", "Total Working Day", "Total Days Present" , "Total Days Absent" shall be considered 'Attendance time'
 												instead 'Day Start'.Refer: 0025240
 5.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
+6.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -118,7 +119,11 @@ BEGIN
 			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			--Rev 6.0
+			cnt_sex TINYINT NULL,
+			GENDERDESC NVARCHAR(100) NULL
+			--End of Rev 6.0
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 
@@ -126,14 +131,22 @@ BEGIN
 		BEGIN
 			--Rev 2.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 6.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 6.0
+			FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
 		END
 	ELSE
 		BEGIN
 			--Rev 2.0 && WITH (NOLOCK) has been added in all tables
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 6.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 6.0
+			FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 			WHERE cnt_contactType IN('EM')
 		END
 
@@ -207,11 +220,12 @@ BEGIN
 
 	--Rev 2.0 && WITH (NOLOCK) has been added in all tables
 	--Rev 5.0 && Added a new column as LOGIN_DATE
+	--Rev 6.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT ATTENINOUT.LOGIN_DATE,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	--Rev 1.0
-	SET @SqlStr+='STG.Stage AS DSTLTYPE,'
+	SET @SqlStr+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC,STG.Stage AS DSTLTYPE,'
 	--End of Rev 1.0
 	SET @SqlStr+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
 	--Rev 4.0
