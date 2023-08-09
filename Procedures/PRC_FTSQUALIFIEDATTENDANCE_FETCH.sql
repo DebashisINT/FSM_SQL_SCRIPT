@@ -1,4 +1,4 @@
---EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2022-02-20','2022-02-28','','EMS0000812','',378
+--EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2023-07-01','2023-08-28','','','',378
 --EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2022-09-01','2022-10-31','','','1,2,3,4',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSQUALIFIEDATTENDANCE_FETCH]') AND type in (N'P', N'PC'))
@@ -21,6 +21,7 @@ AS
 Written by : Debashis Talukder ON 05/11/2022
 Module	   : Qualified Attendance Report.Refer: 0025416
 1.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
+2.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -107,20 +108,32 @@ BEGIN
 			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			--Rev 2.0
+			cnt_sex TINYINT NULL,
+			GENDERDESC NVARCHAR(100) NULL
+			--End of Rev 2.0
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 2.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 2.0
+			FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
 		END
 	ELSE
 		BEGIN
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 2.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 2.0
+			FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 			WHERE cnt_contactType IN('EM')
 		END
 
@@ -182,11 +195,12 @@ BEGIN
 	EXEC SP_EXECUTESQL @SqlStr
 
 	--Rev 1.0 && Added a new column as STARTENDDATEORDBY
+	--Rev 2.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT DAYSTARTEND.STARTENDDATE,DAYSTARTEND.STARTENDDATEORDBY,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
-	SET @SqlStr+='USR.user_loginId AS CONTACTNO,ST.ID AS STATEID,ST.state AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
-	SET @SqlStr+='RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,STG.Stage AS DSTYPE,CH.CH_ID,CH.CHANNEL,'
+	SET @SqlStr+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC,USR.user_loginId AS CONTACTNO,ST.ID AS STATEID,ST.state AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,'
+	SET @SqlStr+='CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,STG.Stage AS DSTYPE,CH.CH_ID,CH.CHANNEL,'
 	SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
 	SET @SqlStr+='(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 	SET @SqlStr+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT))>=240 '
