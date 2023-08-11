@@ -21,6 +21,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_FETCH]
 -- Rev 4.0
 ,@BRANCHID NVARCHAR(MAX)=NULL
 -- End of Rev 4.0
+-- Rev 5.0
+,@ShowFirstVisitTime INT=NULL
+,@ShowLastVisitTime INT=NULL
+-- End of Rev 5.0
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -30,6 +34,8 @@ AS
 												Also the distance travelled is showing zero though the total distance travelled showing data.
 												Refer: 25444
 4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
+5.0		V2.0.42		Sanchita	10/08/2023		Two check box is required to show the first call time & last call time in Attendance Register Report
+												Refer: 26707
 ****************************************************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -257,6 +263,16 @@ BEGIN
 	-- Rev 4.0
 	 SET @sqlStr+=' ,Branch '
 	-- End of Rev 4.0
+	-- Rev 5.0
+	IF @ShowFirstVisitTime=1
+	BEGIN
+		SET @sqlStr+=' ,FirstVisitTime '
+	END
+	IF @ShowLastVisitTime=1
+	BEGIN
+		SET @sqlStr+=' ,LastVisitTime '
+	END
+	-- End of Rev 5.0
 
 	SET @sqlStr+=' FROM ( '
 	SET @sqlStr+=' SELECT CNT.cnt_UCC AS EmpCode, '
@@ -289,6 +305,16 @@ BEGIN
 	-- Rev 4.0
 	SET @sqlStr+=' , BR.branch_description as Branch '
 	-- End of Rev 4.0
+	-- Rev 5.0
+	IF @ShowFirstVisitTime=1
+	BEGIN
+		SET @sqlStr+=' , RIGHT(CONVERT(VARCHAR, CAST(ShopAct.FirstVisitTime AS DATETIME), 100),7) as FirstVisitTime '
+	END
+	IF @ShowLastVisitTime=1
+	BEGIN
+		SET @sqlStr+=' , RIGHT(CONVERT(VARCHAR, CAST(ShopAct.LastVisitTime AS DATETIME), 100),7) as LastVisitTime '
+	END
+	-- End of Rev 5.0
 
 	SET @sqlStr+='  FROM tbl_master_user USR '
 	SET @sqlStr+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -305,6 +331,44 @@ BEGIN
 	   SET @sqlStr+=' LEFT OUTER JOIN #TEMPCTCCONTACT CTCEMP ON USR.user_contactid=CTCEMP.cnt_internalId '
 	 End
 	--End of Rev work 2.0
+	-- Rev 5.0
+	IF @ShowFirstVisitTime=1 OR @ShowLastVisitTime=1
+	BEGIN
+		SET @sqlStr+=' LEFT OUTER JOIN ( '
+		
+		IF @ShowFirstVisitTime=1 AND @ShowLastVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, FirstVisitTime, LastVisitTime, visited_date from ( '
+			SET @sqlStr+=' select User_Id, min(visited_time) as FirstVisitTime, max(visited_time) as LastVisitTime, visited_date from tbl_trans_shopActivitysubmit  '
+		END
+		ELSE IF @ShowFirstVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, FirstVisitTime, visited_date from ( '
+			SET @sqlStr+=' select User_Id, min(visited_time) as FirstVisitTime, visited_date from tbl_trans_shopActivitysubmit  '
+		END
+		ELSE IF @ShowLastVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, LastVisitTime, visited_date from ( '
+			SET @sqlStr+=' select User_Id, max(visited_time) as LastVisitTime, visited_date from tbl_trans_shopActivitysubmit  '
+		END
+		SET @sqlStr+=' group by User_Id,visited_date '
+		SET @sqlStr+=' union all '
+		IF @ShowFirstVisitTime=1 AND @ShowLastVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, min(visited_time) as FirstVisitTime, max(visited_time) as LastVisitTime, visited_date from tbl_trans_shopActivitysubmit_Archive '
+		END
+		ELSE IF @ShowFirstVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, min(visited_time) as FirstVisitTime, visited_date from tbl_trans_shopActivitysubmit_Archive '
+		END
+		ELSE IF @ShowLastVisitTime=1
+		BEGIN
+			SET @sqlStr+=' select User_Id, max(visited_time) as LastVisitTime, visited_date from tbl_trans_shopActivitysubmit_Archive '
+		END
+		SET @sqlStr+=' group by User_Id,visited_date '
+		SET @sqlStr+=' )A ) shopAct ON shopAct.User_Id=USR.User_Id and CONVERT(NVARCHAR(10),visited_date,120)=CONVERT(NVARCHAR(10),'''+@FROM_DATE+''',120) '
+	END
+	-- End of Rev 5.0
 	SET @sqlStr+=' LEFT OUTER JOIN ( '
 	SET @sqlStr+=' SELECT USERID,MIN(LOGGEDIN) AS LOGGEDIN,MAX(LOGEDOUT) AS LOGEDOUT,cnt_internalId,Login_datetime,ATTEN_STATUS '
 	SET @sqlStr+=' ,distance_covered,IDEAL_TIME,Ordervalue,IMAGE_NAME '

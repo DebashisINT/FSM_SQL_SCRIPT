@@ -27,6 +27,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_REPORT]
 -- Rev 4.0
 ,@BRANCHID NVARCHAR(MAX)=NULL
 -- End of Rev 4.0
+-- Rev 5.0
+,@ShowFirstVisitTime INT=NULL
+,@ShowLastVisitTime INT=NULL
+-- End of Rev 5.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -36,6 +40,8 @@ AS
 												Also the distance travelled is showing zero though the total distance travelled showing data.
 												Refer: 25444
 4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
+5.0		V2.0.42		Sanchita	10/08/2023		Two check box is required to show the first call time & last call time in Attendance Register Report
+												Refer: 26707
 ****************************************************************************************************************************************************************************/
 BEGIN
 
@@ -165,7 +171,17 @@ BEGIN
 			ALTER TABLE #TMPATTENDACE ADD FullDay INT
 		  End
 		--End of rev work 2.0
-
+		-- Rev 5.0
+		IF @ShowFirstVisitTime=1
+		  Begin
+			ALTER TABLE #TMPATTENDACE ADD  FirstVisitTime NVARCHAR(30)
+		  End
+		IF @ShowLastVisitTime=1
+		  Begin
+			ALTER TABLE #TMPATTENDACE ADD LastVisitTime NVARCHAR(30)
+		  End
+		-- End of Rev 5.0
+		
 		IF OBJECT_ID('tempdb..#TMPATTENDACESUMMARY') IS NOT NULL
 			DROP TABLE #TMPATTENDACESUMMARY
 	CREATE TABLE #TMPATTENDACESUMMARY(EmpCode NVARCHAR(100),EMP_NAME NVARCHAR(300),LoginID NVARCHAR(50),Department NVARCHAR(200),user_id BIGINT,
@@ -217,6 +233,16 @@ BEGIN
 				--End of rev work 2.0
 
 				SET @sqlStrTable += '[Out_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL, '	
+				-- Rev 5.0
+				IF @ShowFirstVisitTime=1
+				BEGIN
+					SET @sqlStrTable += '[FirstVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL, '
+				END
+				IF @ShowLastVisitTime=1
+				BEGIN
+					SET @sqlStrTable += '[LastVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']'+ ' NVARCHAR(30) NULL, '
+				END
+				-- End of Rev 5.0
 				--Rev work 2.0
 				IF @ISONLYLOGOUTDATA=1
 				Begin
@@ -256,8 +282,13 @@ BEGIN
 					-- Rev 4.0
 					--EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
 					--,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA
+					-- Rev 5.0
+					--EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
+					--,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID
 					EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
-					,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID
+					,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID,
+					@ShowFirstVisitTime=@ShowFirstVisitTime, @ShowLastVisitTime=@ShowLastVisitTime
+					-- End of Rev 5.0
 					-- End of Rev 4.0
 					--End of Rev work 2.0
 
@@ -278,6 +309,16 @@ BEGIN
 						 End
 						--End of rev work 2.0
 						SET @sqlStrTable += '[Out_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '],'
+						-- Rev 5.0
+						IF @ShowFirstVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' [FirstVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '], '
+						END
+						IF @ShowLastVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' [LastVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '], '
+						END
+						-- End of Rev 5.0
 						--Rev work 2.0
 						IF @ISONLYLOGOUTDATA=1
 						 Begin
@@ -309,6 +350,7 @@ BEGIN
 						BEGIN
 						SET @sqlStrTable += ' ,[ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + '] '
 						END
+						
 						SET @sqlStrTable += ' ) '
 						-- Rev 4.0
 						--SET @sqlStrTable += ' SELECT cnt_internalId,EmpCode,EMP_NAME,LoginID,Department,LOGGEDIN, '
@@ -321,6 +363,16 @@ BEGIN
 							End
 						--End of rev work 2.0
 						SET @sqlStrTable += ' LOGEDOUT, '
+						-- Rev 5.0
+						IF @ShowFirstVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' FirstVisitTime, '
+						END
+						IF @ShowLastVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' LastVisitTime, '
+						END
+						-- End of Rev 5.0
 						--Rev work 2.0
 						IF @ISONLYLOGOUTDATA=1
 							Begin
@@ -402,6 +454,16 @@ BEGIN
 						BEGIN
 						SET @sqlStrTable += ' ,TEMP.[ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']=T.IMAGE_NAME '
 						END
+						-- Rev 5.0
+						IF @ShowFirstVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' ,TEMP.[FirstVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']=T.FirstVisitTime '
+						END
+						IF @ShowLastVisitTime=1
+						BEGIN
+							SET @sqlStrTable += ' ,TEMP.[LastVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) + ']=T.LastVisitTime '
+						END
+						-- End of Rev 5.0
 
 						SET @sqlStrTable += ' FROM #HorizontalAttendance TEMP INNER JOIN  '
 						SET @sqlStrTable += '(SELECT * FROM #TMPATTENDACE )T ON T.cnt_internalId=TEMP.Empid '
@@ -433,23 +495,37 @@ BEGIN
 					--SELECT @SLHEADID+3 AS HEADID,'Out Time' AS HEADNAME,'Out_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 					SELECT @SLHEADID+4 AS HEADID,'Out Time' AS HEADNAME,'Out_Time_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 					
+					-- Rev 5.0
+					IF @ShowFirstVisitTime=1
+					BEGIN
+						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
+						SELECT @SLHEADID+5 AS HEADID,'First Call Time' AS HEADNAME,'FirstVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+					END
+
+					IF @ShowLastVisitTime=1
+					BEGIN
+						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
+						SELECT @SLHEADID+6 AS HEADID,'Last Call Time' AS HEADNAME,'LastVisitTime_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+					END
+					-- End of Rev 5.0
+
 					IF @ISONLYLOGOUTDATA=1
 					  Begin
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
-						SELECT @SLHEADID+5 AS HEADID,'Logout Location' AS HEADNAME,'Logout_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+						SELECT @SLHEADID+7 AS HEADID,'Logout Location' AS HEADNAME,'Logout_Location_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 					 End
 					--End of rev work 2.0
 
 					INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
 					--Rev work 2.0
 					--SELECT @SLHEADID+4 AS HEADID,'Duration' AS HEADNAME,'Duration_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-					SELECT @SLHEADID+6 AS HEADID,'Duration' AS HEADNAME,'Duration_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+					SELECT @SLHEADID+8 AS HEADID,'Duration' AS HEADNAME,'Duration_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 					--End of rev work 2.0
 
 					INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
 					--Rev work 2.0
 					--SELECT @SLHEADID+5 AS HEADID,'Status' AS HEADNAME,'Status_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-					SELECT @SLHEADID+7 AS HEADID,'Status' AS HEADNAME,'Status_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+					SELECT @SLHEADID+9 AS HEADID,'Status' AS HEADNAME,'Status_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 					--End of Rev work 2.0
 
 					IF @TotalKMTravelled=1
@@ -457,7 +533,7 @@ BEGIN
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
 						--Rev work 2.0
 						--SELECT @SLHEADID+6 AS HEADID,'Total KM Travelled' AS HEADNAME,'TotalKMTravelled_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-						SELECT @SLHEADID+8 AS HEADID,'Total KM Travelled' AS HEADNAME,'TotalKMTravelled_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+						SELECT @SLHEADID+10 AS HEADID,'Total KM Travelled' AS HEADNAME,'TotalKMTravelled_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 						--End of Rev work 2.0
 					END
 					IF @SecondarySalesValue=1
@@ -465,7 +541,7 @@ BEGIN
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
 						--Rev work 2.0
 						--SELECT @SLHEADID+7 AS HEADID,'Secondary Sales Value' AS HEADNAME,'SecondarySalesValue_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-						SELECT @SLHEADID+9 AS HEADID,'Secondary Sales Value' AS HEADNAME,'SecondarySalesValue_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+						SELECT @SLHEADID+11 AS HEADID,'Secondary Sales Value' AS HEADNAME,'SecondarySalesValue_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 						--End of Rev work 2.0
 					END
 					IF @IdleTimeCount=1
@@ -473,14 +549,14 @@ BEGIN
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID)
 						--Rev work 2.0 
 						--SELECT @SLHEADID+8 AS HEADID,'Idle Time Count' AS HEADNAME,'IdleTimeCount_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-						SELECT @SLHEADID+10 AS HEADID,'Idle Time Count' AS HEADNAME,'IdleTimeCount_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+						SELECT @SLHEADID+12 AS HEADID,'Idle Time Count' AS HEADNAME,'IdleTimeCount_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 						--End of Rev work 2.0
 					END
 					--Rev work 2.0
 					IF @ShowFullday=1
 					BEGIN
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
-						SELECT @SLHEADID+11 AS HEADID,'Full Day' AS HEADNAME,'FullDay_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 						
+						SELECT @SLHEADID+13 AS HEADID,'Full Day' AS HEADNAME,'FullDay_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 						
 					END
 					--End of Rev work 2.0
 					IF @ShowAttendanceSelfie=1
@@ -488,7 +564,7 @@ BEGIN
 						INSERT INTO #TMPEHEADING(HEADID,HEADNAME,HEADSHRTNAME,PARRENTID) 
 						--Rev work 2.0
 						--SELECT @SLHEADID+9 AS HEADID,'Show Attendance Selfie' AS HEADNAME,'ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
-						SELECT @SLHEADID+12 AS HEADID,'Show Attendance Selfie' AS HEADNAME,'ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
+						SELECT @SLHEADID+14 AS HEADID,'Show Attendance Selfie' AS HEADNAME,'ShowAttendanceSelfie_' +RTRIM(LTRIM(REPLACE(CONVERT(NVARCHAR(10),CAST(@COLUMN_DATE AS DATE),105),'-','_'))) AS HEADSHRTNAME,@PARENTID AS PARRENTID 
 						--End of Rev work 2.0
 					END
 					--Rev work 2.0
