@@ -34,6 +34,7 @@ Written by : Sanchita on 07-02-2022. Refer: 24631
 1.0		Pratik		v2.0.28		30/03/2022		Added Action='OldAssignedSalesMan'. Refer: 24776
 2.0		Pratik		v2.0.28		12/04/2022		Added Action='ReBULKASSIGN'. Refer: 24810
 3.0		Sanchita	V2.0.30		19-05-2022		MobileNo to be updated along with PhoneNo . Refer: 
+4.0		Sanchita	V2.0.42		16-08-2023		The enquiry doesn't showing in the listing after modification. Mantis: 26721
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -63,18 +64,36 @@ BEGIN
 			END CATCH
 			--END	
 	ELSE IF(@ACTION_TYPE='EDIT') 
+			-- Rev 4.0
+			--select Date,Customer_Name,Contact_Person,PhoneNo,Email,Location,Product_Required,isnull(Qty,0)as Qty,UOM,isnull(Order_Value,0) as Order_Value,Enq_Details,vend_type,Created_Date,PhoneNo,
+			--	Created_By,Modified_By,Modified_Date,isnull(Supervisor,0) as Supervisor,isnull(salesman,0) as salesman,isnull(verify,0) as verify 
+			--	from tbl_CRM_Import where Crm_Id=@CRM_ID
 			select Date,Customer_Name,Contact_Person,PhoneNo,Email,Location,Product_Required,isnull(Qty,0)as Qty,UOM,isnull(Order_Value,0) as Order_Value,Enq_Details,vend_type,Created_Date,PhoneNo,
-				Created_By,Modified_By,Modified_Date,isnull(Supervisor,0) as Supervisor,isnull(salesman,0) as salesman,isnull(verify,0) as verify from tbl_CRM_Import where Crm_Id=@CRM_ID
+				Created_By,Modified_By,Modified_Date,isnull(Supervisor,0) as Supervisor,isnull(salesman,0) as salesman,isnull(verify,0) as verify 
+				, convert(varchar(10),Date,105) as txtDate
+				from tbl_CRM_Import where Crm_Id=@CRM_ID
+			-- End of Rev 4.0
 	ELSE IF(@ACTION_TYPE='MOD') 
 			BEGIN TRY
 			BEGIN TRANSACTION		
 				-- Rev 3.0 [ MobileNo updated with @PHONENO ]
-				update tbl_CRM_Import set Date=CONVERT(DATETIME,CONVERT(VARCHAR(15),CAST(@DATE as date),120)+' '+CONVERT(VARCHAR(15),CAST(GETDATE() AS TIME),108)),
+				-- Rev 4.0
+				--update tbl_CRM_Import set Date=CONVERT(DATETIME,CONVERT(VARCHAR(15),CAST(@DATE as date),120)+' '+CONVERT(VARCHAR(15),CAST(GETDATE() AS TIME),108)),
+				
+				--Customer_Name=@CUSTNAME,Contact_Person=@CONTACTPERSON,PhoneNo=@PHONENO,Email=@EMAIL,Location=@LOCATION,Product_Required=@PRODUCTREQUIRED
+				--,Qty=@QTY,UOM=ISNULL(@UOM,''),Order_Value=@ORDER_VALUE,Vend_Type=@VEND_TYPE,Enq_Details=@ENQ_DETAILS,Modified_By=@USERID,
+				--Modified_Date=getdate(), MobileNo=@PHONENO
+				--where Crm_Id=@CRM_ID
+
+				update tbl_CRM_Import set --Date=CONVERT(DATETIME,CONVERT(VARCHAR(15),CAST(@DATE as date),120)+' '+CONVERT(VARCHAR(15),CAST(GETDATE() AS TIME),108)),
 				
 				Customer_Name=@CUSTNAME,Contact_Person=@CONTACTPERSON,PhoneNo=@PHONENO,Email=@EMAIL,Location=@LOCATION,Product_Required=@PRODUCTREQUIRED
-				,Qty=@QTY,UOM=ISNULL(@UOM,''),Order_Value=@ORDER_VALUE,Vend_Type=@VEND_TYPE,Enq_Details=@ENQ_DETAILS,Modified_By=@USERID,
+				,Qty=ISNULL(@QTY,0),UOM=ISNULL(@UOM,''),Order_Value=ISNULL(@ORDER_VALUE,0),
+				--Vend_Type=@VEND_TYPE,
+				Enq_Details=@ENQ_DETAILS,Modified_By=@USERID,
 				Modified_Date=getdate(), MobileNo=@PHONENO
 				where Crm_Id=@CRM_ID
+				-- End of Rev 4.0
 
 				COMMIT TRANSACTION
 
