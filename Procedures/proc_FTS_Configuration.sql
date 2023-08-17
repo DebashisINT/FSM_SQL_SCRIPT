@@ -184,6 +184,7 @@ BEGIN
 	163.0		Debashis	17-07-2023	ADD SETTINGS @Action=GlobalCheck' ShopSyncIntervalInMinutes.Row 856
 	164.0		Debashis	17-07-2023	ADD SETTINGS @Action=UserCheck'	IsUsbDebuggingRestricted.Row 858
 	165.0		Debashis	01-08-2023	ADD SETTINGS @Action=GlobalCheck' IsShowWhatsAppIconforVisit & IsAutomatedWhatsAppSendforRevisit.Row 860
+	166.0		Debashis	17-08-2023	ADD SETTINGS @Action=GlobalCheck' IsAllowBackdatedOrderEntry & Order_Past_Days.Row 863
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -406,6 +407,10 @@ BEGIN
 	,@IsShowWhatsAppIconforVisit BIT
 	,@IsAutomatedWhatsAppSendforRevisit BIT
 	--End of Rev 165.0
+	--Rev 166.0
+	,@IsAllowBackdatedOrderEntry BIT
+	,@Order_Past_Days INT
+	--End of Rev 166.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -679,6 +684,10 @@ BEGIN
 		SET @IsShowWhatsAppIconforVisit  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowWhatsAppIconforVisit' AND IsActive=1)
 		SET @IsAutomatedWhatsAppSendforRevisit  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAutomatedWhatsAppSendforRevisit' AND IsActive=1)
 		--End of Rev 165.0
+		--Rev 166.0
+		SET @IsAllowBackdatedOrderEntry  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowBackdatedOrderEntry' AND IsActive=1)
+		SET @Order_Past_Days  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Order_Past_Days' AND IsActive=1)
+		--End of Rev 166.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -931,6 +940,10 @@ BEGIN
 			,@IsShowWhatsAppIconforVisit AS IsShowWhatsAppIconforVisit
 			,@IsAutomatedWhatsAppSendforRevisit AS IsAutomatedWhatsAppSendforRevisit
 			--End of Rev 165.0
+			--Rev 166.0
+			,@IsAllowBackdatedOrderEntry AS IsAllowBackdatedOrderEntry
+			,@Order_Past_Days AS Order_Past_Days
+			--End of Rev 166.0
 	END
 
 	else if(@Action='UserCheck')
