@@ -1,4 +1,4 @@
-------EXEC PRC_FTSQUOTATIONAPPROVALDETAILS_REPORT @ACTION='LISTING', @FROMDATE='2022-01-01',@TODATE='2022-04-30',@EMPID='',@SHOPID='',@USERID=378
+------EXEC PRC_FTSQUOTATIONAPPROVALDETAILS_REPORT @ACTION='LISTING', @FROMDATE='2023-08-14',@TODATE='2023-08-14',@EMPID='',@SHOPID='',@USERID=378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSQUOTATIONAPPROVALDETAILS_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -28,6 +28,9 @@ Module	   : Eurobond Customization - Approve/Reject Quotation. Refer: 25177
 3.0		Debashis		V2.0.38		23-01-2023		Multiple Contact person name to be shown in the Quotation report.Refer: 0025584
 4.0		Sanchita		V2.0.38		24-01-2023		For comma seperated Email Id, Contact Person and Contact No, a space added after comma 
 													so that wrapping can take place for logn strings. Refer:25622 
+5.0		Sanchita		V2.0.39		18-04-2023		System will check the duplicate quotation number & restrict while approving the quotation in FSM
+													Refer: 25843
+6.0		Priti			V2.0.42		21-08-2023		0026725:Product is showing multiple times in the Quotation Approval Module
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -176,7 +179,7 @@ BEGIN
 		SET @SqlStr+='USR.user_loginId AS LOGINID,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,QH.DOCUMENT_NUMBER,CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,105) AS QUOTATIONDATE,QH.QUOTATIONSAVE_DATE as QUOTATIONDATE_DT, '
 		--Rev 3.0
 		--SET @SqlStr+='CONVERT(NVARCHAR(10),QH.QUOTATIONSAVE_DATE,120) AS QUOTATIONDATEORDBY,MS.SHOP_CODE,MS.Shop_Name AS CUSTNAME,MS.Address AS CUSTADDRESS,MS.Shop_Owner_Email AS CUSTEMAIL,MS.Shop_Owner AS CONTACTPERSON,'
-		---- Rev Sanchita
+		---- Rev 2.0
 		----SET @SqlStr+='MS.Shop_Owner_Contact AS CONTACTNO,QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME '
 		--SET @SqlStr+='MS.Shop_Owner_Contact AS CONTACTNO,QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME,QH.REMARKS,QH.QUOTATION_STATUS '
 		-- Rev 4.0 (SELECT '','' changed to SELECT '', '' )
@@ -189,7 +192,7 @@ BEGIN
 		SET @SqlStr+='WHERE MQC.USER_ID=USR.USER_ID AND MQC.USER_ID=QH.USER_ID AND QH.DOCUMENT_NUMBER=MQC.DOCUMENT_NUMBER FOR XML PATH('''')), 1, 1, ''''),'''')) AS CONTACTNO,'
 		SET @SqlStr+='QD.PROD_ID,QD.PRODUCT_NAME,QD.RATE_SQFT,MUSR.user_name AS SALESPERSON,QH.PROJECT_NAME,QH.REMARKS,QH.QUOTATION_STATUS '
 		--End of Rev 3.0
-		-- End of Rev Sanchita
+		-- End of Rev 2.0
 		SET @SqlStr+='FROM tbl_master_employee EMP '
 		SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 		SET @SqlStr+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '
@@ -224,16 +227,28 @@ BEGIN
 		update R set 
 			SEQ=R.SEQ_New ,
 			PROD_ID=(ISNULL((SELECT  LTRIM(STUFF(((SELECT DISTINCT ', ' + convert(varchar(10),  PROD_ID) FROM 	
-				(SELECT prod_id FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER ) AS desnnm FOR XML PATH(''))),1,2,' '))),'') ),
+				(SELECT prod_id FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER 
+				--Rev 6.0
+				and USERID=@USERID
+				--Rev 6.0 End
+				) AS desnnm FOR XML PATH(''))),1,2,' '))),'') ),
 			--PRODUCT_NAME = ( ISNULL((SELECT  LTRIM(STUFF(((SELECT DISTINCT ', ' + PRODUCT_NAME FROM 	
 			--(SELECT PRODUCT_NAME FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER ) AS desnnm FOR XML PATH(''))),1,2,' '))),'') ),
 			PRODUCT_NAME = REPLACE( 
 									( ISNULL((SELECT  LTRIM(STUFF(((SELECT DISTINCT ', ' + PRODUCT_NAME FROM 	
 										(SELECT (CASE WHEN CHARINDEX('(',PRODUCT_NAME)-1>0 THEN LEFT(PRODUCT_NAME,(CHARINDEX('(',PRODUCT_NAME)-1)) ELSE PRODUCT_NAME END)  PRODUCT_NAME
-									FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER ) AS desnnm FOR XML PATH(''))),1,2,' '))),'') ) 
+									FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER 
+									--Rev 6.0
+									and USERID=@USERID
+									--Rev 6.0 End
+									) AS desnnm FOR XML PATH(''))),1,2,' '))),'') ) 
 							, 'amp;', ''),
 			RATE_SQFT = ( ISNULL((SELECT  LTRIM(STUFF(((SELECT DISTINCT ', ' + convert(varchar(10),  RATE_SQFT) FROM 	
-			(SELECT RATE_SQFT FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER ) AS desnnm FOR XML PATH(''))),1,2,' '))),'') )
+			(SELECT RATE_SQFT FROM FTSQUOTATIONAPPROVALDETAILS_REPORT where DOCUMENT_NUMBER=R.DOCUMENT_NUMBER 
+			--Rev 6.0
+			and USERID=@USERID
+			--Rev 6.0 End
+			) AS desnnm FOR XML PATH(''))),1,2,' '))),'') )
 		from 
 		( select ROW_NUMBER() OVER (ORDER BY QUOTATIONDATE_DT) AS SEQ_New, * from FTSQUOTATIONAPPROVALDETAILS_REPORT where SEQ_DOCUMENT_NUMBER_DUPL=1 ) R
 
@@ -261,17 +276,31 @@ BEGIN
 				set @QUOTATION_NUMBER = 'EP/'+ SUBSTRING(CONVERT(nvarchar(6),getdate(), 112),5,2) +'/'+@QUOTATION_NUMBER+'/'+Right(Year(getDate()),2)+'-'+Right(Year(getDate())+ 1,2)
 				-- End of Rev 1.0
 
-				update FSMAPIQUOTATIONHEAD set QUOTATION_STATUS='Approved', ApproveRemarks=@Remarks, QUOTATION_NUMBER=@QUOTATION_NUMBER, ApproveRejectUser=@USERID, ApproveRejectDateTime=getdate()
-				where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
+				-- Rev 5.0
+				IF (select count(0) from FSMAPIQUOTATIONHEAD where QUOTATION_NUMBER=@QUOTATION_NUMBER)=0
+				BEGIN
+				-- End of Rev 5.0
 
-				update FSMAPIQUOTATIONDETAILS set QUOTATION_NUMBER=@QUOTATION_NUMBER where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
+					update FSMAPIQUOTATIONHEAD set QUOTATION_STATUS='Approved', ApproveRemarks=@Remarks, QUOTATION_NUMBER=@QUOTATION_NUMBER, ApproveRejectUser=@USERID, ApproveRejectDateTime=getdate()
+					where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
 
-				-- Rev 2.0
-				UPDATE FSMAPIQUOTATIONMULTICONTACT SET QUOTATION_NUMBER=@QUOTATION_NUMBER where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
-				-- End of Rev 2.0
+					update FSMAPIQUOTATIONDETAILS set QUOTATION_NUMBER=@QUOTATION_NUMBER where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
 
-				COMMIT TRANSACTION
-				Set @RETURN_VALUE = @QUOTATION_NUMBER
+					-- Rev 2.0
+					UPDATE FSMAPIQUOTATIONMULTICONTACT SET QUOTATION_NUMBER=@QUOTATION_NUMBER where DOCUMENT_NUMBER=@DOCUMENT_NUMBER
+					-- End of Rev 2.0
+
+					COMMIT TRANSACTION
+					Set @RETURN_VALUE = @QUOTATION_NUMBER
+
+				-- Rev 5.0
+				END
+				ELSE
+				BEGIN
+					ROLLBACK TRANSACTION
+					Set @RETURN_VALUE = 'QUOTATION_NUMBER_EXISTS'
+				END
+				-- End of Rev 5.0
 			end
 			else
 			begin
