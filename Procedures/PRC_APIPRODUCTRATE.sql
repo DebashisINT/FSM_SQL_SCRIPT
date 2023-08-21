@@ -13,11 +13,12 @@ ALTER PROCEDURE [dbo].[PRC_APIPRODUCTRATE]
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
-1.0			TANMOY			27-12-2019		CREATE SP FRO PRODUCT RATE
-2.0			TANMOY			14-02-2020		SHOW PRODUCT STOCK WAREHOUSE WISE  AND PRODUCT UNIT
-3.0			TANMOY			25-02-2020		add two seetings isStockShow,isRateShow
-4.0			DEBASHIS		08-08-2023		Api response not coming.Now Products have been filtered on State.
-											Refer: 0026694
+1.0					TANMOY			27-12-2019		CREATE SP FRO PRODUCT RATE
+2.0					TANMOY			14-02-2020		SHOW PRODUCT STOCK WAREHOUSE WISE  AND PRODUCT UNIT
+3.0					TANMOY			25-02-2020		add two seetings isStockShow,isRateShow
+4.0		v2.0.41		DEBASHIS		08-08-2023		Api response not coming.Now Products have been filtered on State.
+													Refer: 0026694
+5.0		v2.0.41		DEBASHIS		21-08-2023		Some new columns have been added.Row: 865
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -57,15 +58,20 @@ BEGIN
 	CONVERT(NVARCHAR(30),dbo.GET_STOCKPRODUCTWISE(@shop_id,sProducts_ID,@DATE)) AS stock_amount
 	,UOM.UOM_Name as stock_unit,
 	--Rev 3.0 Start
-	@isStockShow AS isStockShow,@isRateShow AS isRateShow 
+	@isStockShow AS isStockShow,@isRateShow AS isRateShow, 
 	--Rev 3.0 End
+	--Rev 5.0
+	SPLRATE.QTY_UNIT_DISTRIBUTOR AS Qty_per_Unit,SPLRATE.SCHEME_QTY_DISTRIBUTOR AS Scheme_Qty,SPLRATE.EFFECTIVE_PRICE AS Effective_Rate
+	--End of Rev 5.0
 	--Rev 4.0
 	--FROM Master_sProducts PROD
 	FROM #TMPSPLPRODMAST PROD
 	--End of Rev 4.0
 	--LEFT OUTER JOIN Master_ProductClass CLS ON CLS.ProductClass_ID=PROD.ProductClass_Code
 	LEFT OUTER JOIN Master_UOM UOM ON UOM.UOM_ID=PROD.sProducts_TradingLotUnit
-	
+	--Rev 5.0
+	LEFT OUTER JOIN FTS_SPECIAL_PRICE_STATE_TYPE_PRODUCT_WISE SPLRATE ON PROD.sProducts_ID=SPLRATE.PRODUCT_ID
+	--End of Rev 5.0
 	--select * from Master_UOM where UOM_Name='bag'
 	--Rev 4.0
 	DROP TABLE #TMPSPLPRODMAST

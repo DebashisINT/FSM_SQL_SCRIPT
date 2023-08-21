@@ -185,6 +185,7 @@ BEGIN
 	164.0		Debashis	17-07-2023	ADD SETTINGS @Action=UserCheck'	IsUsbDebuggingRestricted.Row 858
 	165.0		Debashis	01-08-2023	ADD SETTINGS @Action=GlobalCheck' IsShowWhatsAppIconforVisit & IsAutomatedWhatsAppSendforRevisit.Row 860
 	166.0		Debashis	17-08-2023	ADD SETTINGS @Action=GlobalCheck' IsAllowBackdatedOrderEntry & Order_Past_Days.Row 863
+	167.0		Debashis	21-08-2023	ADD SETTINGS @Action=GlobalCheck' Show_distributor_scheme_with_Product.Row 864
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -411,6 +412,9 @@ BEGIN
 	,@IsAllowBackdatedOrderEntry BIT
 	,@Order_Past_Days INT
 	--End of Rev 166.0
+	--Rev 167.0
+	,@Show_distributor_scheme_with_Product BIT
+	--End of Rev 167.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -688,6 +692,9 @@ BEGIN
 		SET @IsAllowBackdatedOrderEntry  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowBackdatedOrderEntry' AND IsActive=1)
 		SET @Order_Past_Days  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Order_Past_Days' AND IsActive=1)
 		--End of Rev 166.0
+		--Rev 167.0
+		SET @Show_distributor_scheme_with_Product  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Show_distributor_scheme_with_Product' AND IsActive=1)
+		--End of Rev 167.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -944,6 +951,9 @@ BEGIN
 			,@IsAllowBackdatedOrderEntry AS IsAllowBackdatedOrderEntry
 			,@Order_Past_Days AS Order_Past_Days
 			--End of Rev 166.0
+			--Rev 167.0
+			,@Show_distributor_scheme_with_Product AS Show_distributor_scheme_with_Product
+			--End of Rev 167.0
 	END
 
 	else if(@Action='UserCheck')
