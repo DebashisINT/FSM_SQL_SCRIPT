@@ -21,7 +21,8 @@ BEGIN
 	DECLARE @tab char(1) = CHAR(9), @BranchId nvarchar(max), @Branch nvarchar(500), @Emailid nvarchar(max), @sqlQry nvarchar(max),
 		-- @FromDate varchar(10), @ToDate varchar(10),
 			@CurrentMonth varchar(10), @CurrentYear varchar(10),
-			@SubjectText varchar(200), @bodyText varchar(200), @filename varchar(200), @ReportToDate varchar(10)
+			@SubjectText varchar(200), @bodyText varchar(200), @filename varchar(200), @ReportToDate varchar(10),
+			@user_id numeric(10,0)
 
 	--set @Emailid = 'sanchita.saha@indusnet.co.in'
 	--set @Branch = '122'
@@ -47,16 +48,17 @@ BEGIN
 
 	
 	declare db_cursor_mail cursor for
-	select EMAILID from Honeywell.[dbo].TBL_PERFORMANCESUMMARYMTDAutomail
+	select EMAILID, USER_ID from Honeywell.[dbo].TBL_PERFORMANCESUMMARYMTDAutomail
 	open db_cursor_mail
 	--fetch next from db_cursor_mail into @BranchId, @Branch, @Emailid
-	fetch next from db_cursor_mail into @Emailid
+	fetch next from db_cursor_mail into @Emailid, @user_id
 	while @@FETCH_STATUS=0
 	begin
 
 		-------------- Team Visit Report ---------------------
 		DECLARE @sqlMailQry NVARCHAR(MAX)
-		set @sqlMailQry = 'EXEC Honeywell.[dbo].PRC_FTSPERFORMANCESUMMARYMTD_REPORT_AUTOMIL @MONTH='''+@CurrentMonth+''',@YEARS='''+@CurrentYear+''',@USERID=378 '
+		--set @sqlMailQry = 'EXEC Honeywell.[dbo].PRC_FTSPERFORMANCESUMMARYMTD_REPORT_AUTOMIL @MONTH='''+@CurrentMonth+''',@YEARS='''+@CurrentYear+''',@USERID=378 '
+		set @sqlMailQry = 'EXEC Honeywell.[dbo].PRC_FTSPERFORMANCESUMMARYMTD_REPORT_AUTOMIL @MONTH='''+@CurrentMonth+''',@YEARS='''+@CurrentYear+''',@USERID='+cast(@user_id as varchar(50))+' '
 		EXEC SP_EXECUTESQL @sqlMailQry
 
 		if (select count(0) from Honeywell.[dbo].PERFORMANCESUMMARY_MTD_MAIL)>0
@@ -90,7 +92,7 @@ BEGIN
 
 
 		--fetch next from db_cursor_mail into @BranchId, @Branch, @Emailid
-		fetch next from db_cursor_mail into @Emailid
+		fetch next from db_cursor_mail into @Emailid, @user_id
 	end
 	close db_cursor_mail
 	deallocate db_cursor_mail
