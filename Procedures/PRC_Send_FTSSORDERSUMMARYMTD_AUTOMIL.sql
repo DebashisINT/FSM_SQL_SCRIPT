@@ -48,7 +48,7 @@ BEGIN
 
 	
 	declare db_cursor_mail cursor for
-	select EMAILID, USER_ID from Honeywell.[dbo].TBL_ORDERSUMMARYMTDAutomail
+	select EMAILID, USER_ID from Honeywell.[dbo].ORDERSUMMARYMTDAUTOMAIL
 	open db_cursor_mail
 	--fetch next from db_cursor_mail into @BranchId, @Branch, @Emailid
 	fetch next from db_cursor_mail into @Emailid, @user_id
