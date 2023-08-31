@@ -291,6 +291,11 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@IsShowInactiveCustomer INT=0
 ,@IsShowAttendanceSummary INT=0
 -- End of Rev 30.0
+-- Rev 31.0
+,@IsMenuShowAIMarketAssistant INT=0
+,@IsUsbDebuggingRestricted INT=0
+-- End of Rev 31.0
+
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -331,6 +336,7 @@ AS
 29.0	V2.0.40		08/05/2023		Sanchita	In user table a column exist as IsShowBeatInMenu. This will show in portal under user settings as "ShowBeatInMenu".
 												Refer: 25947
 30.0	V2.0.41		07/06/2023		Sanchita	Required below System settings + user wise settings in portal. Refer: 26245
+31.0	V2.0.43		31/08/2023		Sanchita	User wise settings required in Web Portal Front end User Master. Mantis : 26768
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -505,6 +511,9 @@ BEGIN
 			,IsShowWorkType,IsShowMarketSpendTimer,IsShowUploadImageInAppProfile,IsShowCalendar,IsShowCalculator
 			,IsShowInactiveCustomer,IsShowAttendanceSummary
 			-- End of Rev 30.0
+			-- Rev 31.0
+			,IsMenuShowAIMarketAssistant, IsUsbDebuggingRestricted
+			-- End of Rev 31.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -655,6 +664,9 @@ BEGIN
 			,isnull(@IsShowWorkType,1),isnull(@IsShowMarketSpendTimer,0),isnull(@IsShowUploadImageInAppProfile,0),isnull(@IsShowCalendar,0),isnull(@IsShowCalculator,0)
 			,isnull(@IsShowInactiveCustomer,0),isnull(@IsShowAttendanceSummary,0)
 			-- End of Rev 30.0
+			-- Rev 31.0
+			,isnull(@IsMenuShowAIMarketAssistant,0),isnull(@IsUsbDebuggingRestricted,0)
+			-- End of Rev 31.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1072,6 +1084,10 @@ BEGIN
 				 OR IsShowInactiveCustomer<>@IsShowInactiveCustomer
 				 OR IsShowAttendanceSummary<>@IsShowAttendanceSummary
 				 -- End of Rev 30.0
+				 -- Rev 31.0
+				 OR IsMenuShowAIMarketAssistant<>@IsMenuShowAIMarketAssistant
+				 OR IsUsbDebuggingRestricted<>@IsUsbDebuggingRestricted
+				 -- End of Rev 31.0
 				 )
 				)
 			BEGIN
@@ -1265,6 +1281,10 @@ BEGIN
 			,IsShowInactiveCustomer=@IsShowInactiveCustomer
 			,IsShowAttendanceSummary=@IsShowAttendanceSummary
 			-- End of Rev 30.0
+			-- Rev 31.0
+			,IsMenuShowAIMarketAssistant = @IsMenuShowAIMarketAssistant
+			,IsUsbDebuggingRestricted = @IsUsbDebuggingRestricted
+			-- End of Rev 31.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1518,6 +1538,10 @@ BEGIN
 			,ISNULL(IsShowInactiveCustomer,0) as IsShowInactiveCustomer
 			,ISNULL(IsShowAttendanceSummary,0) as IsShowAttendanceSummary
 			-- End of Rev 30.0
+			-- Rev 31.0
+			,ISNULL(IsMenuShowAIMarketAssistant,0) as IsMenuShowAIMarketAssistant
+			,ISNULL(IsUsbDebuggingRestricted,0) as IsUsbDebuggingRestricted
+			-- End of Rev 31.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1664,6 +1688,9 @@ BEGIN
 			,'IsShowWorkType','IsShowMarketSpendTimer','IsShowUploadImageInAppProfile','IsShowCalendar','IsShowCalculator'
 			,'IsShowInactiveCustomer','IsShowAttendanceSummary', 'willActivityShow'
 			-- End of Rev 30.0
+			-- Rev 31.0
+			,'IsMenuShowAIMarketAssistant', 'IsUsbDebuggingRestricted'
+			-- End of Rev 31.0
 			)
 		END
 	-- Rev 18.0
