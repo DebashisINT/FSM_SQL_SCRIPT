@@ -295,6 +295,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@IsMenuShowAIMarketAssistant INT=0
 ,@IsUsbDebuggingRestricted INT=0
 -- End of Rev 31.0
+-- Rev 32.0
+,@IsShowLatLongInOutletMaster INT=0
+-- End of Rev 32.0
 
 ) --WITH ENCRYPTION
 AS
@@ -337,6 +340,7 @@ AS
 												Refer: 25947
 30.0	V2.0.41		07/06/2023		Sanchita	Required below System settings + user wise settings in portal. Refer: 26245
 31.0	V2.0.43		31/08/2023		Sanchita	User wise settings required in Web Portal Front end User Master. Mantis : 26768
+32.0	V2.0.43		06/09/2023		Sanchita	A new user wise settings required named as ShowLatLongInOutletMaster. Refer: 26794
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -514,6 +518,9 @@ BEGIN
 			-- Rev 31.0
 			,IsMenuShowAIMarketAssistant, IsUsbDebuggingRestricted
 			-- End of Rev 31.0
+			-- Rev 32.0
+			,IsShowLatLongInOutletMaster
+			-- End of Rev 32.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -667,6 +674,9 @@ BEGIN
 			-- Rev 31.0
 			,isnull(@IsMenuShowAIMarketAssistant,0),isnull(@IsUsbDebuggingRestricted,0)
 			-- End of Rev 31.0
+			-- Rev 32.0
+			,isnull(@IsShowLatLongInOutletMaster,0)
+			-- End of Rev 32.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1088,6 +1098,9 @@ BEGIN
 				 OR IsMenuShowAIMarketAssistant<>@IsMenuShowAIMarketAssistant
 				 OR IsUsbDebuggingRestricted<>@IsUsbDebuggingRestricted
 				 -- End of Rev 31.0
+				 -- Rev 32.0
+				 OR IsShowLatLongInOutletMaster<>@IsShowLatLongInOutletMaster
+				 -- End of Rev 32.0
 				 )
 				)
 			BEGIN
@@ -1285,6 +1298,9 @@ BEGIN
 			,IsMenuShowAIMarketAssistant = @IsMenuShowAIMarketAssistant
 			,IsUsbDebuggingRestricted = @IsUsbDebuggingRestricted
 			-- End of Rev 31.0
+			-- Rev 32.0
+			,IsShowLatLongInOutletMaster = @IsShowLatLongInOutletMaster
+			-- End of Rev 32.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1542,6 +1558,9 @@ BEGIN
 			,ISNULL(IsMenuShowAIMarketAssistant,0) as IsMenuShowAIMarketAssistant
 			,ISNULL(IsUsbDebuggingRestricted,0) as IsUsbDebuggingRestricted
 			-- End of Rev 31.0
+			-- Rev 32.0
+			,ISNULL(IsShowLatLongInOutletMaster,0) as IsShowLatLongInOutletMaster
+			-- End of Rev 32.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1691,6 +1710,9 @@ BEGIN
 			-- Rev 31.0
 			,'IsMenuShowAIMarketAssistant', 'IsUsbDebuggingRestricted'
 			-- End of Rev 31.0
+			-- Rev 32.0
+			,'IsShowLatLongInOutletMaster'
+			-- End of Rev 32.0
 			)
 		END
 	-- Rev 18.0
