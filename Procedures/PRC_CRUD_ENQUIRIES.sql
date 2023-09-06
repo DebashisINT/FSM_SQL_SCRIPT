@@ -35,6 +35,7 @@ Written by : Sanchita on 07-02-2022. Refer: 24631
 2.0		Pratik		v2.0.28		12/04/2022		Added Action='ReBULKASSIGN'. Refer: 24810
 3.0		Sanchita	V2.0.30		19-05-2022		MobileNo to be updated along with PhoneNo . Refer: 
 4.0		Sanchita	V2.0.42		16-08-2023		The enquiry doesn't showing in the listing after modification. Mantis: 26721
+5.0		Sanchita	V2.0.43		06-09-2023		For reassign enquery need updation of userid properly. Mantis: 26795
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -233,7 +234,10 @@ BEGIN
 					
 				select * into #tempBulkReAssign FROM DBO.GETSPLIT('|',@CRM_IDS)
 				
-				update tbl_CRM_Import set ReAssignedSalesman=@SALESMANID, ReSalesmanAssignDT=getdate() where Crm_Id in(select s from #tempBulkReAssign where s<>'')
+				-- Rev 5.0
+				--update tbl_CRM_Import set ReAssignedSalesman=@SALESMANID, ReSalesmanAssignDT=getdate() where Crm_Id in(select s from #tempBulkReAssign where s<>'')
+				update tbl_CRM_Import set Prev_ReAssignedSalesman=SalesmanId, SalesmanId=@SALESMANID, ReAssignedSalesman=@SALESMANID, ReSalesmanAssignDT=getdate() where Crm_Id in(select s from #tempBulkReAssign where s<>'')
+				-- End of Rev 5.0
 
 				COMMIT TRANSACTION
 
