@@ -148,7 +148,9 @@ BEGIN
 		LOGGEDIN NVARCHAR(30),LOGEDOUT NVARCHAR(30),ATTEN_STATUS NVARCHAR(300),duration_HR NVARCHAR(30),duration_MIN NVARCHAR(30),cnt_internalId NVARCHAR(100)
 		,DISTANCE_COVERED NVARCHAR(30),IDEAL_TIME NVARCHAR(30),ORDERVALUE NVARCHAR(30),IMAGE_NAME NVARCHAR(max)	
 		-- Rev 4.0
-		, Branch NVARCHAR(200)
+		-- Rev 4.0 Rectify
+		--, Branch NVARCHAR(200)
+		-- End of Rev 4.0 Rectify
 		-- End of Rev 4.0
 		)
 		--Rev work 2.0
@@ -171,6 +173,9 @@ BEGIN
 			ALTER TABLE #TMPATTENDACE ADD FullDay INT
 		  End
 		--End of rev work 2.0
+		-- Rev 4.0 Rectify
+		ALTER TABLE #TMPATTENDACE ADD Branch NVARCHAR(200)
+		-- End of Rev 4.0 Rectify
 		-- Rev 5.0
 		IF @ShowFirstVisitTime=1
 		  Begin
