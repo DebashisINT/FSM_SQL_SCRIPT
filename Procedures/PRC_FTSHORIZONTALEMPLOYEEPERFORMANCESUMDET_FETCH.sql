@@ -22,6 +22,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALEMPLOYEEPERFORMANCESUMDET_FETCH]
 --Rev 3.0
 @FIRSTTIME BIT=NULL
 --End of Rev 3.0
+-- Rev 6.0
+,@BRANCHID NVARCHAR(MAX)=NULL
+-- End of Rev 6.0
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -37,6 +40,7 @@ Module	   : Horizontal Performance Summary & Detail.Refer: 0024858
 												Checked in Eurobond live data.Refer: 0025004
 4.0		V2.0.40		Sanchita	11/05/2023		Feedback column is required in Horizontal Performance Summary & Detail Report. Refer: 25786
 5.0		V2.0.41		Sanchita	29-06-2023		Working Duration calculation is wrong in Horizontal Performance Summary Report. Refer: 26461
+6.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Horizontal Performance Summary & Detail. Refer: 26135
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -137,6 +141,21 @@ BEGIN
 			SELECT EMPCODE,RPTTOEMPCODE FROM cte 
 		END
 	--End of Rev 1.0
+
+	-- Rev 6.0
+	IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+		DROP TABLE #BRANCH_LIST
+	CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
+	CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
+
+	IF @BRANCHID<>''
+		BEGIN
+			SET @sqlStrTable=''
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sqlStrTable='INSERT INTO #BRANCH_LIST SELECT branch_id FROM tbl_master_branch WHERE branch_id IN ('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @sqlStrTable
+		END
+	-- End of Rev 6.0
 
 	IF @REPORTTYPE='Summary'
 		BEGIN
@@ -350,6 +369,9 @@ BEGIN
 			SET @Strsql+='CASE WHEN GPS_INACTIVE_DURATION>0 THEN RIGHT(''0'' + CAST(CAST(GPS_INACTIVE_DURATION AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(GPS_INACTIVE_DURATION AS VARCHAR) % 60 AS VARCHAR),2) ELSE ''00:00'' END AS GPS_INACTIVE_DURATION,'
 			SET @Strsql+='GPSINACTIVECNT,RIGHT(''0'' + CAST(CAST(IDEAL_TIME AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(IDEAL_TIME AS VARCHAR) % 60 AS VARCHAR),2) AS IDEAL_TIME,'	
 			SET @Strsql+='IDEALTIME_CNT,NEWSHOP_VISITED,RE_VISITED,TOTMETTING,SHOPTYPEID,SHOPTYPENAME,SHOPVISITED '
+			-- Rev 6.0
+			SET @Strsql+=' ,Branch '
+			-- End of Rev 6.0
 			SET @Strsql+='FROM('
 			SET @Strsql+='SELECT USR.User_Id,CNT.cnt_internalId AS EMPCODE,ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+'' ''+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,ISNULL(ST.ID,0) AS STATEID,'
 			SET @Strsql+='ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,USR.user_loginId AS CONTACTNO,'
@@ -403,6 +425,9 @@ BEGIN
 			SET @Strsql+='GPSSM.GPS_Inactive_duration,ISNULL(GPSSM.GPSINACTIVECNT,0) AS GPSINACTIVECNT,IDEALLOACTION.IDEAL_TIME,(IDEALLOACTION.IDEAL_TIME/30) AS IDEALTIME_CNT,'
 			SET @Strsql+='ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0) AS TOTMETTING,ISNULL(SHOPACT.NEWSHOP_VISITED,0) AS NEWSHOP_VISITED,ISNULL(SHOPACT.RE_VISITED,0) AS RE_VISITED,'
 			SET @Strsql+='SHPTYPE.SHOPTYPEID,SHPTYPE.SHOPTYPENAME,SHPTYPE.SHOPVISITED '
+			-- Rev 6.0
+			SET @Strsql+=' , BR.branch_description as Branch '
+			-- End of Rev 6.0
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 1.0
@@ -414,6 +439,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			IF @STATEID=''
 				SET @Strsql+='AND EXISTS (SELECT State_Id FROM #STATEID_LIST AS STAT WHERE STAT.State_Id=ST.id) '
+			-- Rev 6.0
+			SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+			-- End of Rev 6.0
 			SET @Strsql+='INNER JOIN ( '
 			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
@@ -535,6 +565,9 @@ BEGIN
 			SET @Strsql+='REPLACE(REPLACE(ATTEN.ALTGRACEINTIME,''AM'','' AM''),''PM'','' PM'') AS ALTGRACEINTIME,NULL AS FIRSTCALLTIME,NULL AS LASTCALLTIME,NULL AS ATTENDANCETYPE,''On Leave'' AS ATTENDANCESTATUS,'
 			SET @Strsql+='NULL WORKINGDURATION,NULL AS UNDERTIME,NULL AS GPS_INACTIVE_DURATION,0 AS GPSINACTIVECNT,NULL AS IDEAL_TIME,0 AS IDEALTIME_CNT,0 AS TOTMETTING,0 AS NEWSHOP_VISITED,0 AS RE_VISITED,'
 			SET @Strsql+='0 AS SHOPTYPEID,'''' AS SHOPTYPENAME,0 AS SHOPVISITED '
+			-- Rev 6.0
+			SET @Strsql+=' , BR.branch_description as Branch '
+			-- End of Rev 6.0
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 1.0
@@ -546,6 +579,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_state ST ON ST.id=ADDR.add_state '
 			IF @STATEID=''
 				SET @Strsql+='AND EXISTS (SELECT State_Id FROM #STATEID_LIST AS STAT WHERE STAT.State_Id=ST.id) '
+			-- Rev 6.0
+			SET @Strsql+='INNER JOIN tbl_master_branch BR ON USR.user_branchId=BR.branch_id '
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+			-- End of Rev 6.0
 			SET @Strsql+='INNER JOIN ( '
 			SET @Strsql+='SELECT cnt.emp_cntId,desg.deg_designation,MAX(emp_id) as emp_id,desg.deg_id FROM tbl_trans_employeeCTC as cnt '
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_designation desg ON desg.deg_id=cnt.emp_Designation WHERE cnt.emp_effectiveuntil IS NULL GROUP BY emp_cntId,desg.deg_designation,desg.deg_id) DESG ON DESG.emp_cntId=EMP.emp_contactId '
@@ -603,6 +641,9 @@ BEGIN
 			-- Rev 4.0
 			SET @Strsql+=' ,SHOPACT.REMARKS AS FEEDBACK, BEAT.NAME AS BEAT '
 			-- End of Rev 4.0
+			-- Rev 6.0
+			SET @Strsql+=' , BR.branch_description as Branch '
+			-- End of Rev 6.0
 			SET @Strsql+='FROM tbl_shoptype ST '
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON ST.TypeId=MS.type '
 			SET @Strsql+='INNER JOIN tbl_master_user MU ON MS.Shop_CreateUser=MU.USER_ID AND MU.user_inactive=''N'' '
@@ -614,6 +655,11 @@ BEGIN
 			SET @Strsql+='INNER JOIN tbl_master_address ADDR ON ADDR.add_cntId=CNT.cnt_internalid AND ADDR.add_addressType=''Office'' '
 			SET @Strsql+='INNER JOIN tbl_master_state STAT ON STAT.id=ADDR.add_state '
 			SET @Strsql+='INNER JOIN tbl_trans_shopActivitysubmit SHOPACT ON MU.user_id=SHOPACT.User_Id AND MS.Shop_Code=SHOPACT.Shop_Id '
+			-- Rev 6.0
+			SET @Strsql+='INNER JOIN tbl_master_branch BR ON MU.user_branchId=BR.branch_id '
+			IF @BRANCHID<>''
+				SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
+			-- End of Rev 6.0
 			-- Rev 4.0
 			SET @Strsql+='LEFT OUTER JOIN FSM_GROUPBEAT BEAT ON MS.beat_id = BEAT.ID '
 			-- End of Rev 4.0
