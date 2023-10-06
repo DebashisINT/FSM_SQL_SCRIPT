@@ -186,6 +186,8 @@ BEGIN
 	165.0		Debashis	01-08-2023	ADD SETTINGS @Action=GlobalCheck' IsShowWhatsAppIconforVisit & IsAutomatedWhatsAppSendforRevisit.Row 860
 	166.0		Debashis	17-08-2023	ADD SETTINGS @Action=GlobalCheck' IsAllowBackdatedOrderEntry & Order_Past_Days.Row 863
 	167.0		Debashis	21-08-2023	ADD SETTINGS @Action=GlobalCheck' Show_distributor_scheme_with_Product.Row 864
+	168.0		Debashis	06-10-2023	ADD SETTINGS @Action=GlobalCheck' GSTINPANMandatoryforSHOPTYPE4,FSSAILicNoEnableInShop & FSSAILicNoMandatoryInShop4.Row 871
+	169.0		Debashis	06-10-2023	ADD SETTINGS @Action=UserCheck'	IsDisabledUpdateAddress.Row 872
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -415,6 +417,11 @@ BEGIN
 	--Rev 167.0
 	,@Show_distributor_scheme_with_Product BIT
 	--End of Rev 167.0
+	--Rev 168.0
+	,@GSTINPANMandatoryforSHOPTYPE4 BIT
+	,@FSSAILicNoEnableInShop BIT
+	,@FSSAILicNoMandatoryInShop4 BIT
+	--End of Rev 168.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -695,6 +702,11 @@ BEGIN
 		--Rev 167.0
 		SET @Show_distributor_scheme_with_Product  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Show_distributor_scheme_with_Product' AND IsActive=1)
 		--End of Rev 167.0
+		--Rev 168.0
+		SET @GSTINPANMandatoryforSHOPTYPE4  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='GSTINPANMandatoryforSHOPTYPE4' AND IsActive=1)
+		SET @FSSAILicNoEnableInShop  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='FSSAILicNoEnableInShop' AND IsActive=1)
+		SET @FSSAILicNoMandatoryInShop4  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='FSSAILicNoMandatoryInShop4' AND IsActive=1)
+		--End of Rev 168.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -954,6 +966,11 @@ BEGIN
 			--Rev 167.0
 			,@Show_distributor_scheme_with_Product AS Show_distributor_scheme_with_Product
 			--End of Rev 167.0
+			--Rev 168.0
+			,@GSTINPANMandatoryforSHOPTYPE4 AS GSTINPANMandatoryforSHOPTYPE4
+			,@FSSAILicNoEnableInShop AS FSSAILicNoEnableInShop
+			,@FSSAILicNoMandatoryInShop4 AS FSSAILicNoMandatoryInShop4
+			--End of Rev 168.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1934,7 +1951,13 @@ BEGIN
 		SELECT 'IsUsbDebuggingRestricted' AS [Key],CONVERT(NVARCHAR(15),USR.IsUsbDebuggingRestricted) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 164.0
+		--Rev 169.0
+		UNION ALL
+		SELECT 'IsDisabledUpdateAddress' AS [Key],CONVERT(NVARCHAR(15),USR.IsDisabledUpdateAddress) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 169.0
 	END
 
 	SET NOCOUNT OFF
 END
+GO

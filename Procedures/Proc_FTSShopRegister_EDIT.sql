@@ -111,8 +111,11 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 @shopStatusUpdate BIT=NULL,
 --End of Rev 18.0
 --Rev 19.0
-@GSTN_Number NVARCHAR(100)=NULL
+@GSTN_Number NVARCHAR(100)=NULL,
 --End of Rev 19.0
+--Rev 20.0
+@isUpdateAddressFromShopMaster BIT=0
+--End of Rev 20.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -137,6 +140,7 @@ As
 														Refer: 0024762
 18.0	v2.0.28		Debashis		18-04-2022			New parameter added as @shopStatusUpdate.Refer: 682
 19.0	v2.0.35		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
+20.0	v2.0.42		Debashis		06-10-2023			New Parameter added.Row: 873 & 874
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -353,8 +357,11 @@ BEGIN
 			 ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END,
 			 --End of Rev 18.0
 			 --Rev 19.0
-			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END
+			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END,
 			 --End of Rev 19.0
+			 --Rev 20.0
+			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END
+			 --End of Rev 20.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
 	--Rev 13.0
@@ -434,8 +441,11 @@ BEGIN
 			ShopStatusUpdate=CASE WHEN @shopStatusUpdate IS NULL OR @shopStatusUpdate='' THEN [ShopStatusUpdate] ELSE @shopStatusUpdate END,
 			--End of Rev 18.0
 			--Rev 19.0
-			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END
+			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END,
 			 --End of Rev 19.0
+			 --Rev 20.0
+			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END
+			 --End of Rev 20.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
 		END
@@ -499,3 +509,4 @@ BEGIN
 	--select '202' as returncode
 	SET NOCOUNT OFF
 END
+GO
