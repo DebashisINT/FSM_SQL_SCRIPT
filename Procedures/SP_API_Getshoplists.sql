@@ -36,6 +36,7 @@ AS
 18.0		Debashis		16-06-2023			Shoplist/List -> parameter added_date value mismatch
 												When fetching shops by using Shoplist/List this api a parameter associated with shop "added_date" 
 												returning wrong result.Refer: 0026360
+19.0		Debashis		06-10-2023			New Parameter added.Row: 870 to 876
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -107,8 +108,11 @@ BEGIN
 			set @sql+='ISNULL(shop.Purpose,'''') AS purpose,'
 			--End of Rev 16.0
 			--Rev 17.0
-			set @sql+='ISNULL(shop.GSTN_Number,'''') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'''') AS ShopOwner_PAN '
+			set @sql+='ISNULL(shop.GSTN_Number,'''') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'''') AS ShopOwner_PAN,'
 			--End of Rev 17.0
+			--Rev 19.0
+			set @sql+='ISNULL(shop.FSSAILicNo,'''') AS FSSAILicNo,CAST(ISNULL(shop.isUpdateAddressFromShopMaster,0) AS BIT) AS isUpdateAddressFromShopMaster '
+			--End of Rev 19.0
 			set @sql+=' from tbl_Master_shop as shop WITH(NOLOCK)  '
 			set @sql+=' INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype as typs WITH(NOLOCK) on typs.shop_typeId=shop.type   '
@@ -190,8 +194,11 @@ BEGIN
 			ISNULL(shop.Purpose,'') AS purpose, 
 			--End of Rev 16.0
 			--Rev 17.0
-			ISNULL(shop.GSTN_Number,'') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'') AS ShopOwner_PAN
+			ISNULL(shop.GSTN_Number,'') AS GSTN_Number,ISNULL(shop.ShopOwner_PAN,'') AS ShopOwner_PAN,
 			--End of Rev 17.0
+			--Rev 19.0
+			ISNULL(shop.FSSAILicNo,'') AS FSSAILicNo,CAST(ISNULL(shop.isUpdateAddressFromShopMaster,0) AS BIT) AS isUpdateAddressFromShopMaster 
+			--End of Rev 19.0
 			from tbl_Master_shop as shop WITH(NOLOCK) 
 			INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 			INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
@@ -210,3 +217,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
