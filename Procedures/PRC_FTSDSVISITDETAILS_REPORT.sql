@@ -1,4 +1,4 @@
---EXEC PRC_FTSDSVISITDETAILS_REPORT '2022-10-01','2022-10-30','','',378
+--EXEC PRC_FTSDSVISITDETAILS_REPORT '2023-07-01','2023-08-30','','','1',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSDSVISITDETAILS_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -31,6 +31,7 @@ Module	   : Employee DS Visit Details.Refer: 0024868
 												considered as 'Qualified'='1' Else ='0']
 												'Present/Absent' = (0/1) [If Employee Marked 'Day Start' for that Day, then it will considered as 'Present'='1' Else ='0'].
 												Refer: 0026474
+7.0		v2.0.41		Debashis	09-08-2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -109,7 +110,11 @@ BEGIN
 					cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 					cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 					cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-					cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+					cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+					--Rev 7.0
+					cnt_sex TINYINT NULL,
+					GENDERDESC NVARCHAR(100) NULL
+					--End of Rev 7.0
 				)
 			CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 
@@ -117,14 +122,22 @@ BEGIN
 				BEGIN
 					--Rev 3.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+					SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+					--Rev 7.0
+					cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+					--End of Rev 7.0
+					FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 					INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
 				END
 			ELSE
 				BEGIN
 					--Rev 3.0 && WITH (NOLOCK) has been added in all tables
 					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WITH (NOLOCK)
+					SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+					--Rev 7.0
+					cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+					--End of Rev 7.0
+					FROM TBL_MASTER_CONTACT WITH (NOLOCK)
 					WHERE cnt_contactType IN('EM')
 				END
 
@@ -229,6 +242,7 @@ BEGIN
 			--Rev 2.0 &&Two new fields have been added as DAYSTTIME & DAYENDTIME
 			--Rev 4.0 &&Three new columns have been added as DSTYPEID,DSTYPE and CIRCLE 
 			--Rev 6.0 &&Two new fields have been added as ATTENDANCE & QUALIFIEDPRESENT
+			--Rev 7.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
 			CREATE TABLE FTSDSVISITDETAILS_REPORT
 			(
 			  USERID INT,
@@ -269,7 +283,9 @@ BEGIN
 			  DSTYPE NVARCHAR(600),
 			  CIRCLE NVARCHAR(MAX),
 			  ATTENDANCE INT,
-			  QUALIFIEDPRESENT INT
+			  QUALIFIEDPRESENT INT,
+			  OUTLETEMPSEX TINYINT,
+			  GENDERDESC NVARCHAR(100)
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSDSVISITDETAILS_REPORT (SEQ)
 		END
@@ -281,6 +297,7 @@ BEGIN
 	IF @ISPAGELOAD='1'
 		BEGIN
 	--End of Rev 6.0
+			--Rev 7.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
 			SET @SqlStr=''
 			SET @SqlStr='INSERT INTO FTSDSVISITDETAILS_REPORT(USERID,SEQ,EMPROWID,LOGINDATE,LOGIN_DATETIME,BRANCH_ID,BRANCHDESC,EMPUSERID,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,'
 			SET @SqlStr+='REPORTTOID,REPORTTOUID,REPORTTO,RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETSMAPPED,NEWSHOP_VISITED,RE_VISITED,TOTAL_VISIT,DISTANCE_TRAVELLED,AVGTIMESPENTINMARKET,'
@@ -288,7 +305,7 @@ BEGIN
 			--SET @SqlStr+='DAYSTTIME,DAYENDTIME,AVGSPENTDURATION) '
 			--Rev 6.0
 			--SET @SqlStr+='DAYSTTIME,DAYENDTIME,AVGSPENTDURATION,DSTYPEID,DSTYPE,CIRCLE) '
-			SET @SqlStr+='DAYSTTIME,DAYENDTIME,AVGSPENTDURATION,DSTYPEID,DSTYPE,CIRCLE,ATTENDANCE,QUALIFIEDPRESENT) '
+			SET @SqlStr+='DAYSTTIME,DAYENDTIME,AVGSPENTDURATION,DSTYPEID,DSTYPE,CIRCLE,ATTENDANCE,QUALIFIEDPRESENT,OUTLETEMPSEX,GENDERDESC) '
 			--End of Rev 6.0
 			--End of Rev 4.0
 			--Rev 5.0
@@ -307,7 +324,7 @@ BEGIN
 			--Rev 4.0
 			--Rev 6.0
 			--SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE '
-			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE,ATTENDANCE,QUALIFIEDPRESENT '
+			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE,ATTENDANCE,QUALIFIEDPRESENT,OUTLETEMPSEX,GENDERDESC '
 			--End of Rev 6.0
 			--End of Rev 4.0
 			SET @SqlStr+='FROM('
@@ -326,7 +343,7 @@ BEGIN
 			--Rev 4.0
 			--Rev 6.0
 			--SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE '
-			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE,SUM(ATTENDANCE) AS ATTENDANCE,SUM(QUALIFIEDPRESENT) AS QUALIFIEDPRESENT '
+			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE,SUM(ATTENDANCE) AS ATTENDANCE,SUM(QUALIFIEDPRESENT) AS QUALIFIEDPRESENT,OUTLETEMPSEX,GENDERDESC '
 			--End of Rev 6.0
 			--End of Rev 4.0
 			SET @SqlStr+='FROM('
@@ -357,8 +374,11 @@ BEGIN
 			SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
 			SET @SqlStr+='(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 			SET @SqlStr+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT))>=240 '
-			SET @SqlStr+='THEN 1 ELSE 0 END AS QUALIFIEDPRESENT '
+			SET @SqlStr+='THEN 1 ELSE 0 END AS QUALIFIEDPRESENT,'
 			--End of Rev 6.0
+			--Rev 7.0
+			SET @SqlStr+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC '
+			--End of Rev 7.0
 			SET @SqlStr+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @SqlStr+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
@@ -463,7 +483,7 @@ BEGIN
 			--End of Rev 5.0
 			SET @SqlStr+='REPORTTO,RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,DAYSTTIME,DAYENDTIME,'
 			--Rev 4.0
-			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE '
+			SET @SqlStr+='DSTYPEID,DSTYPE,CIRCLE,OUTLETEMPSEX,GENDERDESC '
 			--End of Rev 4.0
 			SET @SqlStr+=') DSDETAILS '
 

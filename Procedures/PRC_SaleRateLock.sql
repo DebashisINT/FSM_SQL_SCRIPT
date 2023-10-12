@@ -1,5 +1,4 @@
 
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_SaleRateLock]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_SaleRateLock] AS' 
@@ -27,7 +26,7 @@ ALTER PROCEDURE [dbo].[PRC_SaleRateLock]
 --WITH ENCRYPTION
 AS 
 /************************************************************************************************ *
-	1.0		v2.0.6		TANMOY		14-01-2020		Created.
+		1.0		v2.0.6		TANMOY		14-01-2020		Created.
 	2.0		v2.0.7		TANMOY		19-01-2020		INSERT INTO PRODUCT RATE FROM EXCEL
 	3.0		v2.0.42		PRITI		01-08-2023		0026649: Four new columns are required in the excel template of "Sale rate lock" module.
 	4.0		v2.0.43		Sanchita	12-10-2023		Sale Rate Lock is deleting previous rate of other products if import with new item. Mantis: 26892
@@ -480,7 +479,7 @@ BEGIN
 
 		select @STATE_NAME AS STATE,sProducts_Code AS Code,sProducts_Name AS Description,
 		--Rev 3.0
-		0.00 AS 'Price to Super',
+ 0.00 AS 'Price to Super',
 		--Rev 3.0 End
 		0.00 AS 'Price to Distributor','0.00' AS 'Price to Retailer' 
 		--Rev 3.0
@@ -509,7 +508,7 @@ BEGIN
 		--Rev 3.0 End
 		FROM FTS_SPECIAL_PRICE_STATE_TYPE_PRODUCT_WISE WHERE STATE_ID=@STATE_ID
 
-		-- Rev 4.0
+	-- Rev 4.0
 		--DELETE FROM FTS_SPECIAL_PRICE_STATE_TYPE_PRODUCT_WISE WHERE STATE_ID=@STATE_ID
 		DELETE FROM FTS_SPECIAL_PRICE_STATE_TYPE_PRODUCT_WISE  WHERE STATE_ID=@STATE_ID AND
 			EXISTS(SELECT sProducts_ID FROM @UDT_PRODUCTRATE TEMP inner join Master_sProducts pro on TEMP.Description=pro.sProducts_Name

@@ -1,5 +1,5 @@
 --EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2020-04-01','2021-11-30','1','EMB0000017,EMP0000020',378
---EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2022-02-27','2022-02-28','','',378
+--EXEC PRC_FTSEMPLOYEEOUTLETMASTER_REPORT '2023-02-27','2023-02-28','','','1',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]
 @ISPAGELOAD NVARCHAR(1)=NULL,
 --End of Rev 5.0
 @USERID INT
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 03/11/2021
@@ -27,8 +27,9 @@ Module	   : Employee Outlet Master.Refer: 0024448
 3.0		v2.0.39		PRITI		13/02/2023		0025663:Last Visit fields shall be available in Outlet Reports
 4.0		v2.0.39		Debashis	02/05/2023		Employee Outlet Master -- logic need to be change.Refer: 0025994
 5.0		v2.0.39		Debashis	12/05/2023		Optimization required for Employee Outlet Master.Refer: 0026020
-6.0		V2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
-7.0		V2.0.41		Sanchita	02/06/2023		Employee Outlet Master : Report, Outlet ID shall be showing Internal ID. Refer: 26239
+6.0		v2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
+7.0		v2.0.41		Sanchita	02/06/2023		Employee Outlet Master : Report, Outlet ID shall be showing Internal ID. Refer: 26239
+8.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -116,20 +117,32 @@ BEGIN
 			cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			--Rev 8.0
+			cnt_sex TINYINT NULL,
+			GENDERDESC NVARCHAR(100) NULL
+			--End of Rev 8.0
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 	
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 8.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 8.0
+			FROM TBL_MASTER_CONTACT
 			INNER JOIN #EMPHR_EDIT ON cnt_internalId=EMPCODE WHERE cnt_contactType IN('EM')
 		END
 	ELSE
 		BEGIN
 			INSERT INTO #TEMPCONTACT
-			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
+			SELECT cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,
+			--Rev 8.0
+			cnt_sex,CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC
+			--End of Rev 8.0
+			FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 		END
 	--End of Rev 1.0
 
@@ -168,7 +181,11 @@ BEGIN
 			  LASTVISITDATE NVARCHAR(100),--REV 3.0	
 			  LASTVISITTIME NVARCHAR(100),--REV 3.0	
 			  LASTVISITEDBY NVARCHAR(200),--REV 3.0	
-			  OUTLETSTATUS	NVARCHAR(10) -- Rev 6.0
+			  OUTLETSTATUS	NVARCHAR(10), -- Rev 6.0
+			  --Rev 8.0
+			  OUTLETEMPSEX TINYINT,
+			  GENDERDESC NVARCHAR(100)
+			--End of Rev 8.0
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSEMPLOYEEOUTLETMASTER_REPORT (SEQ)
 		END
@@ -181,9 +198,12 @@ BEGIN
 			--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSEMPLOYEEOUTLETMASTER_REPORT(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTOUID,REPORTTO,'
-			SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG,LASTVISITDATE,LASTVISITTIME,LASTVISITEDBY, '
+			SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG,LASTVISITDATE,LASTVISITTIME,LASTVISITEDBY,'
 			-- Rev 6.0
-			SET @Strsql+='OUTLETSTATUS) '
+			--Rev 8.0
+			--SET @Strsql+='OUTLETSTATUS) '
+			SET @Strsql+='OUTLETSTATUS,OUTLETEMPSEX,GENDERDESC) '
+			--End of Rev 8.0
 			-- End of Rev 6.0
 			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY CNT.cnt_internalId) AS SEQ,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 			SET @Strsql+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
@@ -194,11 +214,14 @@ BEGIN
 			-- End of Rev 7.0
 			SET @Strsql+='MS.Shop_Name AS OUTLETNAME,MS.Address AS OUTLETADDRESS,MS.Shop_Owner_Contact AS OUTLETCONTACT,MS.Shop_Lat AS OUTLETLAT,MS.Shop_Long AS OUTLETLANG '
 			--Rev 3.0
-			SET @Strsql+=' ,CONVERT(NVARCHAR(10),MS.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),MS.Lastvisit_date,108)LASTVISITTIME,UserTBl.user_name LASTVISITEDBY '
+			SET @Strsql+=',CONVERT(NVARCHAR(10),MS.Lastvisit_date,105) AS LASTVISITDATE,CONVERT(NVARCHAR(10),MS.Lastvisit_date,108) AS LASTVISITTIME,UserTBl.user_name AS LASTVISITEDBY '
 			--REV 3.0	end
 			-- Rev 6.0
-			SET @Strsql+=' , CASE WHEN ISNULL(MS.Entity_Status,0)=0 THEN ''Inactive'' ELSE ''Active'' END AS OUTLETSTATUS '
+			SET @Strsql+=' , CASE WHEN ISNULL(MS.Entity_Status,0)=0 THEN ''Inactive'' ELSE ''Active'' END AS OUTLETSTATUS,'
 			-- End of Rev 6.0
+			--Rev 8.0
+			SET @Strsql+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC '
+			--End of Rev 8.0
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			SET @Strsql+='INNER JOIN tbl_master_branch BR ON CNT.cnt_branchid=BR.branch_id '

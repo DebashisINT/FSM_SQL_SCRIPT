@@ -1,6 +1,6 @@
 --EXEC PRC_FTSTEAMVISITATTENDANCEHIERARCHYCHANNELWISE_FETCH '2022-02-20','2022-02-28','','EMS0000812','',378
 --EXEC PRC_FTSTEAMVISITATTENDANCEHIERARCHYCHANNELWISE_FETCH '2022-11-01','2022-11-16','','','',54685
---EXEC PRC_FTSTEAMVISITATTENDANCEHIERARCHYCHANNELWISE_FETCH '2022-11-01','2022-11-16','','','',54689
+--EXEC PRC_FTSTEAMVISITATTENDANCEHIERARCHYCHANNELWISE_FETCH '2023-07-01','2023-08-16','','','',378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSTEAMVISITATTENDANCEHIERARCHYCHANNELWISE_FETCH]') AND type in (N'P', N'PC'))
 BEGIN
@@ -21,6 +21,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 16/11/2022
 Module	   : Team Visit Attendance Hierarchy & Channel Wise.Refer: 0025220
+1.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -118,14 +119,20 @@ BEGIN
 			cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
 			cnt_UCC NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-			deg_designation NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+			deg_designation NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			--Rev 1.0
+			cnt_sex TINYINT NULL,
+			GENDERDESC NVARCHAR(100) NULL
+			--End of Rev 1.0
 		)
 	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
 
 	IF ((SELECT IsAllDataInPortalwithHeirarchy FROM tbl_master_user WHERE user_id=@USERID)=1)
 		BEGIN
-			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,deg_designation)
-			SELECT DISTINCT CNT.cnt_internalId,CNT.cnt_branchid,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,CNT.cnt_UCC,DESG.deg_designation 
+			--Rev 1.0 && Two new fields added as cnt_sex & GENDERDESC
+			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,deg_designation,cnt_sex,GENDERDESC)
+			SELECT DISTINCT CNT.cnt_internalId,CNT.cnt_branchid,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,CNT.cnt_UCC,DESG.deg_designation,cnt_sex,
+			CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC 
 			FROM TBL_MASTER_CONTACT CNT WITH(NOLOCK)
 			INNER JOIN #EMPHR_EDIT EMPEDIT ON CNT.cnt_internalId=EMPEDIT.EMPCODE 
 			INNER JOIN tbl_master_employee EMP WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
@@ -139,8 +146,9 @@ BEGIN
 		END
 	ELSE
 		BEGIN
-			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,deg_designation)
-			SELECT DISTINCT CNT.cnt_internalId,CNT.cnt_branchid,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,CNT.cnt_UCC,DESG.deg_designation 
+			INSERT INTO #TEMPCONTACT(cnt_internalId,cnt_branchid,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,cnt_UCC,deg_designation,cnt_sex,GENDERDESC)
+			SELECT DISTINCT CNT.cnt_internalId,CNT.cnt_branchid,CNT.cnt_firstName,CNT.cnt_middleName,CNT.cnt_lastName,CNT.cnt_contactType,CNT.cnt_UCC,DESG.deg_designation,cnt_sex,
+			CASE WHEN cnt_sex=1 THEN 'Male' WHEN cnt_sex=0 THEN 'Female' END GENDERDESC  
 			FROM TBL_MASTER_CONTACT CNT WITH(NOLOCK)
 			INNER JOIN tbl_master_employee EMP WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId
 			INNER JOIN (
@@ -261,10 +269,11 @@ BEGIN
 	--SELECT @SqlStr
 	EXEC SP_EXECUTESQL @SqlStr
 
+	--Rev 1.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT ATTENINOUT.LOGIN_DATE,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
-	SET @SqlStr+='STG.Stage AS DSTLTYPE,'
+	SET @SqlStr+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC,STG.Stage AS DSTLTYPE,'
 	SET @SqlStr+='ISNULL(ST.ID,0) AS STATEID,ISNULL(ST.state,''State Undefined'') AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,'
 	SET @SqlStr+='USR.user_loginId AS CONTACTNO,CH.CH_ID,CH.CHANNEL,CASE WHEN ATTENINOUT.LOGGEDIN<>'''' OR ATTENINOUT.LOGGEDIN IS NOT NULL THEN 1 ELSE 0 END AS PRESENTABSENT,RPTTOWD.REPORTTOIDWD,'
 	SET @SqlStr+='RPTTOWD.REPORTTOUIDWD,RPTTOWD.REPORTTOWD,RPTTOWD.RPTTODESGWD,RPTTOAE.REPORTTOIDAE,RPTTOAE.REPORTTOUIDAE,RPTTOAE.REPORTTOAE,RPTTOAE.RPTTODESGAE,'

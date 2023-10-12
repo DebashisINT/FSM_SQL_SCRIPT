@@ -14,11 +14,12 @@ ALTER PROCEDURE [dbo].[PROC_MAPPLOT_DASHBOARDDateWise]
 --Rev 2.0
 @BRANCHID NVARCHAR(MAX)=NULL
 --End of Rev 2.0
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0					Tanmoy		30-01-2020		create sp
 2.0		v2.0.32		Debashis	14/09/2022		Branch selection option is required on various reports.Refer: 0025198
+3.0		v2.0.42	    Priti	    25/08/2023		On demand loading of employee name is required in View Route (Dashboard).Refer 0026757
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -149,8 +150,10 @@ BEGIN
 	where cast(SDate as date)=cast('''+@Date+''' as date) and   isnull(shopusr.Lat_visit,'''')<>'''''
 	IF @STATEID<>''
 		SET @sql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=S.add_state) '
+    --Rev 3.0
 	--Rev 2.0
-	IF @BRANCHID<>''
+	--IF @BRANCHID<>''
+	--Rev 3.0 End
 		SET @sql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
 	--End of Rev 2.0
 
@@ -183,8 +186,10 @@ BEGIN
 	--set @sql+='  and S.add_state='''+@StateID+'''  '
 	IF @STATEID<>''
 		SET @sql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=S.add_state) '
+	--Rev 3.0
 	--Rev 2.0
-	IF @BRANCHID<>''
+	--IF @BRANCHID<>''
+	--Rev 3.0 End
 		SET @sql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID) '
 	--End of Rev 2.0
 
