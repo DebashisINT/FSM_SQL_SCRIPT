@@ -26,7 +26,7 @@ ALTER PROCEDURE [dbo].[PRC_SaleRateLock]
 ) 
 --WITH ENCRYPTION
 AS 
-/************************************************************************************************ 
+/************************************************************************************************ *
 	1.0		v2.0.6		TANMOY		14-01-2020		Created.
 	2.0		v2.0.7		TANMOY		19-01-2020		INSERT INTO PRODUCT RATE FROM EXCEL
 	3.0		v2.0.42		PRITI		01-08-2023		0026649: Four new columns are required in the excel template of "Sale rate lock" module.
