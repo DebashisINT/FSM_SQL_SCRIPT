@@ -18,6 +18,7 @@ Written By : Jitendra on 10/01/2018
 4.0		Sanchita			v2.0.26			07/09/2021		Gender, Size, Colour drop down multi selection field required under Product Attribute in Product Master in FSM
 															Refer: 24299
 5.0		Sanchita			v2.0.37			02-12-2022		MRP' and Discount' entering facility required in Product Master. Refer: 25469, 25470
+6.0		Sanchita			V2.0.43			06-11-2023		On demand search is required in Product Master & Projection Entry. Mantis: 26858
 ***************************************************************************************************/ 
 BEGIN  
  SELECT sProducts_ID  
@@ -100,6 +101,12 @@ BEGIN
 	-- Rev 5.0
 	, sProducts_Discount 
 	-- End of Rev 5.0
+	-- Rev 6.0
+	,STUFF((SELECT ',' + CONVERT(NVARCHAR(10),MC.Color_Name) FROM Mapping_ProductColor t1 inner join Master_Color MC on T1.Color_ID=MC.Color_ID
+		WHERE t1.Products_ID=@ProductId
+              FOR XML PATH ('')) , 1, 1, '') as ColorNew_Desc
+	, BR.Brand_Name as Brand_Desc
+	-- End of Rev 6.0
  FROM dbo.Master_sProducts  
  LEFT JOIN Master_MainAccount MASI ON MASI.MainAccount_AccountCode=sInv_MainAccount
  LEFT JOIN Master_MainAccount MASR ON MASR.MainAccount_AccountCode=sRet_MainAccount
@@ -110,6 +117,10 @@ BEGIN
  LEFT JOIN  Mapping_ProductColor PC on Master_sProducts.sProducts_ID = PC.Products_ID
  LEFT JOIN  Mapping_ProductSize PS on Master_sProducts.sProducts_ID = PS.Products_ID
  -- End of Rev 4.0
+ -- Rev 6.0
+ LEFT OUTER JOIN tbl_master_brand BR ON Master_sProducts.sProducts_Brand=BR.Brand_Id
+ -- End of Rev 6.0
 
  WHERE sProducts_ID = @ProductId 
 END
+GO
