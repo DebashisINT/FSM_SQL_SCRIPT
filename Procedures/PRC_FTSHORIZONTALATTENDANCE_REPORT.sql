@@ -31,6 +31,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_REPORT]
 ,@ShowFirstVisitTime INT=NULL
 ,@ShowLastVisitTime INT=NULL
 -- End of Rev 5.0
+-- Rev 6.0
+,@ShowInactiveUser INT=0
+-- End of Rev 6.0
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -42,6 +45,7 @@ AS
 4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
 5.0		V2.0.42		Sanchita	10/08/2023		Two check box is required to show the first call time & last call time in Attendance Register Report
 												Refer: 26707
+6.0		V2.0.43		Sanchita	08/11/2023		In Attendance Register Report, Including Inactive users check box implementation is required. Mantis: 26954
 ****************************************************************************************************************************************************************************/
 BEGIN
 
@@ -290,9 +294,14 @@ BEGIN
 					-- Rev 5.0
 					--EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
 					--,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID
+					-- Rev 6.0
+					--EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
+					--,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID,
+					--@ShowFirstVisitTime=@ShowFirstVisitTime, @ShowLastVisitTime=@ShowLastVisitTime
 					EXEC [PRC_FTSHORIZONTALATTENDANCE_FETCH] @FROM_DATE=@COLUMN_DATE,@EMPID=@EMPID,@SelfieURL=@SelfieURL,@Userid=@Userid
 					,@ShowFullday=@ShowFullday,@ISONLYLOGINDATA=@ISONLYLOGINDATA,@ISONLYLOGOUTDATA=@ISONLYLOGOUTDATA, @BRANCHID=@BRANCHID,
-					@ShowFirstVisitTime=@ShowFirstVisitTime, @ShowLastVisitTime=@ShowLastVisitTime
+					@ShowFirstVisitTime=@ShowFirstVisitTime, @ShowLastVisitTime=@ShowLastVisitTime, @ShowInactiveUser=@ShowInactiveUser
+					-- End of Rev 6.0
 					-- End of Rev 5.0
 					-- End of Rev 4.0
 					--End of Rev work 2.0
