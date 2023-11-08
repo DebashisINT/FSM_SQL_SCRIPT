@@ -25,7 +25,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_FETCH]
 ,@ShowFirstVisitTime INT=NULL
 ,@ShowLastVisitTime INT=NULL
 -- End of Rev 5.0
-) WITH ENCRYPTION
+-- Rev 6.0
+,@ShowInactiveUser INT=0
+-- End of Rev 6.0
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 1.0					Tanmoy		26-11-2020		CREATE PROCEDURE
@@ -36,6 +39,7 @@ AS
 4.0		V2.0.41		Sanchita	19/07/2023		Add Branch parameter in MIS -> Performance Summary report. Refer: 26135
 5.0		V2.0.42		Sanchita	10/08/2023		Two check box is required to show the first call time & last call time in Attendance Register Report
 												Refer: 26707
+6.0		V2.0.43		Sanchita	08/11/2023		In Attendance Register Report, Including Inactive users check box implementation is required. Mantis: 26954
 ****************************************************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -318,6 +322,12 @@ BEGIN
 
 	SET @sqlStr+='  FROM tbl_master_user USR '
 	SET @sqlStr+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	-- Rev 6.0
+	if(@ShowInactiveUser=0)
+	BEGIN
+		SET @sqlStr+=' AND USR.USER_INACTIVE=''N'' '
+	END
+	-- End of Rev 6.0
 	SET @sqlStr+=' INNER JOIN TBL_TRANS_EMPLOYEECTC CTC ON CTC.emp_cntId=CNT.cnt_internalId '
 	SET @sqlStr+=' LEFT OUTER JOIN tbl_master_costCenter DEPT ON CTC.emp_Department=DEPT.cost_id AND DEPT.cost_costCenterType=''Department'' '
 	-- Rev 4.0
@@ -403,7 +413,17 @@ BEGIN
 	--End of Rev work 2.0
 
 	SET @sqlStr+=' FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	-- Rev 6.0
+	--SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	if(@ShowInactiveUser=1)
+	BEGIN
+		SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+	END
+	ELSE
+	BEGIN
+		SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	END
+	-- End of Rev 6.0
 	SET @sqlStr+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 
 	SET @sqlStr+=' LEFT OUTER JOIN ( '
@@ -540,7 +560,17 @@ BEGIN
 	--End of Rev work 2.0
 
 	SET @sqlStr+=' FROM tbl_fts_UserAttendanceLoginlogout ATTEN '
-	SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	-- Rev 6.0
+	--SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	if(@ShowInactiveUser=1)
+	BEGIN
+		SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id '
+	END
+	ELSE
+	BEGIN
+		SET @sqlStr+=' INNER JOIN tbl_master_user USR ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
+	END
+	-- End of Rev 6.0
 	SET @sqlStr+=' INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 
 	SET @sqlStr+=' LEFT OUTER JOIN ( '
