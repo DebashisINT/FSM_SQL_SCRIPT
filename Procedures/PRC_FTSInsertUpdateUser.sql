@@ -341,6 +341,7 @@ AS
 30.0	V2.0.41		07/06/2023		Sanchita	Required below System settings + user wise settings in portal. Refer: 26245
 31.0	V2.0.43		31/08/2023		Sanchita	User wise settings required in Web Portal Front end User Master. Mantis : 26768
 32.0	V2.0.43		06/09/2023		Sanchita	A new user wise settings required named as ShowLatLongInOutletMaster. Refer: 26794
+33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -521,6 +522,9 @@ BEGIN
 			-- Rev 32.0
 			,IsShowLatLongInOutletMaster
 			-- End of Rev 32.0
+			-- Rev 33.0
+			,User_InactiveDate
+			-- End of Rev 33.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -677,6 +681,9 @@ BEGIN
 			-- Rev 32.0
 			,isnull(@IsShowLatLongInOutletMaster,0)
 			-- End of Rev 32.0
+			-- Rev 33.0
+			,(case when @isactive='Y' then getdate() else null end)
+			-- End of Rev 33.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1301,6 +1308,9 @@ BEGIN
 			-- Rev 32.0
 			,IsShowLatLongInOutletMaster = @IsShowLatLongInOutletMaster
 			-- End of Rev 32.0
+			-- Rev 33.0
+			,User_InactiveDate = (case when @isactive='Y' then getdate() else User_InactiveDate end)
+			-- End of Rev 33.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
