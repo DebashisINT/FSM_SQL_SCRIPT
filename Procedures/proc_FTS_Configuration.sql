@@ -188,6 +188,9 @@ BEGIN
 	167.0		Debashis	21-08-2023	ADD SETTINGS @Action=GlobalCheck' Show_distributor_scheme_with_Product.Row 864
 	168.0		Debashis	06-10-2023	ADD SETTINGS @Action=GlobalCheck' GSTINPANMandatoryforSHOPTYPE4,FSSAILicNoEnableInShop & FSSAILicNoMandatoryInShop4.Row 871
 	169.0		Debashis	06-10-2023	ADD SETTINGS @Action=UserCheck'	IsDisabledUpdateAddress.Row 872
+	170.0		Debashis	16-11-2023	ADD SETTINGS @Action=UserCheck'	IsCheckBatteryOptimization.Row 877
+	171.0		Debashis	16-11-2023	ADD SETTINGS @Action=GlobalCheck' isLeadContactNumber,isModelEnable,isPrimaryApplicationEnable,isBookingAmount,isLeadTypeEnable,
+																		isStageEnable & isFunnelStageEnable.Row 879
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -422,6 +425,16 @@ BEGIN
 	,@FSSAILicNoEnableInShop BIT
 	,@FSSAILicNoMandatoryInShop4 BIT
 	--End of Rev 168.0
+	--Rev 171.0
+	,@isLeadContactNumber BIT
+	,@isModelEnable BIT
+	,@isPrimaryApplicationEnable BIT
+	,@isSecondaryApplicationEnable BIT
+	,@isBookingAmount BIT
+	,@isLeadTypeEnable BIT
+	,@isStageEnable BIT
+	,@isFunnelStageEnable BIT
+	--End of Rev 171.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -707,6 +720,16 @@ BEGIN
 		SET @FSSAILicNoEnableInShop  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='FSSAILicNoEnableInShop' AND IsActive=1)
 		SET @FSSAILicNoMandatoryInShop4  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='FSSAILicNoMandatoryInShop4' AND IsActive=1)
 		--End of Rev 168.0
+		--Rev 171.0
+		SET @isLeadContactNumber  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isLeadContactNumber' AND IsActive=1)
+		SET @isModelEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isModelEnable' AND IsActive=1)
+		SET @isPrimaryApplicationEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isPrimaryApplicationEnable' AND IsActive=1)
+		SET @isSecondaryApplicationEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isSecondaryApplicationEnable' AND IsActive=1)
+		SET @isBookingAmount  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isBookingAmount' AND IsActive=1)
+		SET @isLeadTypeEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isLeadTypeEnable' AND IsActive=1)
+		SET @isStageEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isStageEnable' AND IsActive=1)
+		SET @isFunnelStageEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isFunnelStageEnable' AND IsActive=1)
+		--End of Rev 171.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -971,6 +994,16 @@ BEGIN
 			,@FSSAILicNoEnableInShop AS FSSAILicNoEnableInShop
 			,@FSSAILicNoMandatoryInShop4 AS FSSAILicNoMandatoryInShop4
 			--End of Rev 168.0
+			--Rev 171.0
+			,@isLeadContactNumber AS isLeadContactNumber
+			,@isModelEnable AS isModelEnable
+			,@isPrimaryApplicationEnable AS isPrimaryApplicationEnable
+			,@isSecondaryApplicationEnable AS isSecondaryApplicationEnable
+			,@isBookingAmount AS isBookingAmount
+			,@isLeadTypeEnable AS isLeadTypeEnable
+			,@isStageEnable AS isStageEnable
+			,@isFunnelStageEnable AS isFunnelStageEnable
+			--End of Rev 171.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1956,6 +1989,11 @@ BEGIN
 		SELECT 'IsDisabledUpdateAddress' AS [Key],CONVERT(NVARCHAR(15),USR.IsDisabledUpdateAddress) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 169.0
+		--Rev 170.0
+		UNION ALL
+		SELECT 'IsCheckBatteryOptimization' AS [Key],CONVERT(NVARCHAR(15),USR.IsCheckBatteryOptimization) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 170.0
 	END
 
 	SET NOCOUNT OFF
