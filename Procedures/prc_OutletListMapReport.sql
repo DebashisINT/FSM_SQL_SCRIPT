@@ -1,4 +1,4 @@
---EXEC prc_OutletListMapReport @Month='07',@Year='2022',@State='3',@PartyType='0',@PartyStatus=2
+--EXEC prc_OutletListMapReport @Month='10',@Year='2023',@State='19',@PartyType='0',@PartyStatus=2,@CREATE_USERID=378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[prc_OutletListMapReport]') AND type in (N'P', N'PC'))
 BEGIN
@@ -11,14 +11,13 @@ ALTER PROCEDURE [dbo].[prc_OutletListMapReport]
 @State NVARCHAR(10)=NULL,
 @PartyType NVARCHAR(10)=NULL,--SHOP TYPE
 @PartyStatus NVARCHAR(10)=NULL,--ALL,NEW,RE-VISIT
-@Month NVARCHAR(10),--MONTH ID
-@Year NVARCHAR(10),
+@Month NVARCHAR(10)=NULL,--MONTH ID
+@Year NVARCHAR(10)=NULL,
 @CREATE_USERID BIGINT=NULL
-
 ) WITH ENCRYPTION
-
 /****************************************************************************************************************************************************************************
 1.0		v2.0.31		Debashis	07-07-2022		Optimization done.Refer: 0025028
+2.0		v2.0.42		Priti	    23-11-2023		Dashboard report issue(check in local Rubyfoods db).Refer: 0027026
 ****************************************************************************************************************************************************************************/
 AS
 BEGIN
@@ -118,7 +117,10 @@ BEGIN
 		DROP TABLE #SHOPTYPE
 	CREATE TABLE #SHOPTYPE
 	(
-	SP_TYPE NVARCHAR(10)
+	--Rev 2.0
+	--SP_TYPE NVARCHAR(10)
+	SP_TYPE int
+	--Rev 2.0 end
 	)
 	--Rev 1.0
 	CREATE NONCLUSTERED INDEX IX1 ON #SHOPTYPE (SP_TYPE ASC)
@@ -220,7 +222,6 @@ BEGIN
 	SET @sqlStr='SELECT shop_code,Shop_Name,Shop_Owner,Shop_Owner_Contact,Address,PARTYSTATUS,Shop_CreateUser,Shop_Lat,Shop_Long,State,MAP_COLOR,visitdate,Is_Newshopadd '
 	SET @sqlStr+='FROM #SHOPVISITREVIST_COLUR '
 	--SET @sqlStr+='ORDER BY SEQ '
-	SET @sqlStr+='ORDER BY SEQ '
 	--End of Rev 1.0
 	IF @PartyStatus!=2
 	BEGIN
@@ -229,6 +230,7 @@ BEGIN
 	-- Rev 1.0
 	SET @sqlStr+='ORDER BY SEQ '
 	-- end of Rev 1.0
+
 	EXEC SP_EXECUTESQL @sqlStr
 
 	DROP TABLE #SHOPVISITREVIST_COLUR
