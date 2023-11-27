@@ -13,7 +13,10 @@ ALTER PROCEDURE [dbo].[PRC_CRUD_ENQUIRIES]
 	@CONTACTPERSON NVARCHAR(200) =NULL,
 	@PHONENO NVARCHAR(20) =NULL,
 	@EMAIL NVARCHAR(100) =NULL,
-	@LOCATION NVARCHAR(300) =NULL,
+	-- Rev 6.0
+	--@LOCATION NVARCHAR(300) =NULL,
+	@LOCATION NVARCHAR(500) =NULL,
+	-- End of Rev 6.0
 	@PRODUCTREQUIRED NVARCHAR(300) =NULL,
 	@QTY DECIMAL(18,2) =NULL,
 	@ORDER_VALUE DECIMAL(18,2) =NULL,
@@ -36,6 +39,7 @@ Written by : Sanchita on 07-02-2022. Refer: 24631
 3.0		Sanchita	V2.0.30		19-05-2022		MobileNo to be updated along with PhoneNo . Refer: 
 4.0		Sanchita	V2.0.42		16-08-2023		The enquiry doesn't showing in the listing after modification. Mantis: 26721
 5.0		Sanchita	V2.0.43		06-09-2023		For reassign enquery need updation of userid properly. Mantis: 26795
+6.0		Sanchita	V2.0.43		27/07/2023		Eurobond Enquiry data entry and edit submit issue. Mantis : 27047
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON

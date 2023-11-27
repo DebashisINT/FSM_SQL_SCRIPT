@@ -22,6 +22,7 @@ Written by Sanchita. Refer: 24631
 3.0		Pratik		v2.0.28		18/04/2022		Assigned On & Reassigned On column required in Enquiry module. Refer: 24827
 4.0		Sanchita	V2.0.42		21/08/2023		CRM Enquiries - Some of the Indiamart Enquiry are not coming while showing the enquiry list.
 												Mantis: 26736
+5.0		Sanchita	V2.0.43		27/07/2023		Eurobond Enquiry data entry and edit submit issue. Mantis : 27047
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -95,7 +96,10 @@ BEGIN
 			  CONTACT_PERSON NVARCHAR(200) NULL,
 			  PHONENO NVARCHAR(200) NULL,
 			  EMAIL NVARCHAR(100) NULL,
-			  LOCATION NVARCHAR(100) NULL,
+			  -- Rev 5.0
+			  --LOCATION NVARCHAR(100) NULL,
+			  LOCATION NVARCHAR(500) NULL,
+			  -- End of Rev 5.0
 			  -- Rev 4.0
 			  --PRODUCT_REQUIRED NVARCHAR(100) NULL,
 			  PRODUCT_REQUIRED NVARCHAR(500) NULL,
@@ -174,7 +178,10 @@ BEGIN
 	--End of Rev 2.0
 	-- Rev 4.0
 	--SET @Strsql+=',Email,h.Location,h.Product_Required,h.Qty,h.UOM,h.Order_Value,h.Enq_Details'
-	SET @Strsql+=',Email,h.Location,LEFT(h.Product_Required,500),h.Qty,h.UOM,h.Order_Value,h.Enq_Details'
+	-- Rev 5.0
+	--SET @Strsql+=',Email,h.Location,LEFT(h.Product_Required,500),h.Qty,h.UOM,h.Order_Value,h.Enq_Details'
+	SET @Strsql+=',Email,LEFT(h.Location,500),LEFT(h.Product_Required,500),h.Qty,h.UOM,h.Order_Value,h.Enq_Details'
+	-- End of Rev 5.0
 	-- End of Rev 4.0
 	SET @Strsql+=',h.Created_Date,u.user_name,u1.user_name,h.Modified_Date,h.Taged_vendor,h.vend_type,isnull(h.Supervisor,0) as Supervisor,isnull(h.salesman,0) as salesman,
 	 isnull(h.verify,0) as verify'
@@ -238,7 +245,11 @@ BEGIN
 	SET @Strsql+=' left outer join(select user_id,user_name from tbl_master_user ) ura on cast(ura.user_id as int)=h.ReAssignedSalesman'
 	--End of rev 1.0
 	--rev 2.0
-	SET @Strsql+=' left outer join (SELECT Crm_Id,''location''+ CAST(ROW_NUMBER()OVER(PARTITION BY crm_id ORDER BY crm_id) AS VARCHAR) AS Col,Split.value FROM dbo.tbl_CRM_Import AS ci CROSS APPLY String_split(Location,'','') AS Split ) AS tbl Pivot (Max(Value) FOR Col IN ([location1],[location2])) AS Pvt on Pvt.Crm_Id=h.Crm_Id'
+	SET @Strsql+=' left outer join (SELECT Crm_Id,''location''+ CAST(ROW_NUMBER()OVER(PARTITION BY crm_id ORDER BY crm_id) AS VARCHAR) AS Col,'
+	-- Rev 5.0
+	--SET @Strsql+=' Split.value FROM dbo.tbl_CRM_Import AS ci CROSS APPLY String_split(Location,'','') AS Split ) AS tbl Pivot (Max(Value) FOR Col IN ([location1],[location2])) AS Pvt on Pvt.Crm_Id=h.Crm_Id'
+	SET @Strsql+=' Split.value FROM dbo.tbl_CRM_Import AS ci CROSS APPLY String_split(LEFT(Location,500),'','') AS Split ) AS tbl Pivot (Max(Value) FOR Col IN ([location1],[location2])) AS Pvt on Pvt.Crm_Id=h.Crm_Id'
+	-- End of Rev 5.0
 	--End of rev 2.0
 	SET @Strsql+=' where CONVERT(NVARCHAR(10),h.Date,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @Strsql+=' and isnull(h.Is_deleted,0)=0'
@@ -255,4 +266,4 @@ BEGIN
 	drop table #TEMPSALESMAN
 	drop table #TEMPMAXSALESMANFEEDBACK
 END
-
+GO
