@@ -42,6 +42,8 @@ Module	   : Sales Report - Summary
 12.0	v2.0.24		TANMOY		29/07/2021		Employee hierarchy  WISE FILTER
 13.0	v2.0.25		Sanchita	20/09/2021		Hierarchy not working when Select All taken
 14.0	V2.0.42		Priti	    20/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
+15.0	V2.0.43		Sanchita	27/11/2023		An error is showing while trying to generate Employee Summary Report when both Branch and State 
+												are selected. Mantis: 27042
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -498,8 +500,10 @@ BEGIN
 	SET @Strsql+='GROUP BY COLLEC.user_id,CNT.cnt_internalId) COLLEC ON COLLEC.cnt_internalId=CNT.cnt_internalId) AS SALESSUM '
 
 	--Rev 14.0
-	IF @BRANCHID<>''
-		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=SALESSUM.branch_id) '
+	-- Rev 15.0
+	--IF @BRANCHID<>''
+	--	SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=SALESSUM.branch_id) '
+	-- End of Rev 15.0
     --Rev 14.0 End
 	IF @STATEID<>'' AND @DESIGNID='' AND @EMPID=''
 		SET @Strsql+='WHERE EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=SALESSUM.STATEID) '
@@ -528,6 +532,16 @@ BEGIN
 			SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=SALESSUM.deg_id) '
 			SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=SALESSUM.EMPCODE) '
 		END
+	-- Rev 15.0
+	IF @STATEID='' AND @DESIGNID='' AND @EMPID='' AND  @BRANCHID<>''
+	BEGIN
+		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=SALESSUM.branch_id) '
+	END
+	BEGIN
+		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=SALESSUM.branch_id) '
+	END
+	-- End of Rev 15.0
+
 	--SELECT @Strsql
 	EXEC SP_EXECUTESQL @Strsql
 
@@ -547,3 +561,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
