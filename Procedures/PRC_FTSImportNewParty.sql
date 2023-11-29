@@ -30,6 +30,10 @@ AS
 10.0		Sanchita	30-08-2023		V2.0.43		If Duplicate conact exists and Beat given in Import Excel, then while inserting record
 													in table "FTS_PartyImportLog", error comming for convertion failed from String to Bigint
 													for column "Beat_ID". Now taken care of. Refer: 26775
+11.0		Sanchita	29-11-2023		V2.0.43		At the time of Add or Import of Employee from FSM PORTAL, the tables 
+													tbl_trans_shopActivitysubmit, FTS_ShopMoreDetails and FTS_DOCTOR_DETAILS 
+													should aslo be updated. All these tables get updated when a shop is added from FSM APP.
+													Mantis : 27055
 ******************************************************************************************************************************/
 BEGIN
 
@@ -66,6 +70,10 @@ DECLARE @Party_Status_ID NVARCHAR(500)=null
 DECLARE @Beat_ID NVARCHAR(300)=NULL
 
 DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
+
+-- Rev 11.0
+DECLARE @ShopIDNew VARCHAR(100)
+-- End of Rev 11.0
 
 -- Rev 9.0
 	if exists( select [Contact] from @IMPORT_TABLE group by [Contact] having count([Contact])>1  )
@@ -203,6 +211,21 @@ DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
 																		--,,[Shop_Owner_Email2],[Alt_MobileNo1],[GSTN_NUMBER],[Trade_Licence_Number]
 																
 																		--,[ImportStatus],[ImportMsg],[ImportDate],[CreateUser])
+
+																		-- Rev 11.0
+																		SET @ShopIDNew=SCOPE_IDENTITY();
+
+																		INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd)
+																		SELECT [Shop_CreateUser], [Shop_Code], cast([Lastvisit_date] as date) , [Lastvisit_date], '00:00:00', 1, [Lastvisit_date], 1 FROM tbl_Master_shop
+																		WHERE Shop_ID=@ShopIDNew
+
+																		INSERT INTO FTS_ShopMoreDetails (SHOP_ID,Create_date)
+																		VALUES (@ShopIDNew,GETDATE())
+									
+
+																		INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,CREATE_DATE,CREATE_USER)
+																		VALUES (@ShopIDNew,GETDATE(),@user_id)
+																		-- End of Rev 11.0
 
 																		INSERT INTO FTS_PartyImportLog
 																		([State],[City],[Area],[Cluster],[Type],[Shoptype],[Entity],[Assigned To PP],[DDType],[Assigned To DD],[Party Name],[Party Code],[Party_Status],[Address],[Pin Code],[Owner],[DOB],[Anniversary],
