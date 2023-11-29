@@ -92,17 +92,9 @@ AS
 14.0		v2.0.38		Sanchita	27-01-2023		Bulk modification feature is required in Parties menu. Refer: 25609
 15.0		v2.0.38		Sanchita	27-01-2023		Assign to DD is not showing while making shop from Portal. Refer: 25606
 16.0		V2.0.41		Sanchita	05-06-2023		Inactive DD/PP is showing in the Assign to PP/DD list while creating any Shop. Refer: 26262
-17.0		V2.0.43		Sanchita	29-11-2023		At the time of Add or Import of Employee from FSM PORTAL, the tables 
-													tbl_trans_shopActivitysubmit, FTS_ShopMoreDetails and FTS_DOCTOR_DETAILS 
-													should aslo be updated. All these tables get updated when a shop is added from FSM APP.
-													Mantis : 27055
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
-	-- Rev 17.0
-	DECLARE @ShopIDNew VARCHAR(100)
-	-- End of Rev 17.0
-
 	set @Lastvisit_date =GETDATE()
 	IF @ACTION='Details'
 	BEGIN
@@ -259,22 +251,6 @@ BEGIN
 			,@GSTN_NUMBER,@Trade_Licence_Number,@Cluster,@Alt_MobileNo1,@Shop_Owner_Email2
 			--End of rev 8.0
 			)
-
-			-- Rev 17.0
-			SET @ShopIDNew=SCOPE_IDENTITY();
-
-			INSERT INTO [tbl_trans_shopActivitysubmit] ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd)
-			SELECT [Shop_CreateUser], [Shop_Code], cast([Lastvisit_date] as date) , [Lastvisit_date], '00:00:00', 1, [Lastvisit_date], 1 FROM tbl_Master_shop
-			WHERE Shop_ID=@ShopIDNew
-
-			INSERT INTO FTS_ShopMoreDetails (SHOP_ID,Create_date)
-			VALUES (@ShopIDNew,GETDATE())
-									
-
-			INSERT INTO FTS_DOCTOR_DETAILS (SHOP_ID,CREATE_DATE,CREATE_USER)
-			VALUES (@ShopIDNew,GETDATE(),@user_id)
-			-- End of Rev 17.0
-
 		-- Rev 9.0
 		END
 		
@@ -462,4 +438,3 @@ BEGIN
 	END
 	-- End of Rev 16.0
 END
-GO
