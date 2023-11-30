@@ -38,7 +38,7 @@ BEGIN
 			BEGIN
 				IF ISNULL(@Customer_Name,'')<>''
 				BEGIN
-					IF ISNULL(@PhoneNo,'')<>''
+					IF (ISNULL(@PhoneNo,'')<>'' AND ISNULL(@PhoneNo,'')<>'0' AND ISNUMERIC(@PhoneNo)=1 )
 					BEGIN
 						IF ISNULL(@vend_type,'')<>''
 						BEGIN
@@ -111,7 +111,7 @@ BEGIN
 						values( @Date,
 							@Customer_Name,@Contact_Person,@PhoneNo,@Email,@Location,@Product_Required,@Quantity,ISNULL(@UOM,''),
 							@Order_Value,@Enq_Details,@vend_type, getdate(),	@CreateUser_Id,null,null,@PhoneNo
-							,'Faild','Phone No Blank',GETDATE() )
+							,'Faild','Phone No Invalid',GETDATE() )
 					END
 				END
 				ELSE
