@@ -191,6 +191,8 @@ BEGIN
 	170.0		Debashis	16-11-2023	ADD SETTINGS @Action=UserCheck'	IsCheckBatteryOptimization.Row 877
 	171.0		Debashis	16-11-2023	ADD SETTINGS @Action=GlobalCheck' isLeadContactNumber,isModelEnable,isPrimaryApplicationEnable,isBookingAmount,isLeadTypeEnable,
 																		isStageEnable & isFunnelStageEnable.Row 879
+	172.0		Debashis	04-12-2023	ADD SETTINGS @Action=GlobalCheck' MultiVisitIntervalInMinutes.Row 866
+	173.0		Debashis	04-12-2023	ADD SETTINGS @Action=UserCheck'	IsShowMenuCRMContacts.Row 886
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -435,6 +437,9 @@ BEGIN
 	,@isStageEnable BIT
 	,@isFunnelStageEnable BIT
 	--End of Rev 171.0
+	--Rev 172.0
+	,@MultiVisitIntervalInMinutes INT
+	--End of Rev 172.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -730,6 +735,9 @@ BEGIN
 		SET @isStageEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isStageEnable' AND IsActive=1)
 		SET @isFunnelStageEnable  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isFunnelStageEnable' AND IsActive=1)
 		--End of Rev 171.0
+		--Rev 172.0
+		SET @MultiVisitIntervalInMinutes  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='MultiVisitIntervalInMinutes' AND IsActive=1)
+		--End of Rev 172.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1004,6 +1012,9 @@ BEGIN
 			,@isStageEnable AS isStageEnable
 			,@isFunnelStageEnable AS isFunnelStageEnable
 			--End of Rev 171.0
+			--Rev 172.0
+			,@MultiVisitIntervalInMinutes AS MultiVisitIntervalInMinutes
+			--End of Rev 172.0
 	END
 
 	else if(@Action='UserCheck')
@@ -1994,6 +2005,11 @@ BEGIN
 		SELECT 'IsCheckBatteryOptimization' AS [Key],CONVERT(NVARCHAR(15),USR.IsCheckBatteryOptimization) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 170.0
+		--Rev 173.0
+		UNION ALL
+		SELECT 'IsShowMenuCRMContacts' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowMenuCRMContacts) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 173.0
 	END
 
 	SET NOCOUNT OFF
