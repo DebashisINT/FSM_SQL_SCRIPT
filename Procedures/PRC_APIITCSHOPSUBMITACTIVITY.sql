@@ -36,6 +36,7 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 												Now it has been taken care of.Refer: 0026582
 10.0	v2.0.41     Debashis    15/07/2023      New requirement for Update data.Row: 859
 11.0	v2.0.41		Debashis	15/07/2023		Optimized Shopsubmission/ITCShopVisited API data sync.Refer: 0026583
+12.0	v2.0.43		Debashis	11/12/2023		Data Sync has been moved to FSM_ITC_MIRROR DB.Refer: 0027094
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 5.0
@@ -181,7 +182,10 @@ BEGIN
 			XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)')
 			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 			INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
-			WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+			--Rev 12.0
+			--WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+			WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+			--End of Rev 12.0
 			AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 			--End of Rev 11.0
 
@@ -235,8 +239,12 @@ BEGIN
 					--android_version,battery,net_status,net_type,start_timestamp
 					--FROM #TEMP_TABLE
 					----End of Rev 5.0
-					INSERT INTO Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
+					--Rev 12.0
+					--INSERT INTO Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
+					--IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
+					INSERT INTO [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
 					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
+					--End of Rev 12.0
 
 					SELECT [User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
 					android_version,battery,net_status,net_type,start_timestamp
@@ -256,7 +264,10 @@ BEGIN
 					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					--Rev 11.0
 					--WHERE EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
-					WHERE EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--Rev 12.0
+					--WHERE EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					WHERE EXISTS(SELECT SHPACT.User_Id FROM [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--End of Rev 12.0
 					--End of Rev 11.0
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 					--End of Rev 2.0
@@ -271,9 +282,13 @@ BEGIN
 					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					--Rev 11.0
 					--WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
-					WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--Rev 12.0
+					--WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
+					WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--End of Rev 12.0
 					--End of Rev 11.0
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
+
 				END
 			--Rev 4.0
 			ELSE
@@ -322,7 +337,10 @@ BEGIN
 					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					--Rev 11.0
 					--WHERE EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
-					WHERE EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--Rev 12.0
+					--WHERE EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					WHERE EXISTS(SELECT SHPACT.User_Id FROM [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--End of Rev 12.0
 					--End of Rev 11.0
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 					--End of Rev 2.0
@@ -337,7 +355,10 @@ BEGIN
 					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					--Rev 11.0
 					--WHERE NOT EXISTS(SELECT SHPACT.ActivityId FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
-					WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--Rev 12.0
+					--WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					WHERE NOT EXISTS(SELECT SHPACT.User_Id FROM [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData SHPACT WITH(NOLOCK) WHERE SHPACT.shop_id=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') 
+					--End of Rev 12.0
 					--End of Rev 11.0
 					AND SHPACT.visited_date=XMLproduct.value('(visited_date/text())[1]','date') AND SHPACT.User_Id=@user_id)
 					--End of Rev 10.0
@@ -377,3 +398,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
