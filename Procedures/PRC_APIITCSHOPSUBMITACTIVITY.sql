@@ -37,6 +37,7 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 10.0	v2.0.41     Debashis    15/07/2023      New requirement for Update data.Row: 859
 11.0	v2.0.41		Debashis	15/07/2023		Optimized Shopsubmission/ITCShopVisited API data sync.Refer: 0026583
 12.0	v2.0.43		Debashis	11/12/2023		Data Sync has been moved to FSM_ITC_MIRROR DB.Refer: 0027094
+13.0	v2.0.42		Debashis	12/12/2023		Duration spent values getting updated wrongly.Refer: 0027098
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 5.0
@@ -246,7 +247,12 @@ BEGIN
 					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
 					--End of Rev 12.0
 
-					SELECT [User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
+					SELECT [User_Id],[Shop_Id],visited_date,visited_time,
+					--Rev 13.0
+					--spent_duration,
+					CASE WHEN spent_duration>'23:59:59' THEN '23:59:59' ELSE spent_duration END AS spent_duration,
+					--End of Rev 13.0
+					total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
 					android_version,battery,net_status,net_type,start_timestamp
 					FROM #TEMP_TABLE
 					ORDER BY [User_Id]
