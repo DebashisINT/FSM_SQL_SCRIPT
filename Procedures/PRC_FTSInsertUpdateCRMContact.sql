@@ -50,7 +50,7 @@ BEGIN
 	DECLARE @Strsql NVARCHAR(MAX), @Shop_Name nvarchar(4000)
 	DECLARE @SHOP_CODE NVARCHAR(100)
 	Declare @ReferenceContactId nvarchar(100) = '', @ReferenceType VARCHAR(50)=''
-
+	
 	set @Lastvisit_date =GETDATE()
 
 	
@@ -226,14 +226,14 @@ BEGIN
 	END
 	IF @ACTION='IMPORTCONTACT'
 	BEGIN
-
+		declare @i bigint=1
 		DECLARE @FirstName1 NVARCHAR(500)
-		DECLARE @LastName1 NVARCHAR(500)
+		DECLARE @LastName1 NVARCHAR(500)=NULL
 		DECLARE @Phone1 NVARCHAR(500)
-		DECLARE @Email1 NVARCHAR(500)
-		DECLARE @Address1 NVARCHAR(500)
-		DECLARE @DateofBirth1 NVARCHAR(200)
-		DECLARE @DateofAnniversary1 NVARCHAR(500)
+		DECLARE @Email1 NVARCHAR(500)=NULL
+		DECLARE @Address1 NVARCHAR(500)=NULL
+		DECLARE @DateofBirth1 NVARCHAR(500)=null
+		DECLARE @DateofAnniversary1 NVARCHAR(500)=null
 		DECLARE @Company1 NVARCHAR(500)=null
 		DECLARE @JobTitle1 NVARCHAR(500)=NULL
 		DECLARE @AssignTo1 NVARCHAR(500)=null
@@ -243,7 +243,7 @@ BEGIN
 		DECLARE @Reference1 NVARCHAR(500)=null
 		DECLARE @Stages1 NVARCHAR(500)=null
 		DECLARE @Remarks1 NVARCHAR(500)=NULL
-		DECLARE @ExpectedSalesValue1 NVARCHAR(500)=null
+		DECLARE @ExpectedSalesValue1 DECIMAL(18,2)=null
 		DECLARE @NextfollowUpDate1 NVARCHAR(500)=null
 		DECLARE @Active1 NVARCHAR(500)=null
 
@@ -257,7 +257,6 @@ BEGIN
 		DECLARE @ReferenceType1 VARCHAR(10)=''
 		DECLARE @ActiveVal bit = 0;
 
-		
 		DECLARE DB_CURSOR CURSOR FOR
 		SELECT [FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], 
 						[AssignTo], [Type], [Status], [Source], [Reference], 
@@ -268,16 +267,15 @@ BEGIN
 								@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1
 		WHILE @@FETCH_STATUS=0
 		BEGIN
-			
 			SET @CompanyID1 = (SELECT [COMPANY_ID] FROM CRM_CONTACT_COMPANY WHERE [COMPANY_NAME]=ISNULL(@Company1,''))
-			SET @AssignToID1 = (SELECT user_id FROM TBL_MASTER_USER WHERE USER_NAME=ISNULL(@AssignTo1,'') )
+			SET @AssignToID1 = (SELECT user_id FROM TBL_MASTER_USER WHERE user_loginId=ISNULL(@AssignTo1,'') )
 			SET @TypeID1 = (SELECT [TYPE_ID] FROM CRM_CONTACT_TYPE WHERE [TYPE_NAME]=ISNULL(@Type1,'') )
 			SET @StatusID1 = (SELECT [STATUS_ID] FROM CRM_CONTACT_STATUS WHERE [STATUS_NAME]=ISNULL(@Status1,'') )
 			SET @SourceID1 = (SELECT [SOURCE_ID] FROM CRM_CONTACT_SOURCE WHERE [SOURCE_NAME]=ISNULL(@Source1,'') )
 			
 			IF ISNULL(@Source1,'')='Reference'
 			BEGIN
-				SET @ReferenceID1 = (SELECT user_contactId FROM TBL_MASTER_USER WHERE USER_NAME=ISNULL(@Reference1,'') )
+				SET @ReferenceID1 = (SELECT user_contactId FROM TBL_MASTER_USER WHERE user_loginId=ISNULL(@Reference1,'') )
 			
 				IF(ISNULL(@ReferenceID1,'')<>'')
 				BEGIN
@@ -285,7 +283,7 @@ BEGIN
 				END
 				ELSE
 				BEGIN
-					SET @ReferenceID1 = (SELECT SHOP_CODE FROM TBL_MASTER_SHOP WHERE Shop_Name=ISNULL(@Reference1,'') )
+					SET @ReferenceID1 = (SELECT SHOP_CODE FROM TBL_MASTER_SHOP WHERE Shop_Owner_Contact=ISNULL(@Reference1,'') )
 					SET @ReferenceType1 = 'SHOP'
 				END
 			END
@@ -301,48 +299,115 @@ BEGIN
 			else
 				set @Active1 = 0;
 
-			IF ISNULL(@Status1,'')='' OR (ISNULL(@Status1,'')<>'' AND ISNULL(@StatusID1,'')<>'')
-			BEGIN -- 1
+			IF (TRIM(ISNULL(@Phone1,''))<>'' AND LEFT(TRIM(ISNULL(@Phone1,'')),1)<>'0' AND LEN(TRIM(ISNULL(@Phone1,'')))=10 )
+			BEGIN  -- 1
+				IF TRIM(ISNULL(@Status1,''))='' OR (TRIM(ISNULL(@Status1,''))<>'' AND ISNULL(@StatusID1,'')<>'')
+				BEGIN -- 2
 				
-				IF ISNULL(@Company1,'')='' OR (ISNULL(@Company1,'')<>'' AND ISNULL(@CompanyID1,'')<>'')
-				BEGIN-- 2
-					IF ISNULL(@AssignTo1,'')<>''
-					BEGIN -- 3
-						IF ISNULL(@AssignTo1,'')<>'' AND ISNULL(@AssignToID1,'')<>''
+					IF TRIM(ISNULL(@Company1,''))='' OR (TRIM(ISNULL(@Company1,''))<>'' AND ISNULL(@CompanyID1,'')<>'')
+					BEGIN-- 3
+						IF TRIM(ISNULL(@AssignTo1,''))<>''
 						BEGIN -- 4
-							IF ISNULL(@Type1,'')='' OR ISNULL(@Type1,'')<>'' AND ISNULL(@TypeID1,'')<>''
-							BEGIN  -- 5
-								IF ISNULL(@Status1,'')='' OR ISNULL(@Status1,'')<>'' AND ISNULL(@StatusID1,'')<>''
+							IF TRIM(ISNULL(@AssignTo1,''))<>'' AND ISNULL(@AssignToID1,'')<>''
+							BEGIN -- 5
+								IF TRIM(ISNULL(@Type1,''))='' OR (TRIM(ISNULL(@Type1,''))<>'' AND ISNULL(@TypeID1,'')<>'')
 								BEGIN  -- 6
-									IF ISNULL(@Source1,'')='' OR ISNULL(@Source1,'')<>'' AND ISNULL(@SourceID1,'')<>''
-									BEGIN -- 7
-										IF ISNULL(@Reference1,'')='' OR ISNULL(@Reference1,'')<>'' AND ISNULL(@ReferenceID1,'')<>''
-										BEGIN  -- 8
-											IF ISNULL(@Stages1,'')='' OR ISNULL(@Stages1,'')<>'' AND ISNULL(@StagesID1,'')<>''
+									IF TRIM(ISNULL(@Status1,''))='' OR (TRIM(ISNULL(@Status1,''))<>'' AND ISNULL(@StatusID1,'')<>'')
+									BEGIN  -- 7
+										IF TRIM(ISNULL(@Source1,''))='' OR (TRIM(ISNULL(@Source1,''))<>'' AND ISNULL(@SourceID1,'')<>'')
+										BEGIN -- 8
+											IF TRIM(ISNULL(@Reference1,''))='' OR (TRIM(ISNULL(@Reference1,''))<>'' AND ISNULL(@ReferenceID1,'')<>'')
 											BEGIN  -- 9
-												SET @SHOP_CODE=(CAST(@user_id AS varchar(20)) + '_' + cast((CAST(DATEDIFF(SECOND,'1970-01-01',getdate()) AS bigint) * 1155)+1 AS varchar(20)) )
-												SET @Shop_Name = TRIM(@FirstName1)+' '+TRIM(isnull(@LastName1,''))
-
-												IF NOT EXISTS(SELECT SHOP_CODE FROM TBL_MASTER_SHOP 
-													WHERE Shop_FirstName=@FirstName1 AND Shop_LastName=@LastName1 AND Shop_Owner_Contact=@Phone1 AND Shop_Owner_Email=@Email1 AND 
-													[Address]=@Address1 AND dob=@DateofBirth1 AND date_aniversary=@DateofAnniversary1 AND Shop_CRMCompID=@CompanyID1 AND  
-													Shop_JobTitle=@JobTitle1 AND Shop_CreateUser=@AssignToID1 AND Shop_CRMTypeID=@TypeID1 AND 
-													Shop_CRMStatusID=@StatusID1 AND Shop_CRMSourceID=@SourceID1 AND Shop_CRMReferenceID=@ReferenceID1 AND Shop_CRMStageID=@StagesID1 AND 
-													Remarks=@Remarks1 AND Amount=@ExpectedSalesValue1 AND Shop_NextFollowupDate=@NextfollowUpDate1)
+												IF TRIM(ISNULL(@Stages1,''))='' OR (TRIM(ISNULL(@Stages1,''))<>'' AND ISNULL(@StagesID1,'')<>'')
 												BEGIN  -- 10
-													INSERT INTO tbl_Master_shop
-													(Shop_Code,Shop_Name,Shop_Owner_Contact,Shop_Owner_Email, Address, dob, date_aniversary, Shop_JobTitle, 
-														Shop_CRMCompID, Shop_CreateUser, Shop_CRMTypeID, Shop_CRMStatusID, Shop_CRMSourceID, Shop_CRMReferenceID,
-														Shop_CRMStageID, Remarks, Amount, Shop_NextFollowupDate, Entity_Status, ISFROMCRM, Shop_CreateTime,
-														Shop_FirstName, Shop_LastName, Shop_CRMReferenceType
-													)
+													IF ( @ExpectedSalesValue1>=0 AND @ExpectedSalesValue1<=999999999999999.99 ) 
+													BEGIN -- 11
+														IF ( 
+															(@DateofBirth1 IS NULL OR ISNULL(@DateofBirth1,'')='' OR (ISNULL(@DateofBirth1,'')<>'' AND CONVERT(DATE,@DateofBirth1)<=GETDATE()) )
+															AND (@DateofAnniversary1 IS NULL OR ISNULL(@DateofAnniversary1,'')='' OR (ISNULL(@DateofAnniversary1,'')<>'' AND CONVERT(DATE,@DateofAnniversary1)<=GETDATE()) )
+															AND (@NextfollowUpDate1 IS NULL OR ISNULL(@NextfollowUpDate1,'')='' OR (ISNULL(@NextfollowUpDate1,'')<>'' AND CONVERT(DATE,@NextfollowUpDate1)>GETDATE()) ) 
+															)
+														BEGIN -- 12
+															SET @SHOP_CODE=CAST(@user_id AS varchar(20)) + '_' + cast((CAST(DATEDIFF(SECOND,'1970-01-01',getdate()) AS bigint) * 1155)+@i AS varchar(20))
+															SET @Shop_Name = TRIM(@FirstName1)+' '+TRIM(isnull(@LastName1,''))
 
-													VALUES(@SHOP_CODE,@Shop_Name,@Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @JobTitle1,
-														@CompanyID1, @AssignToID1, @TypeId1, @StatusId1, @SourceId1, @ReferenceID1, 
-														@StagesID1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1, 1, GETDATE(), @FirstName1, @LastName1, @ReferenceType1
-													)
+															IF NOT EXISTS(SELECT SHOP_CODE FROM TBL_MASTER_SHOP 
+																WHERE TRIM(Shop_FirstName)=TRIM(@FirstName1) AND TRIM(Shop_LastName)=TRIM(@LastName1) AND TRIM(Shop_Owner_Contact)=TRIM(@Phone1) 
+																AND  TRIM(Shop_Owner_Email)=TRIM(@Email1) AND TRIM([Address])=TRIM(@Address1) 
+																AND CONVERT(DATE,dob)=CONVERT(DATE,@DateofBirth1) 
+																AND CONVERT(DATE,date_aniversary)=CONVERT(DATE,@DateofAnniversary1) AND Shop_CRMCompID=ISNULL(@CompanyID1,0) 
+																AND TRIM(Shop_JobTitle)=TRIM(@JobTitle1) AND Shop_CreateUser=ISNULL(@AssignToID1,0) 
+																AND Shop_CRMTypeID=ISNULL(@TypeID1,0) AND Shop_CRMStatusID=ISNULL(@StatusID1,0) 
+																AND Shop_CRMSourceID=ISNULL(@SourceID1,0) AND Shop_CRMReferenceID=ISNULL(@ReferenceID1,0)
+																AND Shop_CRMStageID=ISNULL(@StagesID1,0) AND TRIM(Remarks)=TRIM(@Remarks1) AND Amount=@ExpectedSalesValue1 
+																AND CONVERT(DATE,Shop_NextFollowupDate)=CONVERT(DATE,@NextfollowUpDate1) )
+															BEGIN  -- 13
+																INSERT INTO tbl_Master_shop
+																(Shop_Code,Shop_Name,Shop_Owner_Contact,Shop_Owner_Email, Address, dob, date_aniversary, Shop_JobTitle, 
+																	Shop_CRMCompID, Shop_CreateUser, Shop_CRMTypeID, Shop_CRMStatusID, Shop_CRMSourceID, Shop_CRMReferenceID,
+																	Shop_CRMStageID, Remarks, Amount, Shop_NextFollowupDate, Entity_Status, ISFROMCRM, Shop_CreateTime,
+																	Shop_FirstName, Shop_LastName, Shop_CRMReferenceType
+																)
+
+																VALUES(@SHOP_CODE,@Shop_Name,@Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @JobTitle1,
+																	ISNULL(@CompanyID1,0), ISNULL(@AssignToID1,0), ISNULL(@TypeId1,0), ISNULL(@StatusId1,0), ISNULL(@SourceId1,0), 
+																	ISNULL(@ReferenceID1,0), ISNULL(@StagesID1,0), @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, 
+																	@Active1, 1, GETDATE(), @FirstName1, @LastName1, @ReferenceType1
+																)
 												
 
+																INSERT INTO FTS_CRMContactImportLog
+																	([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
+																	[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
+																	[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
+
+																VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
+																	@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+																	@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+																	'Sucess','Sucess',GETDATE(), @User_Id )
+															END -- 13
+															ELSE
+															BEGIN
+																INSERT INTO FTS_CRMContactImportLog
+																([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
+																[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
+																[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
+
+																VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
+																@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+																@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+																'Failed','Record already exists.',GETDATE(), @User_Id )
+															END -- 13
+														END -- 12
+														ELSE
+														BEGIN
+															INSERT INTO FTS_CRMContactImportLog
+															([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
+															[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
+															[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
+
+															VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
+															@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+															@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+															'Failed','Date of Birth and Date of Anniversary should be within current date and Next follow up Date should be after current date.',GETDATE(), @User_Id )
+														END -- 12
+													END -- 11
+													ELSE
+													BEGIN
+														INSERT INTO FTS_CRMContactImportLog
+														([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
+														[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
+														[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
+
+														VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
+														@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+														@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+														'Failed','Invalid Expcted Sales value.',GETDATE(), @User_Id )
+													END -- 11
+												
+												END -- 10
+												ELSE
+												BEGIN
 													INSERT INTO FTS_CRMContactImportLog
 														([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
 														[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
@@ -351,21 +416,9 @@ BEGIN
 													VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 														@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 														@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-														'Sucess','Sucess',GETDATE(), @User_Id )
+														'Failed','Invalid Stage.',GETDATE(), @User_Id )
 												END -- 10
-												ELSE
-												BEGIN
-													INSERT INTO FTS_CRMContactImportLog
-													([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
-													[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
-													[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
-
-													VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
-													@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
-													@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-													'Failed','Record already exists.',GETDATE(), @User_Id )
-												END -- 10
-											END -- 9
+											END --9
 											ELSE
 											BEGIN
 												INSERT INTO FTS_CRMContactImportLog
@@ -376,9 +429,9 @@ BEGIN
 												VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 													@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 													@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-													'Failed','Invalid Stage.',GETDATE(), @User_Id )
+													'Failed','Invalid Reference Name.',GETDATE(), @User_Id )
 											END -- 9
-										END --8
+										END -- 8
 										ELSE
 										BEGIN
 											INSERT INTO FTS_CRMContactImportLog
@@ -389,8 +442,8 @@ BEGIN
 											VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 												@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 												@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-												'Failed','Invalid Reference Name.',GETDATE(), @User_Id )
-										END -- 8
+												'Failed','Invalid Source.',GETDATE(), @User_Id )
+										END  --8
 									END -- 7
 									ELSE
 									BEGIN
@@ -402,8 +455,8 @@ BEGIN
 										VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 											@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 											@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-											'Failed','Invalid Source.',GETDATE(), @User_Id )
-									END  --7
+											'Failed','Invalid Status.',GETDATE(), @User_Id )
+									END  -- 7
 								END -- 6
 								ELSE
 								BEGIN
@@ -415,9 +468,9 @@ BEGIN
 									VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 										@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 										@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-										'Failed','Invalid Status.',GETDATE(), @User_Id )
-								END  -- 6
-							END -- 5
+										'Failed','Invalid Type.',GETDATE(), @User_Id )
+								END  --6
+							END  -- 5
 							ELSE
 							BEGIN
 								INSERT INTO FTS_CRMContactImportLog
@@ -428,8 +481,8 @@ BEGIN
 								VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 									@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 									@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-									'Failed','Invalid Type.',GETDATE(), @User_Id )
-							END  --5
+									'Failed','Invalid Assign To.',GETDATE(), @User_Id )
+							END-- 5
 						END  -- 4
 						ELSE
 						BEGIN
@@ -441,9 +494,10 @@ BEGIN
 							VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 								@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 								@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-								'Failed','Invalid Assign To.',GETDATE(), @User_Id )
+								'Failed','Assign To not given.',GETDATE(), @User_Id )
 						END-- 4
-					END  -- 3
+
+					END --3
 					ELSE
 					BEGIN
 						INSERT INTO FTS_CRMContactImportLog
@@ -454,21 +508,20 @@ BEGIN
 						VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 							@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
 							@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-							'Failed','Assign To not given.',GETDATE(), @User_Id )
-					END-- 3
-
-				END --2
+							'Failed','Invalid Company',GETDATE(), @User_Id )
+					END -- 3
+				END -- 2
 				ELSE
 				BEGIN
 					INSERT INTO FTS_CRMContactImportLog
-						([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
-						[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
-						[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
+					([FirstName], [LastName], [Phone], [Email], [Address], [DateofBirth], [DateofAnniversary], [Company], [JobTitle], [AssignTo], [Type],
+					[Status], [Source], [Reference], [Stages], [Remarks], [ExpectedSalesValue], [NextfollowUpDate], [Active], 
+					[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
 
 					VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
-						@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
-						@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-						'Failed','Invalid Company',GETDATE(), @User_Id )
+							@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+							@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+							'Failed','Invalid Status',GETDATE(), @User_Id )
 				END -- 2
 			END -- 1
 			ELSE
@@ -479,11 +532,12 @@ BEGIN
 				[ImportStatus], [ImportMsg], [ImportDate], [CreateUser] )
 
 				VALUES(@FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
-						@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
-						@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
-						'Failed','Invalid Status',GETDATE(), @User_Id )
+				@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 
+				@Stages1, @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, @Active1,
+				'Failed','Phone number cannot be blank or start with zero and should be of 10 digits.',GETDATE(), @User_Id )
 			END -- 1
 
+			SET @i=@i+1
 			
 			FETCH NEXT FROM DB_CURSOR INTO @FirstName1, @LastName1, @Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @Company1, @JobTitle1, 
 							@AssignTo1, @Type1, @Status1, @Source1, @Reference1, 

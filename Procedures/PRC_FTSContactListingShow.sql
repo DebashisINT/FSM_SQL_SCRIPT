@@ -26,35 +26,35 @@ BEGIN
 	DECLARE @Strsql NVARCHAR(MAX)
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'CRM_CONTACT_LISTING') AND TYPE IN (N'U'))
-			BEGIN
-				CREATE TABLE CRM_CONTACT_LISTING
-				(
-				  USERID INT,
-				  SEQ INT,
-				  Shop_Code varchar(100),
-				  Shop_FirstName NVARCHAR(500) NULL,
-				  Shop_LastName NVARCHAR(500) NULL,
-				  Shop_Owner_Contact NVARCHAR(100) NULL,
-				  Shop_Owner_Email NVARCHAR(300) NULL,
-				  Shop_Address NVARCHAR(max) NULL,
-				  Shop_DOB NVARCHAR(50) NULL,
-				  Shop_date_aniversary NVARCHAR(50) NULL,
-				  Shop_CompanyName NVARCHAR(200) NULL,
-				  Shop_JobTitle NVARCHAR(500) NULL,
-				  Shop_CreateUserName ntext NULL,
-				  Shop_TypeName NVARCHAR(200) NULL,
-				  Shop_StatusName NVARCHAR(200) NULL,
-				  Shop_SourceName NVARCHAR(200) NULL,
-				  Shop_ReferenceName NVARCHAR(200) NULL,
-				  Shop_StageName NVARCHAR(200) NULL,
-				  Shop_Remarks NVARCHAR(max) NULL,
-				  Shop_Amount Decimal(18,2) NULL,
-				  Shop_NextFollowupDate NVARCHAR(50) NULL,
-				  Shop_Entity_Status VARCHAR(10) NULL
-				)
-				CREATE NONCLUSTERED INDEX IX1 ON CRM_CONTACT_LISTING (SEQ)
-			END
-		DELETE FROM CRM_CONTACT_LISTING WHERE USERID=@USERID
+	BEGIN
+		CREATE TABLE CRM_CONTACT_LISTING
+		(
+			USERID INT,
+			SEQ INT,
+			Shop_Code varchar(100),
+			Shop_FirstName NVARCHAR(500) NULL,
+			Shop_LastName NVARCHAR(500) NULL,
+			Shop_Owner_Contact NVARCHAR(100) NULL,
+			Shop_Owner_Email NVARCHAR(300) NULL,
+			Shop_Address NVARCHAR(max) NULL,
+			Shop_DOB NVARCHAR(50) NULL,
+			Shop_date_aniversary NVARCHAR(50) NULL,
+			Shop_CompanyName NVARCHAR(200) NULL,
+			Shop_JobTitle NVARCHAR(500) NULL,
+			Shop_CreateUserName ntext NULL,
+			Shop_TypeName NVARCHAR(200) NULL,
+			Shop_StatusName NVARCHAR(200) NULL,
+			Shop_SourceName NVARCHAR(200) NULL,
+			Shop_ReferenceName NVARCHAR(200) NULL,
+			Shop_StageName NVARCHAR(200) NULL,
+			Shop_Remarks NVARCHAR(max) NULL,
+			Shop_Amount Decimal(18,2) NULL,
+			Shop_NextFollowupDate NVARCHAR(50) NULL,
+			Shop_Entity_Status VARCHAR(10) NULL
+		)
+		CREATE NONCLUSTERED INDEX IX1 ON CRM_CONTACT_LISTING (SEQ)
+	END
+		
 
 	IF(@ACTION='GETLISTINGDATA')
 	BEGIN
@@ -62,6 +62,7 @@ BEGIN
 		BEGIN
 			set @CONTACTSFROM = ''''+ replace(@CONTACTSFROM,',',''',''') + ''''
 
+			DELETE FROM CRM_CONTACT_LISTING WHERE USERID=@USERID
 			
 			IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
 				DROP TABLE #TEMPCONTACT
@@ -154,6 +155,17 @@ BEGIN
 	begin
 		SELECT EnqID, EnquiryFromDesc from tbl_master_EnquiryFrom order by EnqID
 	end
-	
+	ELSE IF(@ACTION='GETTOTALCONTACTSCOUNT')
+	begin
+		DECLARE @TotalContacts INT = 0
+
+		IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'CRM_CONTACT_LISTING') AND TYPE IN (N'U'))
+		BEGIN
+			SET @TotalContacts = (SELECT COUNT(0) FROM CRM_CONTACT_LISTING WHERE USERID=@USERID)
+		END
+
+		SELECT @TotalContacts AS cnt_TotalContacts
+
+	end
 END
 GO
