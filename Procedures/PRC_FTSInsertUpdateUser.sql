@@ -298,6 +298,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 -- Rev 32.0
 ,@IsShowLatLongInOutletMaster INT=0
 -- End of Rev 32.0
+-- Rev 34.0
+,@IsCallLogHistoryActivated INT=0
+-- End of Rev 34.0
 
 ) --WITH ENCRYPTION
 AS
@@ -342,6 +345,8 @@ AS
 31.0	V2.0.43		31/08/2023		Sanchita	User wise settings required in Web Portal Front end User Master. Mantis : 26768
 32.0	V2.0.43		06/09/2023		Sanchita	A new user wise settings required named as ShowLatLongInOutletMaster. Refer: 26794
 33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
+34.0    V2.0.44     19/12/2023      Sanchita    Call log facility is required in the FSM App - IsCallLogHistoryActivated” - 
+                                                User Account - Add User master settings. Mantis: 27063
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -525,6 +530,9 @@ BEGIN
 			-- Rev 33.0
 			,User_InactiveDate
 			-- End of Rev 33.0
+			-- Rev 34.0
+			,IsCallLogHistoryActivated
+			-- End of Rev 34.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -684,6 +692,9 @@ BEGIN
 			-- Rev 33.0
 			,(case when @isactive='Y' then getdate() else null end)
 			-- End of Rev 33.0
+			-- Rev 34.0
+			,isnull(@IsCallLogHistoryActivated,0)
+			-- End of Rev 34.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1108,6 +1119,9 @@ BEGIN
 				 -- Rev 32.0
 				 OR IsShowLatLongInOutletMaster<>@IsShowLatLongInOutletMaster
 				 -- End of Rev 32.0
+				 -- Rev 34.0
+				 OR IsCallLogHistoryActivated<>@IsCallLogHistoryActivated
+				 -- End of Rev 34.0
 				 )
 				)
 			BEGIN
@@ -1311,6 +1325,9 @@ BEGIN
 			-- Rev 33.0
 			,User_InactiveDate = (case when @isactive='Y' then getdate() else User_InactiveDate end)
 			-- End of Rev 33.0
+			-- Rev 34.0
+			,IsCallLogHistoryActivated = @IsCallLogHistoryActivated
+			-- End of Rev 34.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1571,6 +1588,9 @@ BEGIN
 			-- Rev 32.0
 			,ISNULL(IsShowLatLongInOutletMaster,0) as IsShowLatLongInOutletMaster
 			-- End of Rev 32.0
+			-- Rev 34.0
+			,ISNULL(IsCallLogHistoryActivated,0) as IsCallLogHistoryActivated
+			-- End of Rev 34.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1722,6 +1742,9 @@ BEGIN
 			-- End of Rev 31.0
 			-- Rev 32.0
 			,'IsShowLatLongInOutletMaster'
+			-- End of Rev 32.0
+			-- Rev 32.0
+			,'IsCallLogHistoryActivated'
 			-- End of Rev 32.0
 			)
 		END
