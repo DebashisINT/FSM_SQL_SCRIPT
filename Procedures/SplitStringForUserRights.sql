@@ -40,12 +40,19 @@ RETURNS @Output TABLE (
 		  -- Rev 2.0
 		  ,Has_CanBulkUpdate bit
 		  -- End of Rev 2.0
+		  -- Rev 3.0
+		  ,Has_CanReassignedBeatParty bit
+		  ,Has_CanReassignedBeatPartyLog bit
+		  ,Has_CanReassignedAreaRouteBeat bit
+		  ,Has_CanReassignedAreaRouteBeatLog bit
+		  -- End of Rev 3.0
 )
 AS
 /**************************************************************************************************************************************************************************
 1.0		Pratik			v2.0.28			18-04-2022		Add Rights CanAssign for module CRM - Enquiry
 															Refer: 24832
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
+3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
 ****************************************************************************************************************************************************************************/
 BEGIN
       DECLARE @StartIndex INT, @EndIndex INT, @CheckVal NVARCHAR(MAX)
@@ -58,6 +65,9 @@ BEGIN
 	 --rev 1.0
 	 ,@Has_CanAssignActivity bit, @Has_CanBulkUpdate bit
 	 --End of rev 1.0
+	 -- Rev 3.0
+	 ,@Has_CanReassignedBeatParty bit, @Has_CanReassignedBeatPartyLog bit,@Has_CanReassignedAreaRouteBeat bit, @Has_CanReassignedAreaRouteBeatLog bit
+	 -- End of Rev 3.0
 
       SET @StartIndex = 1
       IF SUBSTRING(@Input, LEN(@Input) - 1, LEN(@Input)) <> @MainSplitDelimiter
@@ -107,6 +117,12 @@ BEGIN
 				-- Rev 2.0
 				SET @Has_CanBulkUpdate=0;
 				-- End of Rev 2.0
+				-- Rev 3.0
+				SET @Has_CanReassignedBeatParty=0;
+				SET @Has_CanReassignedBeatPartyLog=0;
+				SET @Has_CanReassignedAreaRouteBeat=0;
+				SET @Has_CanReassignedAreaRouteBeatLog=0;
+				-- End of Rev 3.0
 				IF SUBSTRING(@Value, LEN(@Value) - 1, LEN(@Value)) <> @ValueDelimiter
 				BEGIN
 					SET @Value = @Value + @ValueDelimiter
@@ -216,6 +232,24 @@ BEGIN
 							set @Has_CanBulkUpdate=1;
 						END
 						--End of rev 2.0
+						-- Rev 3.0
+						ELSE IF @TempValue = '26'
+						BEGIN
+							set @Has_CanReassignedBeatParty=1;
+						END
+						ELSE IF @TempValue = '27'
+						BEGIN
+							set @Has_CanReassignedBeatPartyLog=1;
+						END
+						ELSE IF @TempValue = '28'
+						BEGIN
+							set @Has_CanReassignedAreaRouteBeat=1;
+						END
+						ELSE IF @TempValue = '29'
+						BEGIN
+							set @Has_CanReassignedAreaRouteBeatLog=1;
+						END
+						-- End of Rev 3.0
 						
 					END
 					
@@ -231,7 +265,11 @@ BEGIN
 				Has_CanReassignActivity_Rights,Has_Close_Rights,Has_SpecialEdit_Rights,Has_Cancel_Rights
 				-- Rev 2.0 [Has_CanBulkUpdate and @Has_CanBulkUpdate added]
 				--rev 1.0
-				,Has_CanAssignActivity, Has_CanBulkUpdate)
+				,Has_CanAssignActivity, Has_CanBulkUpdate
+				-- Rev 3.0
+				,Has_CanReassignedBeatParty, Has_CanReassignedBeatPartyLog, Has_CanReassignedAreaRouteBeat, Has_CanReassignedAreaRouteBeatLog
+				-- End of Rev 3.0
+				)
 				--End of rev 1.0
 				VALUES (@MenuId, @Has_Add_Rights, @Has_Modify_Rights, @Has_Delete_Rights, @Has_View_Rights, @Has_Industry_Rights,
 				@Has_CreateActivity_Rights,@Has_ContactPerson_Rights,@Has_History_Rights,
@@ -240,7 +278,11 @@ BEGIN
 				@Has_Branchassign_Rights,@Has_Cancelassignmnt_Rights,@Has_CanReassignActivity_Rights,
 				@Has_Close_Rights,@Has_SpecialEdit_Rights,@Has_Cancel_Rights
 				--rev 1.0
-				,@Has_CanAssignActivity, @Has_CanBulkUpdate);
+				,@Has_CanAssignActivity, @Has_CanBulkUpdate
+				-- Rev 3.0
+				,@Has_CanReassignedBeatParty, @Has_CanReassignedBeatPartyLog, @Has_CanReassignedAreaRouteBeat, @Has_CanReassignedAreaRouteBeatLog
+				-- End of Rev 3.0
+				);
 				--End of rev 1.0
 			END
            
@@ -250,5 +292,3 @@ BEGIN
       RETURN
 END
 GO
-
-
