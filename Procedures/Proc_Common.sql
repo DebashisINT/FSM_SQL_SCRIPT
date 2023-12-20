@@ -14,6 +14,7 @@ AS
 1.0		Pratik			v2.0.28			18-04-2022		Add Rights CanAssign for module CRM - Enquiry
 															Refer: 24832
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
+3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
 ****************************************************************************************************************************************************************************/
 BEGIN
 	IF @mode = 'GetUserRightsForPage'
@@ -44,6 +45,12 @@ BEGIN
 		-- Rev 2.0
 		,CanBulkUpdate = CAST(IsNull(ta.acc_CanBulkUpdate, 0) as BIT)
 		-- End of Rev 2.0
+		-- Rev 3.0
+		,CanReassignedBeatParty = CAST(IsNull(ta.acc_CanReassignedBeatParty, 0) as BIT)
+		,CanReassignedBeatPartyLog = CAST(IsNull(ta.acc_CanReassignedBeatPartyLog, 0) as BIT)
+		,CanReassignedAreaRouteBeat = CAST(IsNull(ta.acc_CanReassignedAreaRouteBeat, 0) as BIT)
+		,CanReassignedAreaRouteBeatLog = CAST(IsNull(ta.acc_CanReassignedAreaRouteBeatLog, 0) as BIT)
+		-- End of Rev 3.0
 		FROM tbl_trans_access ta
 		INNER JOIN tbl_trans_menu tm ON CAST(ta.acc_menuId as INT) = CAST(mnu_Id as INT)
 		WHERE ta.acc_userGroupId = @usergroupid and tm.mnu_menuLink = @url;

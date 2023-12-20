@@ -23,6 +23,7 @@ AS
 1.0		Pratik			v2.0.28			18-04-2022		Add Rights CanAssign for module CRM - Enquiry
 															Refer: 24832
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
+3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
 ****************************************************************************************************************************************************************************/
 BEGIN
 	IF @mode = 'INSERT'
@@ -54,7 +55,11 @@ BEGIN
 				                              acc_Export,acc_Print,acc_Budget,acc_Branchassign,acc_cancelassign,acc_CanReassignActivity,acc_can_close,acc_cancel
 											  -- Rev 2.0 [acc_CanBulkUpdate added]
 											  --rev 1.0
-											  ,acc_CanAssignActivity, acc_CanBulkUpdate)
+											  ,acc_CanAssignActivity, acc_CanBulkUpdate
+											  -- Rev 3.0
+											  ,acc_CanReassignedBeatParty, acc_CanReassignedBeatPartyLog, acc_CanReassignedAreaRouteBeat, acc_CanReassignedAreaRouteBeatLog
+											  -- End of Rev 3.0
+											  )
 											  --End of rev 1.0
 											  
 				SELECT @grp_id, MenuId, 'All', Has_Modify_Rights, Has_Delete_Rights, Has_Add_Rights, Has_View_Rights,  
@@ -72,6 +77,9 @@ BEGIN
 				--rev 1.0
 				,Has_CanAssignActivity, Has_CanBulkUpdate 
 				--End of rev 1.0
+				-- Rev 3.0
+				,Has_CanReassignedBeatParty, Has_CanReassignedBeatPartyLog, Has_CanReassignedAreaRouteBeat, Has_CanReassignedAreaRouteBeatLog
+				-- End of Rev 3.0
 				 FROM [dbo].[SplitStringForUserRights](@UserGroupRights, '^', '|', '_');
 				
 				IF @@ROWCOUNT <= 0
@@ -145,7 +153,11 @@ BEGIN
 											  acc_Budget,acc_Branchassign,acc_cancelassign,acc_CanReassignActivity,acc_can_close,acc_SpecialEdit,acc_cancel
 											  -- Rev 2.0 [acc_CanBulkUpdate added]
 											  --rev 1.0
-											  ,acc_CanAssignActivity, acc_CanBulkUpdate)
+											  ,acc_CanAssignActivity, acc_CanBulkUpdate
+											  -- Rev 3.0
+											  ,acc_CanReassignedBeatParty, acc_CanReassignedBeatPartyLog, acc_CanReassignedAreaRouteBeat, acc_CanReassignedAreaRouteBeatLog
+											  -- End of Rev 3.0
+											  )
 											  --End of rev 1.0
 				SELECT @grp_id, MenuId, 'All', Has_Modify_Rights, Has_Delete_Rights, Has_Add_Rights, Has_View_Rights,  
 				GETDATE(), @CreateUser, Has_Industry_Rights,
@@ -162,6 +174,9 @@ BEGIN
 				--rev 1.0
 				,Has_CanAssignActivity, Has_CanBulkUpdate
 				--End of rev 1.0
+				-- Rev 3.0
+				,Has_CanReassignedBeatParty, Has_CanReassignedBeatPartyLog, Has_CanReassignedAreaRouteBeat, Has_CanReassignedAreaRouteBeatLog
+				-- End of Rev 3.0
 				 FROM [dbo].[SplitStringForUserRights](@UserGroupRights, '^', '|', '_');
 				
 				IF @@ROWCOUNT <= 0
@@ -226,3 +241,4 @@ BEGIN
 		END
 	END
 END
+GO
