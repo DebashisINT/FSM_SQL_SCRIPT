@@ -193,6 +193,9 @@ BEGIN
 																		isStageEnable & isFunnelStageEnable.Row 879
 	172.0		Debashis	04-12-2023	ADD SETTINGS @Action=GlobalCheck' MultiVisitIntervalInMinutes.Row 866
 	173.0		Debashis	04-12-2023	ADD SETTINGS @Action=UserCheck'	IsShowMenuCRMContacts.Row 886
+	174.0		Debashis	20-12-2023	ADD SETTINGS @Action=UserCheck'	IsCallLogHistoryActivated.Row 887
+	175.0		Debashis	22-12-2023	ADD SETTINGS @Action=UserCheck'	IsAllDataInPortalwithHeirarchy.Row 890
+	176.0		Debashis	22-12-2023	ADD SETTINGS @Action=GlobalCheck'	IsGPSRouteSync & IsSyncBellNotificationInApp.Row 891
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -440,6 +443,10 @@ BEGIN
 	--Rev 172.0
 	,@MultiVisitIntervalInMinutes INT
 	--End of Rev 172.0
+	--Rev 176.0
+	,@IsGPSRouteSync BIT
+	,@IsSyncBellNotificationInApp BIT
+	--End of Rev 176.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -738,6 +745,10 @@ BEGIN
 		--Rev 172.0
 		SET @MultiVisitIntervalInMinutes  =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='MultiVisitIntervalInMinutes' AND IsActive=1)
 		--End of Rev 172.0
+		--Rev 176.0
+		SET @IsGPSRouteSync =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsGPSRouteSync' AND IsActive=1)
+		SET @IsSyncBellNotificationInApp =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsSyncBellNotificationInApp' AND IsActive=1)
+		--End of Rev 176.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1015,6 +1026,10 @@ BEGIN
 			--Rev 172.0
 			,@MultiVisitIntervalInMinutes AS MultiVisitIntervalInMinutes
 			--End of Rev 172.0
+			--Rev 176.0
+			,@IsGPSRouteSync AS IsGPSRouteSync
+			,@IsSyncBellNotificationInApp AS IsSyncBellNotificationInApp
+			--End of Rev 176.0
 	END
 
 	else if(@Action='UserCheck')
@@ -2010,6 +2025,16 @@ BEGIN
 		SELECT 'IsShowMenuCRMContacts' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowMenuCRMContacts) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 173.0
+		--Rev 174.0
+		UNION ALL
+		SELECT 'IsCallLogHistoryActivated' AS [Key],CONVERT(NVARCHAR(15),USR.IsCallLogHistoryActivated) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 174.0
+		--Rev 175.0
+		UNION ALL
+		SELECT 'IsAllDataInPortalwithHeirarchy' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllDataInPortalwithHeirarchy) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 175.0
 	END
 
 	SET NOCOUNT OFF

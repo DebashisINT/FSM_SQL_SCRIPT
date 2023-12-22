@@ -114,8 +114,22 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 @GSTN_Number NVARCHAR(100)=NULL,
 --End of Rev 19.0
 --Rev 20.0
-@isUpdateAddressFromShopMaster BIT=0
+@isUpdateAddressFromShopMaster BIT=0,
 --End of Rev 20.0
+--Rev 21.0
+@shop_firstName VARCHAR(200)=NULL,
+@shop_lastName VARCHAR(200)=NULL,
+@crm_companyID INT=NULL,
+@crm_jobTitle VARCHAR(500)=NULL,
+@crm_typeID INT=NULL,
+@crm_statusID INT=NULL,
+@crm_sourceID INT=NULL,
+@crm_referenceID NVARCHAR(200)=NULL,
+@crm_referenceID_type VARCHAR(50)=NULL,
+@crm_stage_ID INT=NULL,
+@assign_to INT=NULL,
+@saved_from_status VARCHAR(100)=NULL
+--End of Rev 21.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -141,6 +155,7 @@ As
 18.0	v2.0.28		Debashis		18-04-2022			New parameter added as @shopStatusUpdate.Refer: 682
 19.0	v2.0.35		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
 20.0	v2.0.42		Debashis		06-10-2023			New Parameter added.Row: 873 & 874
+21.0	v2.0.43		Debashis		22-12-2023			Some new parameters have been added.Row: 893,894,896 & 897
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -360,8 +375,22 @@ BEGIN
 			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END,
 			 --End of Rev 19.0
 			 --Rev 20.0
-			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END
+			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END,
 			 --End of Rev 20.0
+			 --Rev 21.0
+			 Shop_FirstName=CASE WHEN @shop_firstName IS NULL OR @shop_firstName='' THEN Shop_FirstName ELSE @shop_firstName END,
+			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE Shop_LastName END,
+			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID='' THEN Shop_CRMCompID ELSE Shop_CRMCompID END,
+			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE Shop_JobTitle END,
+			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID='' THEN Shop_CRMTypeID ELSE Shop_CRMTypeID END,
+			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID='' THEN Shop_CRMStatusID ELSE Shop_CRMStatusID END,
+			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID='' THEN Shop_CRMSourceID ELSE Shop_CRMSourceID END,
+			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE Shop_CRMReferenceID END,
+			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE Shop_CRMReferenceType END,
+			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID='' THEN Shop_CRMStageID ELSE Shop_CRMStageID END,
+			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
+			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
+			 --End of Rev 21.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
 	--Rev 13.0
@@ -444,8 +473,22 @@ BEGIN
 			 GSTN_Number=CASE WHEN @GSTN_Number IS NULL OR @GSTN_Number='' THEN [GSTN_Number] ELSE @GSTN_Number END,
 			 --End of Rev 19.0
 			 --Rev 20.0
-			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END
+			 isUpdateAddressFromShopMaster=CASE WHEN @isUpdateAddressFromShopMaster IS NULL OR @isUpdateAddressFromShopMaster=0 THEN [ShopStatusUpdate] ELSE @isUpdateAddressFromShopMaster END,
 			 --End of Rev 20.0
+			 --Rev 21.0
+			 Shop_FirstName=CASE WHEN @shop_firstName IS NULL OR @shop_firstName='' THEN Shop_FirstName ELSE @shop_firstName END,
+			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE Shop_LastName END,
+			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID='' THEN Shop_CRMCompID ELSE Shop_CRMCompID END,
+			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE Shop_JobTitle END,
+			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID='' THEN Shop_CRMTypeID ELSE Shop_CRMTypeID END,
+			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID='' THEN Shop_CRMStatusID ELSE Shop_CRMStatusID END,
+			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID='' THEN Shop_CRMSourceID ELSE Shop_CRMSourceID END,
+			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE Shop_CRMReferenceID END,
+			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE Shop_CRMReferenceType END,
+			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID='' THEN Shop_CRMStageID ELSE Shop_CRMStageID END,
+			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
+			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
+			 --End of Rev 21.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
 		END
