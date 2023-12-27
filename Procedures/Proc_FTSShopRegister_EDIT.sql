@@ -379,15 +379,15 @@ BEGIN
 			 --End of Rev 20.0
 			 --Rev 21.0
 			 Shop_FirstName=CASE WHEN @shop_firstName IS NULL OR @shop_firstName='' THEN Shop_FirstName ELSE @shop_firstName END,
-			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE Shop_LastName END,
-			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID='' THEN Shop_CRMCompID ELSE Shop_CRMCompID END,
-			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE Shop_JobTitle END,
-			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID='' THEN Shop_CRMTypeID ELSE Shop_CRMTypeID END,
-			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID='' THEN Shop_CRMStatusID ELSE Shop_CRMStatusID END,
-			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID='' THEN Shop_CRMSourceID ELSE Shop_CRMSourceID END,
-			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE Shop_CRMReferenceID END,
-			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE Shop_CRMReferenceType END,
-			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID='' THEN Shop_CRMStageID ELSE Shop_CRMStageID END,
+			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE @shop_lastName END,
+			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID=0 THEN Shop_CRMCompID ELSE @crm_companyID END,
+			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE @crm_jobTitle END,
+			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID=0 THEN Shop_CRMTypeID ELSE @crm_typeID END,
+			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID=0 THEN Shop_CRMStatusID ELSE @crm_statusID END,
+			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID=0 THEN Shop_CRMSourceID ELSE @crm_sourceID END,
+			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE @crm_referenceID END,
+			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE @crm_referenceID_type END,
+			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID=0 THEN Shop_CRMStageID ELSE @crm_stage_ID END,
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
 			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
 			 --End of Rev 21.0
@@ -477,15 +477,15 @@ BEGIN
 			 --End of Rev 20.0
 			 --Rev 21.0
 			 Shop_FirstName=CASE WHEN @shop_firstName IS NULL OR @shop_firstName='' THEN Shop_FirstName ELSE @shop_firstName END,
-			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE Shop_LastName END,
-			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID='' THEN Shop_CRMCompID ELSE Shop_CRMCompID END,
-			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE Shop_JobTitle END,
-			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID='' THEN Shop_CRMTypeID ELSE Shop_CRMTypeID END,
-			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID='' THEN Shop_CRMStatusID ELSE Shop_CRMStatusID END,
-			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID='' THEN Shop_CRMSourceID ELSE Shop_CRMSourceID END,
-			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE Shop_CRMReferenceID END,
-			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE Shop_CRMReferenceType END,
-			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID='' THEN Shop_CRMStageID ELSE Shop_CRMStageID END,
+			 Shop_LastName=CASE WHEN @shop_lastName IS NULL OR @shop_lastName='' THEN Shop_LastName ELSE @shop_lastName END,
+			 Shop_CRMCompID=CASE WHEN @crm_companyID IS NULL OR @crm_companyID=0 THEN Shop_CRMCompID ELSE @crm_companyID END,
+			 Shop_JobTitle=CASE WHEN @crm_jobTitle IS NULL OR @crm_jobTitle='' THEN Shop_JobTitle ELSE @crm_jobTitle END,
+			 Shop_CRMTypeID=CASE WHEN @crm_typeID IS NULL OR @crm_typeID=0 THEN Shop_CRMTypeID ELSE @crm_typeID END,
+			 Shop_CRMStatusID=CASE WHEN @crm_statusID IS NULL OR @crm_statusID=0 THEN Shop_CRMStatusID ELSE @crm_statusID END,
+			 Shop_CRMSourceID=CASE WHEN @crm_sourceID IS NULL OR @crm_sourceID=0 THEN Shop_CRMSourceID ELSE @crm_sourceID END,
+			 Shop_CRMReferenceID=CASE WHEN @crm_referenceID IS NULL OR @crm_referenceID='' THEN Shop_CRMReferenceID ELSE @crm_referenceID END,
+			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE @crm_referenceID_type END,
+			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID=0 THEN Shop_CRMStageID ELSE @crm_stage_ID END,
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
 			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
 			 --End of Rev 21.0
