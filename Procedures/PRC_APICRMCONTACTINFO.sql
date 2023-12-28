@@ -8,12 +8,12 @@ ALTER PROCEDURE [dbo].[PRC_APICRMCONTACTINFO]
 (
 @ACTION NVARCHAR(20),
 @USERID INT=NULL,
-@COMPANYNAME NVARCHAR(200)=NULL
+@JsonXML XML=NULL
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************************************************************************
 Written By : Debashis Talukder On 05/12/2023
-Purpose : For CRM Contact API.Row: 880 to 885
+Purpose : For CRM Contact API.Row: 880 to 884 & 898
 ***************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -41,7 +41,8 @@ BEGIN
 	ELSE IF @ACTION='CRMCOMPANYSAVE'
 		BEGIN
 			INSERT INTO CRM_CONTACT_COMPANY(COMPANY_NAME,IsActive,CREATED_BY,CREATED_DATE)
-			SELECT @COMPANYNAME,1,@USERID,GETDATE()
+			SELECT XMLproduct.value('(company_name/text())[1]','VARCHAR(200)'),1,@USERID,GETDATE()
+			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 
 			SELECT COMPANY_ID,COMPANY_NAME FROM CRM_CONTACT_COMPANY WHERE CREATED_BY=@USERID AND IsActive=1
 		END
