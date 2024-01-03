@@ -17,6 +17,7 @@ AS
 2.0		v2.0.26		Debashis	29-12-2021		Enhancement done for Row No. 598
 3.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 608
 4.0		v2.0.38		Debashis	23-01-2023		Enhancement done for Row No. 806
+5.0		v2.0.43		Debashis	03-01-2023		Product not showing Under Order.Now solved.Refer: 0027148
 ********************************************************************************************************************************************/
 BEGIN
 
@@ -76,7 +77,10 @@ BEGIN
 		SET @SQL+='INNER JOIN Master_sProducts PROD ON PROD.sProducts_ID=ORDDET.Product_Id	'
 		SET @SQL+='INNER JOIN tbl_master_brand brnd on PROD.sProducts_Brand=brnd.Brand_Id	'
 		SET @SQL+='INNER JOIN Master_ProductClass as cls on PROD.ProductClass_Code=cls.ProductClass_ID	'
-		SET @SQL+='INNER JOIN Master_Size as msize on PROD.sProducts_Size=msize.Size_ID	'
+		--Rev 5.0
+		--SET @SQL+='INNER JOIN Master_Size as msize on PROD.sProducts_Size=msize.Size_ID	'
+		SET @SQL+='LEFT OUTER JOIN Master_Size as msize on PROD.sProducts_Size=msize.Size_ID	'
+		--End of Rev 5.0
 		SET @SQL+='where  User_Id='+@user_id+' '
 	if(ISNULL(@Date,'')<>'')
 		SET @SQL +='
@@ -87,3 +91,4 @@ BEGIN
 
 
 END
+GO
