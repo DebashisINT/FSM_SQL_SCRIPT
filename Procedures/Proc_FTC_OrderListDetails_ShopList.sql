@@ -60,7 +60,10 @@ BEGIN
 		SET @SQL=''
 		--Rev 1.0 Start
 		SET @SQL+='SELECT  ORDHEAD.Shop_Code as SHOPID,Order_ProdId as id, '
-		SET @SQL+='PROD.sProducts_ID as PRODID,PROD.sProducts_Brand as   brand_id,PROD.ProductClass_Code as category_id,PROD.sProducts_Size as watt_id   '
+		--Rev 5.0
+		--SET @SQL+='PROD.sProducts_ID as PRODID,PROD.sProducts_Brand as   brand_id,PROD.ProductClass_Code as category_id,PROD.sProducts_Size as watt_id   '
+		SET @SQL+='PROD.sProducts_ID as PRODID,PROD.sProducts_Brand as   brand_id,PROD.ProductClass_Code as category_id,ISNULL(PROD.sProducts_Size,0) as watt_id   '
+		--End of Rev 5.0
 		--Rev 1.0 End
 		SET @SQL+=',brnd.Brand_Name as brand  '
 		SET @SQL+=',cls.ProductClass_Name as category   '
