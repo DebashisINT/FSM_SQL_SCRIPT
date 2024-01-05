@@ -1,4 +1,4 @@
---EXEC PRC_FTSEMPLOYEEACTIVITYDETAILS_REPORT '','2021-02-01','2021-03-31','','',378
+--EXEC PRC_FTSEMPLOYEEACTIVITYDETAILS_REPORT '','2024-01-02','2024-01-02','','',378,'119'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSEMPLOYEEACTIVITYDETAILS_REPORT]') AND type in (N'P', N'PC'))
 BEGIN
@@ -17,7 +17,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEACTIVITYDETAILS_REPORT]
 --Rev 3.0
 @BRANCHID NVARCHAR(MAX)=NULL
 --Rev 3.0 End
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 11/03/2021
@@ -26,6 +26,7 @@ Module	   : Employee Activity Details Report for Track.Refer: 0023846
 2.0		v2.0.24		30-07-2021		Debashis		Employee Activity Employee Activity Details This report shall not be showing distance subtotal of Visit /Revisit.
 													Refer: 0024198
 3.0	    V2.0.42		20/07/2023      Priti	        Branch Parameter is required for various FSM reports.Refer:0026135
+4.0		V2.0.44		05/01/2023		Debashis		EMPLOYEE ACTIVITY DETAILS Report issue in PRIYANKA ENTERPRISES.Refer: 0027149
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -34,7 +35,7 @@ BEGIN
 
 	--Rev 3.0
 	 IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
-	 DROP TABLE #BRANCH_LIST
+		DROP TABLE #BRANCH_LIST
 	 CREATE TABLE #BRANCH_LIST (Branch_Id BIGINT NULL)
 	 CREATE NONCLUSTERED INDEX Branch_Id ON #BRANCH_LIST (Branch_Id ASC)
      IF @BRANCHID<>''
@@ -153,7 +154,11 @@ BEGIN
 	SET @Strsql+='CASE WHEN mstShp.type=1 THEN SHOPDD.Shop_Name WHEN mstShp.type=4 THEN SHOPPP.shop_name WHEN mstShp.type=11 THEN SHOPCUS.shop_name ELSE '''' END AS PCUSTNAME, '
 	--Rev 1.0 End
 	SET @Strsql+='SHOP.CUSTTYPE,SHOP.Shop_Code AS CUSTCODE,'
-	SET @Strsql+='SHOP.Shop_Name AS CUSTNAME,CASE WHEN SHOP.CUSTTYPE=''Entity'' THEN SHOP.ENTITY ELSE '''' END AS ENTITYTYPE FROM tbl_trans_shopActivitysubmit shpAvtv '
+	SET @Strsql+='SHOP.Shop_Name AS CUSTNAME,CASE WHEN SHOP.CUSTTYPE=''Entity'' THEN SHOP.ENTITY ELSE '''' END AS ENTITYTYPE '
+	--Rev 3.0
+	SET @Strsql+=',BR.branch_id as branch_id '	
+	--Rev 3.0 End
+	SET @Strsql+=' FROM tbl_trans_shopActivitysubmit shpAvtv '
 	SET @Strsql+='INNER JOIN tbl_Master_shop mstShp ON mstShp.Shop_Code=shpAvtv.Shop_Id '
 	SET @Strsql+='INNER JOIN tbl_shoptype SHPTYP ON SHPTYP.TypeId=mstShp.type '
 	SET @Strsql+='INNER JOIN TBL_MASTER_USER MU ON MU.user_id=shpAvtv.User_Id '
@@ -191,12 +196,20 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_pp_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A) SHOPPP ON SHOP.assigned_to_PP_id=SHOPPP.Shop_Code '
 	SET @Strsql+='LEFT OUTER JOIN(SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_shop_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A) SHOPCUS ON SHOP.assigned_to_shop_id=SHOPCUS.Shop_Code '
 	--Rev 1.0 End
+	--Rev 4.0
+	IF @BRANCHID<>''
+		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=BR.branch_id) '
+	--End of Rev 4.0
 	SET @Strsql+='UNION ALL '
 	SET @Strsql+='SELECT '''' AS Shop_name,'''' AS ENTITYCODE,'''' AS Shop_Type,'''' AS Mobile_No,location_name AS Location,SDate AS VISIT_DATETIME,CONVERT(NVARCHAR(10),TSA.SDate,105) AS VISITDATE,'
 	SET @Strsql+='CONVERT(VARCHAR(8),CAST(TSA.SDate AS TIME),108) AS VISITTIME,'''' AS Duration,distance_covered AS Distance,'''' AS Visit_Type,'''' AS REMARKS,TSA.User_id,CNT.cnt_internalId AS EMPCODE,'
 	SET @Strsql+='ISNULL(CNT.cnt_firstName,'''')+'' ''+ISNULL(CNT.cnt_middleName,'''')+(CASE WHEN ISNULL(CNT.cnt_middleName,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.cnt_lastName,'''') AS EMPNAME,'
 	SET @Strsql+='MS.state,MS.id AS STATE_ID,BR.branch_description AS BRANCHDESC,N.deg_designation,N.deg_id,CNT.cnt_UCC AS Employee_ID,'''' AS PCUSTNAME,'''' AS CUSTTYPE,'''' AS CUSTCODE,'''' AS CUSTNAME,'
-	SET @Strsql+=''''' AS ENTITYTYPE FROM TBL_TRANS_SHOPUSER_ARCH TSA '
+	SET @Strsql+=''''' AS ENTITYTYPE  '  
+	--Rev 3.0
+	SET @Strsql+=',BR.branch_id as branch_id '	
+	--Rev 3.0 End	
+	SET @Strsql+=' FROM TBL_TRANS_SHOPUSER_ARCH TSA '
 	SET @Strsql+='INNER JOIN TBL_MASTER_USER MU ON MU.user_id=TSA.User_Id '
     SET @Strsql+='INNER JOIN tbl_master_address MA ON MA.add_cntId=MU.user_contactId  and MA.add_addressType=''Office'' '
     SET @Strsql+='INNER JOIN tbl_master_state MS ON MS.ID=MA.add_state '
@@ -207,6 +220,10 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN tbl_master_designation AS desg ON desg.deg_id=cnt.emp_Designation '
 	SET @Strsql+='GROUP BY emp_cntId,desg.deg_designation,desg.deg_id,emp_effectiveuntil having emp_effectiveuntil IS NULL)N '
 	SET @Strsql+='ON N.emp_cntId=MU.user_contactId '
+	--Rev 4.0
+	IF @BRANCHID<>''
+		SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=BR.branch_id) '
+	--End of Rev 4.0
 	SET @Strsql+=') AS T WHERE ISNULL(T.User_id,'''')<>'''' AND CONVERT(NVARCHAR(10),T.VISIT_DATETIME,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @Employee<>''
 		SET @Strsql+='AND EXISTS (SELECT emp_contactId from #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=T.EMPCODE) '
@@ -214,14 +231,13 @@ BEGIN
 		SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=T.STATE_ID) '
 	IF @DESIGNID<>''
 		SET @Strsql+='AND EXISTS (SELECT deg_id from #DESIGNATION_LIST AS DS WHERE DS.deg_id=T.deg_id) '
-
-
-	--Rev 3.0
-	IF @BRANCHID<>''
-		SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=T.branch_id) '
-    --Rev 3.0 End
-
-		--SELECT @Strsql
+	--Rev 4.0
+	----Rev 3.0
+	--IF @BRANCHID<>''
+	--	SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCH_LIST AS F WHERE F.Branch_Id=T.branch_id) '
+ --   --Rev 3.0 End
+	--End of Rev 4.0
+	--SELECT @Strsql
 	EXEC sp_executesql @Strsql
 	
 	DROP TABLE #EMPLOYEE_LIST
@@ -235,3 +251,4 @@ BEGIN
 
 	SET NOCOUNT OFF
  END
+ GO
