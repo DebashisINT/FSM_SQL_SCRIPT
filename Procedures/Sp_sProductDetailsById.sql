@@ -19,6 +19,7 @@ Written By : Jitendra on 10/01/2018
 															Refer: 24299
 5.0		Sanchita			v2.0.37			02-12-2022		MRP' and Discount' entering facility required in Product Master. Refer: 25469, 25470
 6.0		Sanchita			V2.0.43			06-11-2023		On demand search is required in Product Master & Projection Entry. Mantis: 26858
+7.0		Sanchita			V2.0.45			25-01-2024		FSM Product Master - Colour Search - saved colurs not showing ticked. - Eurobond. Mantis: 27211
 ***************************************************************************************************/ 
 BEGIN  
  SELECT sProducts_ID  
@@ -102,7 +103,10 @@ BEGIN
 	, sProducts_Discount 
 	-- End of Rev 5.0
 	-- Rev 6.0
-	,STUFF((SELECT ',' + CONVERT(NVARCHAR(10),MC.Color_Name) FROM Mapping_ProductColor t1 inner join Master_Color MC on T1.Color_ID=MC.Color_ID
+	-- Rev 7.0
+	--,STUFF((SELECT ',' + CONVERT(NVARCHAR(10),MC.Color_Name) FROM Mapping_ProductColor t1 inner join Master_Color MC on T1.Color_ID=MC.Color_ID
+	,STUFF((SELECT ',' + CONVERT(NVARCHAR(MAX),MC.Color_Name) FROM Mapping_ProductColor t1 inner join Master_Color MC on T1.Color_ID=MC.Color_ID
+	-- End of Rev 7.0
 		WHERE t1.Products_ID=@ProductId
               FOR XML PATH ('')) , 1, 1, '') as ColorNew_Desc
 	, BR.Brand_Name as Brand_Desc
