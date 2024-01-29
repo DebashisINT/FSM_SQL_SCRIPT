@@ -56,6 +56,7 @@ AS
 									So table name changed from FTS_ProjectReport to FTS_CRMProjectinDetails. Mantis : 26135			
     3.0		Sanchita	V2.0.43		On demand search is required in Product Master & Projection Entry. Mantis : 26858		
 	4.0		Sanchita	V2.0.43		Project & Projection entry report should show the data based on the settings. Mantis: 26987
+	5.0		Sanchita	V2.0.45		PROJECT & PROJECTION ENTRY: Filter- Completed project drop-down data is not showing user-wise :-Eurobond. Mantis: 27210
 *************************************************************************************************************************************/
 BEGIN
 
@@ -63,6 +64,59 @@ BEGIN
 	-- Rev 1.0
 	DECLARE @ReportEmpID bigint, @IsHOD int
 	-- End of Rev 1.0
+
+	-- Rev 5.0
+	IF(@ACTION = 'GETLISTINGDATA' OR @ACTION='GetProjectCompletedDT' OR @ACTION='GetOrderLostReason' )
+	BEGIN
+		-- Hierarchy
+		set @empcode =(select user_contactId from Tbl_master_user where user_id=@USERID)		
+		CREATE TABLE #EMPHR
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+
+		CREATE TABLE #EMPHR_EDIT
+		(
+		EMPCODE VARCHAR(50),
+		RPTTOEMPCODE VARCHAR(50)
+		)
+		
+		INSERT INTO #EMPHR
+		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+
+		-- Rev 4.0
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Userid)=1)
+		BEGIN
+			-- If the above setting value is set as true for any user, he/she can only seen his/her data along with his hierarchical data.
+		-- End of Rev 4.0
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+			-- Hierarchy
+		-- Rev 4.0
+		END
+		ELSE
+		BEGIN
+			-- If the setting value is set as false, he/she can seen all the data irrespective of any hierarchy
+			INSERT INTO #EMPHR_EDIT
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO 
+			WHERE emp_effectiveuntil IS NULL
+		END
+	END
+	-- End of Rev 5.0
 	
 	IF(@ACTION = 'GETLISTINGDATA')
 	BEGIN
@@ -109,54 +163,56 @@ BEGIN
 
 		if(@Is_PageLoad <> 'is_pageload')
 		begin
-			-- Hierarchy
-			set @empcode =(select user_contactId from Tbl_master_user where user_id=@USERID)		
-			CREATE TABLE #EMPHR
-			(
-			EMPCODE VARCHAR(50),
-			RPTTOEMPCODE VARCHAR(50)
-			)
+			-- Rev 5.0
+			---- Hierarchy
+			--set @empcode =(select user_contactId from Tbl_master_user where user_id=@USERID)		
+			--CREATE TABLE #EMPHR
+			--(
+			--EMPCODE VARCHAR(50),
+			--RPTTOEMPCODE VARCHAR(50)
+			--)
 
-			CREATE TABLE #EMPHR_EDIT
-			(
-			EMPCODE VARCHAR(50),
-			RPTTOEMPCODE VARCHAR(50)
-			)
+			--CREATE TABLE #EMPHR_EDIT
+			--(
+			--EMPCODE VARCHAR(50),
+			--RPTTOEMPCODE VARCHAR(50)
+			--)
 		
-			INSERT INTO #EMPHR
-			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
-			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+			--INSERT INTO #EMPHR
+			--SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			--FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
 
-			-- Rev 4.0
-			IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Userid)=1)
-			BEGIN
-				-- If the above setting value is set as true for any user, he/she can only seen his/her data along with his hierarchical data.
-			-- End of Rev 4.0
-				;with cte as(select	
-				EMPCODE,RPTTOEMPCODE
-				from #EMPHR 
-				where EMPCODE IS NULL OR EMPCODE=@empcode  
-				union all
-				select	
-				a.EMPCODE,a.RPTTOEMPCODE
-				from #EMPHR a
-				join cte b
-				on a.RPTTOEMPCODE = b.EMPCODE
-				) 
-				INSERT INTO #EMPHR_EDIT
-				select EMPCODE,RPTTOEMPCODE  from cte 
-				-- Hierarchy
-			-- Rev 4.0
-			END
-			ELSE
-			BEGIN
-				-- If the setting value is set as false, he/she can seen all the data irrespective of any hierarchy
-				INSERT INTO #EMPHR_EDIT
-				SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
-				FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO 
-				WHERE emp_effectiveuntil IS NULL
-			END
-			-- End of Rev 4.0
+			---- Rev 4.0
+			--IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@Userid)=1)
+			--BEGIN
+			--	-- If the above setting value is set as true for any user, he/she can only seen his/her data along with his hierarchical data.
+			---- End of Rev 4.0
+			--	;with cte as(select	
+			--	EMPCODE,RPTTOEMPCODE
+			--	from #EMPHR 
+			--	where EMPCODE IS NULL OR EMPCODE=@empcode  
+			--	union all
+			--	select	
+			--	a.EMPCODE,a.RPTTOEMPCODE
+			--	from #EMPHR a
+			--	join cte b
+			--	on a.RPTTOEMPCODE = b.EMPCODE
+			--	) 
+			--	INSERT INTO #EMPHR_EDIT
+			--	select EMPCODE,RPTTOEMPCODE  from cte 
+			--	-- Hierarchy
+			---- Rev 4.0
+			--END
+			--ELSE
+			--BEGIN
+			--	-- If the setting value is set as false, he/she can seen all the data irrespective of any hierarchy
+			--	INSERT INTO #EMPHR_EDIT
+			--	SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			--	FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO 
+			--	WHERE emp_effectiveuntil IS NULL
+			--END
+			---- End of Rev 4.0
+			-- End of Rev 5.0
 
 			-- Rev 1.0
 			set @IsHOD = 0
@@ -226,9 +282,18 @@ BEGIN
 					where CTC.emp_reportTo=@ReportEmpID and PL.USERID=@USERID
 			-- End of Rev 1.0
 
-		
-			drop table #EMPHR
-			drop table #EMPHR_EDIT
+			-- Rev 5.0
+			--drop table #EMPHR
+			--drop table #EMPHR_EDIT
+			IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR') AND TYPE IN (N'U'))
+			BEGIN
+				drop table #EMPHR
+			END
+			IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR_EDIT') AND TYPE IN (N'U'))
+			BEGIN
+				drop table #EMPHR_EDIT
+			END
+			-- End of Rev 5.0
 		end
 		
 	END
@@ -426,9 +491,25 @@ BEGIN
 		select replace(ORDER_LOST,' ','~') ID, ORDER_LOST as Close_Reason , convert(nvarchar(10),count(ORDER_LOST)) as Close_Reason_Count
 		-- Rev 2.0
 		--from FTS_ProjectReport where ORDER_LOST<>'' group by ORDER_LOST order by ORDER_LOST
-		from FTS_CRMProjectinDetails where ORDER_LOST<>'' group by ORDER_LOST order by ORDER_LOST
-		-- End of Rev 2.0
+		-- Rev 5.0
+		--from FTS_CRMProjectinDetails where ORDER_LOST<>'' group by ORDER_LOST order by ORDER_LOST
+		---- End of Rev 2.0
 
+		from FTS_CRMProjectinDetails PR
+				inner join tbl_master_user U on U.user_id = PR.CreatedBy 
+				INNER JOIN #EMPHR_EDIT ON EMPCODE = U.user_contactId
+		where ORDER_LOST<>'' group by ORDER_LOST order by ORDER_LOST
+		
+
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR') AND TYPE IN (N'U'))
+		BEGIN
+			drop table #EMPHR
+		END
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR_EDIT') AND TYPE IN (N'U'))
+		BEGIN
+			drop table #EMPHR_EDIT
+		END
+		-- End of Rev 5.0
 	end
 
 	IF(@ACTION = 'GetProjectCompletedDT')
@@ -438,9 +519,25 @@ BEGIN
 			convert(nvarchar(10),count( convert(date,PROJ_COMPLETE_DT))) as Completed_Date_Count
 			-- Rev 2.0
 			--from FTS_ProjectReport where  convert(date,PROJ_COMPLETE_DT)<>'1900-01-01' group by  convert(date,PROJ_COMPLETE_DT) order by  convert(date,PROJ_COMPLETE_DT)
-			from FTS_CRMProjectinDetails where  convert(date,PROJ_COMPLETE_DT)<>'1900-01-01' group by  convert(date,PROJ_COMPLETE_DT) order by  convert(date,PROJ_COMPLETE_DT)
-			-- End of Rev 2.0
+			-- Rev 5.0
+			--from FTS_CRMProjectinDetails where  convert(date,PROJ_COMPLETE_DT)<>'1900-01-01' group by  convert(date,PROJ_COMPLETE_DT) order by  convert(date,PROJ_COMPLETE_DT)
+			---- End of Rev 2.0
+		
+			from FTS_CRMProjectinDetails PR
+				inner join tbl_master_user U on U.user_id = PR.CreatedBy 
+				INNER JOIN #EMPHR_EDIT ON EMPCODE = U.user_contactId
+			where  convert(date,PROJ_COMPLETE_DT)<>'1900-01-01' group by  convert(date,PROJ_COMPLETE_DT) order by  convert(date,PROJ_COMPLETE_DT)
 
+
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR') AND TYPE IN (N'U'))
+		BEGIN
+			drop table #EMPHR
+		END
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#EMPHR_EDIT') AND TYPE IN (N'U'))
+		BEGIN
+			drop table #EMPHR_EDIT
+		END
+		-- End of Rev 5.0
 	end
 
 	IF(@ACTION = 'TotProject_VS_InactivProject')
@@ -515,21 +612,35 @@ BEGIN
 		SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
 		FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
 
-
-		;with cte as(select	
-		EMPCODE,RPTTOEMPCODE
-		from #EMPHR2 
-		where EMPCODE IS NULL OR EMPCODE=@empcode  
-		union all
-		select	
-		a.EMPCODE,a.RPTTOEMPCODE
-		from #EMPHR2 a
-		join cte b
-		on a.RPTTOEMPCODE = b.EMPCODE
-		) 
-		INSERT INTO #EMPHR2_EDIT
-		select EMPCODE,RPTTOEMPCODE  from cte 
-		-- Hierarchy
+		-- Rev 4.0
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
+		BEGIN
+		-- End of Rev 4.0
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR2 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR2 a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR2_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+			-- Hierarchy
+		-- Rev 4.0
+		END
+		ELSE
+		BEGIN
+			-- If the setting value is set as false, he/she can seen all the data irrespective of any hierarchy
+			INSERT INTO #EMPHR2_EDIT
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO 
+			WHERE emp_effectiveuntil IS NULL
+		END
+		-- End of Rev 4.0
 
 		SELECT '0' AS UserId,'Select' AS UserName
 		UNION ALL
