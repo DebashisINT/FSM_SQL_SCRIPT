@@ -42,6 +42,12 @@ AS
 	6.0		15-02-2023		Sanchita	A setting required for Employee and User Master module in FSM Portal. Refer: 25668
 	7.0		18-04-2023		Sanchita	V2.0.38		Report To not showing in Employee Master when Show button is clicked selecting any Employee. 
 													Refer: 25841
+	8.0		01-02-2024		Sanchita	V2.0.45		Employee master is taking too much time to populate in Hello Apps. Mantis 27214
+													After analysis it was found that the Index of table TBL_MASTER_EMPLOYEE got corrupted.
+													On running Rebuild Indexes for table TBL_MASTER_EMPLOYEE from SQL Server, the problem got solved.
+													To avoid this Index corruption, the TEMP table #TEMPMASTEREMPLOYEE will be used 
+													instead of TBL_MASTER_EMPLOYEE. 
+													All places where TBL_MASTER_EMPLOYEE was used now replaced by #TEMPMASTEREMPLOYEE in this SP.
 ***************************************************************************************************************************************/
 BEGIN
   Declare @DSql nVarchar(Max),@DSql1 nVarchar(Max), @DSql_SearchBy nVarchar(2000)
@@ -161,6 +167,24 @@ BEGIN
     if(@FindOption=0) Set @DSql_SearchBy=@DSql_SearchBy+'like '''+@SearchString+'%'''
     else Set @DSql_SearchBy=@DSql_SearchBy+'='''+@SearchString+''''
   End
+
+  -- Rev 8.0
+  IF OBJECT_ID('tempdb..#TEMPMASTEREMPLOYEE') IS NOT NULL
+		DROP TABLE #TEMPMASTEREMPLOYEE
+	CREATE TABLE #TEMPMASTEREMPLOYEE
+		(
+			emp_id NUMERIC(18,0) ,
+			emp_contactId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			emp_uniqueCode NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			emp_dateofJoining DATETIME NULL,
+			cnt_OtherID NVARCHAR(300) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+			emp_dateofLeaving DATETIME
+		)
+	CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPMASTEREMPLOYEE(emp_contactId ASC)
+
+	INSERT INTO #TEMPMASTEREMPLOYEE
+	SELECT emp_id, emp_contactId, emp_uniqueCode, emp_dateofJoining, cnt_OtherID, emp_dateofLeaving FROM TBL_MASTER_EMPLOYEE
+  -- End of Rev 8.0
 
   /*REV 2.0 start*/
   --Find All Email Ids And Insert into #Email Table WithOut Repeating ContactID
@@ -287,7 +311,7 @@ BEGIN
 	, CTC.cmp_Name Company,CTC.emp_organization OrganizationID,Ltrim(Rtrim(eml.eml_email)) Email_Ids
 	,Ltrim(Rtrim(phf.phf_phoneNumber)) PhoneMobile_Numbers,femrel_memberName FatherName,crg_Number PanCardNumber,a.cnt_OtherID
 	,CTC.AdditionalReportingHead as AdditionalReportingHead,CTC.Colleague as Colleague,CTC.Colleague1 as Colleague1,CTC.Colleague2 as Colleague2
-	From tbl_master_employee a WITH (NOLOCK) 
+	From #TEMPMASTEREMPLOYEE a WITH (NOLOCK) 
 	INNER JOIN #TEMPCONTACT b WITH (NOLOCK) ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM'' '
 	-- Rev 7.0
 	IF (@Employees <>'')
@@ -315,16 +339,16 @@ BEGIN
 
 		,EMPCTC.emp_reportTo,DESG.deg_designation ,EMPCTC.emp_designation ,EMPCTC.emp_organization,
 		EMPCTC.emp_cntId,CNT.cnt_internalId,DESG.deg_designation AS RPTTODESG ,desg.cmp_Name
-		FROM tbl_master_employee EMP WITH (NOLOCK) 
+		FROM #TEMPMASTEREMPLOYEE EMP WITH (NOLOCK) 
 		INNER JOIN tbl_trans_employeeCTC EMPCTC WITH (NOLOCK) ON EMP.emp_id=EMPCTC.emp_reportTo 
 
-		LEFT JOIN tbl_master_employee DeputyEMP WITH (NOLOCK) on EMPCTC.emp_deputy=DeputyEMP.emp_id
+		LEFT JOIN #TEMPMASTEREMPLOYEE DeputyEMP WITH (NOLOCK) on EMPCTC.emp_deputy=DeputyEMP.emp_id
 		LEFT JOIN #TEMPCONTACT DeputyCNT WITH (NOLOCK) ON DeputyEMP.emp_contactId=DeputyCNT.cnt_internalId and DeputyCNT.cnt_contactType=''EM''
-		LEFT JOIN tbl_master_employee ColleagueEMP WITH (NOLOCK) on EMPCTC.emp_colleague=ColleagueEMP.emp_id
+		LEFT JOIN #TEMPMASTEREMPLOYEE ColleagueEMP WITH (NOLOCK) on EMPCTC.emp_colleague=ColleagueEMP.emp_id
 		LEFT JOIN #TEMPCONTACT ColleagueCNT WITH (NOLOCK) ON ColleagueEMP.emp_contactId=ColleagueCNT.cnt_internalId and ColleagueCNT.cnt_contactType=''EM''
-		LEFT JOIN tbl_master_employee Colleague1EMP WITH (NOLOCK) on EMPCTC.emp_colleague1=Colleague1EMP.emp_id
+		LEFT JOIN #TEMPMASTEREMPLOYEE Colleague1EMP WITH (NOLOCK) on EMPCTC.emp_colleague1=Colleague1EMP.emp_id
 		LEFT JOIN #TEMPCONTACT Colleague1CNT WITH (NOLOCK) ON Colleague1EMP.emp_contactId=Colleague1CNT.cnt_internalId and Colleague1CNT.cnt_contactType=''EM''
-		LEFT JOIN tbl_master_employee Colleague2EMP WITH (NOLOCK) on EMPCTC.emp_colleague2=Colleague2EMP.emp_id
+		LEFT JOIN #TEMPMASTEREMPLOYEE Colleague2EMP WITH (NOLOCK) on EMPCTC.emp_colleague2=Colleague2EMP.emp_id
 		LEFT JOIN #TEMPCONTACT Colleague2CNT WITH (NOLOCK) ON Colleague2EMP.emp_contactId=Colleague2CNT.cnt_internalId and Colleague2CNT.cnt_contactType=''EM''
 
 		INNER JOIN #TEMPCONTACT CNT WITH(NOLOCK) ON CNT.cnt_internalId=EMP.emp_contactId and CNT.cnt_contactType=''EM'' '
@@ -585,3 +609,4 @@ BEGIN
   
   
 End
+go
