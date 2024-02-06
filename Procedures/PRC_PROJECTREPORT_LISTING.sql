@@ -57,6 +57,7 @@ AS
     3.0		Sanchita	V2.0.43		On demand search is required in Product Master & Projection Entry. Mantis : 26858		
 	4.0		Sanchita	V2.0.43		Project & Projection entry report should show the data based on the settings. Mantis: 26987
 	5.0		Sanchita	V2.0.45		PROJECT & PROJECTION ENTRY: Filter- Completed project drop-down data is not showing user-wise :-Eurobond. Mantis: 27210
+	6.0		Sanchita	V2.0.45		Project name will be auto loaded after selecting the customer in Project & Projection report. Mantis: 27222
 *************************************************************************************************************************************/
 BEGIN
 
@@ -717,6 +718,9 @@ BEGIN
 	IF(@ACTION = 'CustomerNameSearch')
 	BEGIN
 		select top 10 Shop_Code, Shop_Name from tbl_Master_shop where type<>999 and Shop_CreateUser=@USERID
+		-- Rev 6.0
+		and trim(Project_Name)<>''
+		-- End of Rev 6.0
 		AND Shop_Name LIKE '%'+@SearchKey+'%'
 		order by Shop_Code
 	END
@@ -731,5 +735,13 @@ BEGIN
 
 	END
 	-- End of Rev 3.0
+	-- Rev 6.0
+	IF(@ACTION = 'GetProjectName')
+	BEGIN
+
+		select top 1 Project_Name from tbl_master_shop S where project_name is not null and project_name<>'' and Shop_Code=@Shop_Code 
+
+	end
+	-- End of Rev 6.0
 END
 GO
