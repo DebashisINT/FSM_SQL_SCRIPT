@@ -196,7 +196,8 @@ BEGIN
 	174.0		Debashis	20-12-2023	ADD SETTINGS @Action=UserCheck'	IsCallLogHistoryActivated.Row 887
 	175.0		Debashis	22-12-2023	ADD SETTINGS @Action=UserCheck'	IsAllDataInPortalwithHeirarchy.Row 890
 	176.0		Debashis	22-12-2023	ADD SETTINGS @Action=GlobalCheck'	IsGPSRouteSync & IsSyncBellNotificationInApp.Row 891
-	177.0		Debashis	05-01-2023	ADD SETTINGS @Action=GlobalCheck'	IsShowCustomerLocationShare.Row 899 & Refer: 0027139
+	177.0		Debashis	05-01-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowCustomerLocationShare.Row 899 & Refer: 0027139
+	178.0		Debashis	20-02-2024	ADD SETTINGS @Action=GlobalCheck'	AdditionalInfoRequiredForTimelines.Row 900 & Refer: 0027245
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -451,6 +452,9 @@ BEGIN
 	--Rev 177.0
 	,@IsShowCustomerLocationShare BIT
 	--End of Rev 177.0
+	--Rev 178.0
+	,@AdditionalInfoRequiredForTimelines BIT
+	--End of Rev 178.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -756,6 +760,9 @@ BEGIN
 		--Rev 177.0
 		SET @IsShowCustomerLocationShare =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowCustomerLocationShare' AND IsActive=1)
 		--End of Rev 177.0
+		--Rev 178.0
+		SET @AdditionalInfoRequiredForTimelines =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='AdditionalInfoRequiredForTimelines' AND IsActive=1)
+		--End of Rev 178.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1040,6 +1047,9 @@ BEGIN
 			--Rev 177.0
 			,@IsShowCustomerLocationShare AS IsShowCustomerLocationShare
 			--End of Rev 177.0
+			--Rev 178.0
+			,@AdditionalInfoRequiredForTimelines AS AdditionalInfoRequiredForTimelines
+			--End of Rev 178.0
 	END
 
 	else if(@Action='UserCheck')
