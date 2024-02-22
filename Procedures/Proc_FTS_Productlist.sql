@@ -12,11 +12,13 @@ ALTER PROCEDURE  [dbo].[Proc_FTS_Productlist]
 @last_updated_date NVARCHAR(50)=NULL
 ) --WITH ENCRYPTION
 AS
-/***************************************************************************************************************
+/************************************************************************************************************************************************************************************************************
 1.0					20-11-2020		Tanmoy		null value check in watt
 2.0		v2.0.37		07-12-2022		Debashis	A new field added.Row: 773
 3.0		v2.0.37		12-12-2022		Debashis	A new field added.Row: 777
-***************************************************************************************************************/
+4.0		v2.0.44		22-02-2024		Debashis	In the application, the dormant stated Products are showing in the order page.
+												Now it has been taken care of.Refer: 0027270
+************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
@@ -25,16 +27,25 @@ BEGIN
 
 	IF(isnull(@last_updated_date,'') <>'')
 		BEGIN
+			--Rev 4.0
+			--IF EXISTS(SELECT sProducts_Code FROM Master_sProducts WHERE (CAST(sProducts_CreateTime AS DATE)=CAST(@last_updated_date AS DATE) 
+			--OR CAST(sProducts_ModifyTime AS DATE)=CAST(@last_updated_date AS DATE)))
 			IF EXISTS(SELECT sProducts_Code FROM Master_sProducts WHERE (CAST(sProducts_CreateTime AS DATE)=CAST(@last_updated_date AS DATE) 
-			OR CAST(sProducts_ModifyTime AS DATE)=CAST(@last_updated_date AS DATE)))
+			OR CAST(sProducts_ModifyTime AS DATE)=CAST(@last_updated_date AS DATE)) AND sProduct_Status<>'D')
+			--End of Rev 4.0
 				SET @sqlfetch='1'
 			ELSE
 				SET @sqlfetch='0'
 		END
 
 	SET @sql='SELECT COUNT(0) FROM Master_sProducts AS masprod '
+	--Rev 4.0
+	--IF(@sqlfetch='0')
+	--	SET @sql +='WHERE CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE)'
+	SET @sql +='WHERE masprod.sProduct_Status<>''D'' '
 	IF(@sqlfetch='0')
-		SET @sql +='WHERE CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE)'
+		SET @sql +='AND CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE) '
+	--End of Rev 4.0
 	EXEC sp_ExecuteSQL @sql 
 
 	--Rev 2.0 &&A new field sProduct_MRP is added
@@ -46,10 +57,15 @@ BEGIN
 	INNER JOIN tbl_master_brand brnd ON masprod.sProducts_Brand=brnd.Brand_Id 
 	INNER JOIN Master_ProductClass AS cls ON masprod.ProductClass_Code=cls.ProductClass_ID
 	LEFT OUTER JOIN Master_Size AS msize ON masprod.sProducts_Size=msize.Size_ID '
-
+	--Rev 4.0
+	--IF(@sqlfetch='0')
+	--	SET @sql +='WHERE CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE)'
+	SET @sql +='WHERE masprod.sProduct_Status<>''D'' '
 	IF(@sqlfetch='0')
-		SET @sql +='WHERE CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE)'
+		SET @sql +='AND CAST(sProducts_CreateTime AS DATE)=CAST('''+@last_updated_date+''' AS DATE) '
+	--End of Rev 4.0
 	EXEC sp_ExecuteSQL @sql
 
 	SET NOCOUNT OFF
 END
+GO
