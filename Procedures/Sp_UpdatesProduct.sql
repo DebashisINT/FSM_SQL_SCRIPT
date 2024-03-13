@@ -86,6 +86,7 @@ Written By : Jitendra on 10/01/2018
 															Refer: 24299
 3.0		Sanchita			v2.0.37			02-12-2022		MRP' and Discount' entering facility required in Product Master. Refer: 25469, 25470
 4.0		Sanchita			V2.0.38			20-01-2023		Need to increase the length of the Description field of Product Master. Refer: 25603
+5.0		Sanchita			V2.0.46			13-03-2024		FSM Product Master - Search, Filter not working. mantis: 27307
 ***************************************************************************************************/ 
 BEGIN
 
@@ -243,6 +244,29 @@ BEGIN
 		--	VALUES(@ProductId,@ProductGenderNew,@ModifyUser,SYSDATETIME())
 	END
 	-- End of Rev 2.0
+
+	-- Rev 5.0
+	IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FSMProduct_Master') AND TYPE IN (N'U'))
+	BEGIN
+		DELETE FROM FSMProduct_Master WHERE sProducts_ID=@ProductId
+		
+		insert into FSMProduct_Master
+		SELECT @ModifyUser ,MP.sProducts_ID ,MP.sProducts_Code ,MP.sProducts_Name ,MP.sProducts_Description ,MP.sProducts_Type ,
+		CASE WHEN MP.sProducts_Type ='A' THEN 'Raw Material' WHEN MP.sProducts_Type ='B' THEN 'Work-In-Process' WHEN  MP.sProducts_Type ='C' THEN 'Finished Goods' END AS sProducts_TypeFull 
+		,MP.ProductClass_Code ,MPC.ProductClass_Name ,MP.sProducts_GlobalCode,MP.sProducts_TradingLot, MP.sProducts_TradingLotUnit,MP.sProducts_QuoteCurrency ,MP.sProducts_QuoteLot, 
+		MP.sProducts_QuoteLotUnit, MP.sProducts_DeliveryLot, MP.sProducts_DeliveryLotUnit ,MP.sProducts_Color ,MP.sProducts_Size,MP.sProducts_CreateUser ,MP.sProducts_CreateTime
+		,MP.sProducts_ModifyUser ,MP.sProducts_ModifyTime ,case ISNULL(MP.sProducts_HsnCode,'')when '' then ISNULL(SERVICE_CATEGORY_CODE,'')else MP.sProducts_HsnCode end  HSNCODE 
+		,Brand_Name ,case sProduct_IsInventory when 1 then 'Yes' else 'No' end sProduct_IsInventory 
+		,case Is_ServiceItem when 1 then 'Yes' else 'No' end Is_ServiceItem ,case sProduct_IsCapitalGoods  when 1 then 'Yes' else 'No' end sProduct_IsCapitalGoods 
+		,sInv_MainAccount,sRet_MainAccount,pInv_MainAccount,pRet_MainAccount 
+		FROM Master_sProducts MP 
+		left join Master_ProductClass MPC 
+		on MP.ProductClass_Code=MPC.ProductClass_ID  left outer join TBL_MASTER_SERVICE_TAX sac on 
+		MP.sProducts_serviceTax=sac.TAX_ID 
+		left outer join tbl_master_brand brand on MP.sProducts_Brand=brand.Brand_Id 
+		where MP.sProducts_ID = @ProductId
+	END
+	-- End of Rev 5.0
 
 	---Update tbl_trans_ProductTaxRate table with respect to new scheme
 	 
