@@ -198,6 +198,8 @@ BEGIN
 	176.0		Debashis	22-12-2023	ADD SETTINGS @Action=GlobalCheck'	IsGPSRouteSync & IsSyncBellNotificationInApp.Row 891
 	177.0		Debashis	05-01-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowCustomerLocationShare.Row 899 & Refer: 0027139
 	178.0		Debashis	20-02-2024	ADD SETTINGS @Action=GlobalCheck'	AdditionalInfoRequiredForTimelines.Row 900 & Refer: 0027245
+	179.0		Debashis	14-03-2024	ADD SETTINGS @Action=GlobalCheck'	ShowPartyWithGeoFence,ShowPartyWithCreateOrder & Allow_past_days_for_apply_reimbursement.
+																			Row 901 & Refer: 0027279,0027285 & 0027282
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -455,6 +457,11 @@ BEGIN
 	--Rev 178.0
 	,@AdditionalInfoRequiredForTimelines BIT
 	--End of Rev 178.0
+	--Rev 179.0
+	,@ShowPartyWithGeoFence BIT
+	,@ShowPartyWithCreateOrder BIT
+	,@Allow_past_days_for_apply_reimbursement BIT
+	--End of Rev 179.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -763,6 +770,11 @@ BEGIN
 		--Rev 178.0
 		SET @AdditionalInfoRequiredForTimelines =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='AdditionalInfoRequiredForTimelines' AND IsActive=1)
 		--End of Rev 178.0
+		--Rev 179.0
+		SET @ShowPartyWithGeoFence =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowPartyWithGeoFence' AND IsActive=1)
+		SET @ShowPartyWithCreateOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowPartyWithCreateOrder' AND IsActive=1)
+		SET @Allow_past_days_for_apply_reimbursement =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Allow_past_days_for_apply_reimbursement' AND IsActive=1)
+		--End of Rev 179.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1050,6 +1062,11 @@ BEGIN
 			--Rev 178.0
 			,@AdditionalInfoRequiredForTimelines AS AdditionalInfoRequiredForTimelines
 			--End of Rev 178.0
+			--Rev 179.0
+			,@ShowPartyWithGeoFence AS ShowPartyWithGeoFence
+			,@ShowPartyWithCreateOrder AS ShowPartyWithCreateOrder
+			,@Allow_past_days_for_apply_reimbursement AS Allow_past_days_for_apply_reimbursement
+			--End of Rev 179.0
 	END
 
 	else if(@Action='UserCheck')
