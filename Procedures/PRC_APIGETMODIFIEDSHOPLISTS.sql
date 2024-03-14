@@ -16,6 +16,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 02/02/2023
 Module	   : Modify mutiple Shop & their lists.Refer: Row:810 to 811
+1.0		v2.0.45		Debashis	14/03/2024		A new Action has been implemented.Row: 902 & Refer: 0027309
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -68,7 +69,7 @@ BEGIN
 			AND shop.Shop_CreateUser=@user_id)
 			BEGIN
 				UPDATE shop SET IsShopModified=0
-				FROM tbl_Master_shop shop
+				FROM tbl_Master_shop shop WITH(NOLOCK)
 				INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 				ON shop.SHOP_CODE=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)') AND shop.Shop_CreateUser=@user_id
 
@@ -79,6 +80,24 @@ BEGIN
 				INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
 			END
 		END
+	--Rev 1.0
+	IF @ACTION='SHOPADDRESSEDIT'
+		BEGIN
+			UPDATE MS SET Shop_Lat=XMLproduct.value('(shop_updated_lat/text())[1]','NVARCHAR(500)'),
+			Shop_Long=XMLproduct.value('(shop_updated_long/text())[1]','NVARCHAR(500)'),
+			[Address]=XMLproduct.value('(shop_updated_address/text())[1]','NVARCHAR(500)')
+			FROM tbl_Master_shop MS WITH(NOLOCK)
+			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
+			ON MS.Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND MS.Shop_CreateUser=@USER_ID
+
+			SELECT DISTINCT @user_id,
+			XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
+			'Success' AS STRMESSAGE
+			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+			INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
+		END
+	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END
+GO
