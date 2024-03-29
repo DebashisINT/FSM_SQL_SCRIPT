@@ -15,7 +15,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSTEAMVISITATTENDANCE_FETCH_AUTOMAIL]
 @EMPID NVARCHAR(MAX)=NULL,
 @CHANNELID NVARCHAR(MAX)=NULL,
 @USERID INT
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 04/03/2022
@@ -285,3 +285,4 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
+GO
