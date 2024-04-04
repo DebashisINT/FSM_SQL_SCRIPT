@@ -38,6 +38,7 @@ Module	   : ITC Shop Visit & Syncronization.Refer: 0025362,0025375 & Row:748
 11.0	v2.0.41		Debashis	15/07/2023		Optimized Shopsubmission/ITCShopVisited API data sync.Refer: 0026583
 12.0	v2.0.43		Debashis	11/12/2023		Data Sync has been moved to FSM_ITC_MIRROR DB.Refer: 0027094
 13.0	v2.0.42		Debashis	12/12/2023		Duration spent values getting updated wrongly.Refer: 0027098
+14.0	v2.0.45		Debashis	03/04/2024		Some new fields have been added.Row: 915
 ****************************************************************************************************************************************************************************/
 BEGIN
 	--Rev 5.0
@@ -156,14 +157,15 @@ BEGIN
 			IF OBJECT_ID('tempdb..#TEMP_TABLE') IS NOT NULL
 				DROP TABLE #TEMP_TABLE
 
+			--Rev 14.0 && Added some fields as SHOP_LAT,SHOP_LONG & SHOP_ADDRESS
 			CREATE TABLE #TEMP_TABLE
 			([User_Id] BIGINT,[Shop_Id] NVARCHAR(100),visited_date DATE,visited_time DATETIME,spent_duration NVARCHAR(100),total_visit_count INT,Createddate DATETIME,Is_Newshopadd BIT,
 			distance_travelled DECIMAL(18,2),IsFirstVisit BIT,device_model NVARCHAR(200),android_version NVARCHAR(200),battery NVARCHAR(200),net_status NVARCHAR(200),net_type NVARCHAR(200),
-			start_timestamp NVARCHAR(200))
+			start_timestamp NVARCHAR(200),SHOP_LAT NVARCHAR(50),SHOP_LONG NVARCHAR(50),SHOP_ADDRESS NVARCHAR(500))
 			CREATE NONCLUSTERED INDEX IX1 ON #TEMP_TABLE(Shop_Id ASC,visited_date ASC)
 
 			INSERT INTO #TEMP_TABLE([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,
-			device_model,android_version,battery,net_status,net_type,start_timestamp)			
+			device_model,android_version,battery,net_status,net_type,start_timestamp,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS)			
 
 			SELECT DISTINCT @user_id,
 			XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
@@ -180,7 +182,12 @@ BEGIN
 			XMLproduct.value('(battery/text())[1]','NVARCHAR(100)'),
 			XMLproduct.value('(net_status/text())[1]','NVARCHAR(100)'),
 			XMLproduct.value('(net_type/text())[1]','NVARCHAR(100)'),
-			XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)')
+			XMLproduct.value('(start_timestamp/text())[1]','NVARCHAR(100)'),
+			--Rev 14.0
+			XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)'),
+			XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)'),
+			XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+			--End of Rev 14.0
 			FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 			INNER JOIN tbl_Master_shop WITH(NOLOCK) ON Shop_Code=XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)')
 			--Rev 12.0
@@ -243,8 +250,10 @@ BEGIN
 					--Rev 12.0
 					--INSERT INTO Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
 					--IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
+
+					--Rev 14.0 && Added some fields as SHOP_LAT,SHOP_LONG & SHOP_ADDRESS
 					INSERT INTO [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
-					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp)
+					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS)
 					--End of Rev 12.0
 
 					SELECT [User_Id],[Shop_Id],visited_date,visited_time,
@@ -253,7 +262,10 @@ BEGIN
 					CASE WHEN spent_duration>'23:59:59' THEN '23:59:59' ELSE spent_duration END AS spent_duration,
 					--End of Rev 13.0
 					total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
-					android_version,battery,net_status,net_type,start_timestamp
+					android_version,battery,net_status,net_type,start_timestamp,
+					--Rev 14.0
+					SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+					--End of Rev 14.0
 					FROM #TEMP_TABLE
 					ORDER BY [User_Id]
 					OFFSET 0 ROWS

@@ -34,11 +34,11 @@ BEGIN
 	--DECLARE @SQLEXC NVARCHAR(500)
 	DECLARE @SQLEXC NVARCHAR(MAX)
 	--End of Rev 6.0
-	select @DDSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowStateWiseAllDD'
-	select @PPSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowAllPP'
-	select @AllDDSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowAllDD'
+	SELECT @DDSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowStateWiseAllDD'
+	SELECT @PPSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowAllPP'
+	SELECT @AllDDSHOW=[Value] from FTS_APP_CONFIG_SETTINGS where [Key]='isShowAllDD'
 	
-	if(@Action='PP')
+	IF(@Action='PP')
 		BEGIN
 		SET @SQLEXC=' '
 			--SET @SQLEXC +='select  Shop_Code as assigned_to_pp_id ,Shop_Name as assigned_to_pp_authorizer_name,Shop_Owner_Contact as phn_no  from tbl_Master_shop   '
@@ -66,7 +66,7 @@ BEGIN
 			 order by Shop_Name
 			
 		END
-	else if(@Action='DD')
+	ELSE IF(@Action='DD')
 		BEGIN
 			--Rev 5.0 && Added two new columns as Shop_Lat & Shop_Long
 			--Rev 8.0 && Added a new column as Address
@@ -98,8 +98,9 @@ BEGIN
 			exec sp_sqlexec @SQLEXC
 			--select @SQLEXC
 		END
-	else if(@Action='Shop')
+	ELSE IF(@Action='Shop')
 		BEGIN
+			--Rev Debashis
 			SET @SQLEXC='select  Shop_Code as assigned_to_shop_id , Shop_Name as name ,Shop_Owner_Contact as phn_no,
 			CASE WHEN ISNULL(convert(varchar(10),retailer_id),'''')=''0'' THEN '''' ELSE ISNULL(convert(varchar(10),retailer_id),'''') end type_id  from tbl_Master_shop WITH(NOLOCK) '
 			SET @SQLEXC +='where type=1 '
@@ -110,8 +111,21 @@ BEGIN
 			--End of Rev 7.0
 			SET @SQLEXC +=' order by Shop_Name  '
 
-			exec sp_sqlexec @SQLEXC
+			--SELECT Shop_Code,Shop_Name,Shop_Owner_Contact,type,Shop_CreateUser,retailer_id INTO #TMPSHOPMAST FROM tbl_Master_shop WITH(NOLOCK)
+			--WHERE type=1
+
+			--SET @SQLEXC='SELECT Shop_Code AS assigned_to_shop_id,Shop_Name AS name,Shop_Owner_Contact AS phn_no,
+			--CASE WHEN ISNULL(CONVERT(NVARCHAR(10),retailer_id),'''')=''0'' THEN '''' ELSE ISNULL(CONVERT(NVARCHAR(10),retailer_id),'''') END type_id FROM #TMPSHOPMAST WITH(NOLOCK) '
+			--SET @SQLEXC+='WHERE type=1 AND CONVERT(NVARCHAR(10),Shop_CreateUser)='''+TRIM(STR(@user_id))+''' '
+			--SET @SQLEXC+='ORDER BY Shop_Name  '
+			--End of Rev Debashis
+
+			EXEC sp_sqlexec @SQLEXC
 		END
+	--Rev Debashis
+	--IF(@Action='Shop')
+	--	DROP TABLE #TMPSHOPMAST
+	--End of Rev Debashis
 
 	SET NOCOUNT OFF
 END

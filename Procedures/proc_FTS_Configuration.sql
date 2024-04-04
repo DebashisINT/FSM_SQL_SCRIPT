@@ -200,6 +200,8 @@ BEGIN
 	178.0		Debashis	20-02-2024	ADD SETTINGS @Action=GlobalCheck'	AdditionalInfoRequiredForTimelines.Row 900 & Refer: 0027245
 	179.0		Debashis	14-03-2024	ADD SETTINGS @Action=GlobalCheck'	ShowPartyWithGeoFence,ShowPartyWithCreateOrder & Allow_past_days_for_apply_reimbursement.
 																			Row 901 & Refer: 0027279,0027285 & 0027282
+	180.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	loc_k & firebase_k.Row 903
+	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -460,8 +462,15 @@ BEGIN
 	--Rev 179.0
 	,@ShowPartyWithGeoFence BIT
 	,@ShowPartyWithCreateOrder BIT
-	,@Allow_past_days_for_apply_reimbursement BIT
+	,@Allow_past_days_for_apply_reimbursement NVARCHAR(200)
 	--End of Rev 179.0
+	--Rev 180.0
+	,@loc_k NVARCHAR(200)
+	,@firebase_k NVARCHAR(200)
+	--End of Rev 180.0
+	--Rev 181.0
+	,@IsShowLeaderBoard BIT
+	--End of Rev 181.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -775,6 +784,13 @@ BEGIN
 		SET @ShowPartyWithCreateOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowPartyWithCreateOrder' AND IsActive=1)
 		SET @Allow_past_days_for_apply_reimbursement =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='Allow_past_days_for_apply_reimbursement' AND IsActive=1)
 		--End of Rev 179.0
+		--Rev 180.0
+		SET @loc_k =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='loc_k' AND IsActive=1)
+		SET @firebase_k =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='firebase_k' AND IsActive=1)
+		--End of Rev 180.0
+		--Rev 181.0
+		SET @IsShowLeaderBoard =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowLeaderBoard' AND IsActive=1)
+		--End of Rev 181.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1067,6 +1083,13 @@ BEGIN
 			,@ShowPartyWithCreateOrder AS ShowPartyWithCreateOrder
 			,@Allow_past_days_for_apply_reimbursement AS Allow_past_days_for_apply_reimbursement
 			--End of Rev 179.0
+			--Rev 180.0
+			,@loc_k AS loc_k
+			,@firebase_k AS firebase_k
+			--End of Rev 180.0
+			--Rev 181.0
+			,@IsShowLeaderBoard AS IsShowLeaderBoard
+			--End of Rev 181.0
 	END
 
 	else if(@Action='UserCheck')
