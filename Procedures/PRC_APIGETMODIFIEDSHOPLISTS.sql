@@ -17,6 +17,7 @@ AS
 Written by : Debashis Talukder ON 02/02/2023
 Module	   : Modify mutiple Shop & their lists.Refer: Row:810 to 811
 1.0		v2.0.45		Debashis	14/03/2024		A new Action has been implemented.Row: 902 & Refer: 0027309
+2.0		v2.0.45		Debashis	03/04/2024		A new field has been added.Row: 914
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -85,7 +86,10 @@ BEGIN
 		BEGIN
 			UPDATE MS SET Shop_Lat=XMLproduct.value('(shop_updated_lat/text())[1]','NVARCHAR(500)'),
 			Shop_Long=XMLproduct.value('(shop_updated_long/text())[1]','NVARCHAR(500)'),
-			[Address]=XMLproduct.value('(shop_updated_address/text())[1]','NVARCHAR(500)')
+			[Address]=XMLproduct.value('(shop_updated_address/text())[1]','NVARCHAR(500)'),
+			--Rev 2.0
+			Pincode=XMLproduct.value('(pincode/text())[1]','NVARCHAR(100)')
+			--End of Rev 2.0
 			FROM tbl_Master_shop MS WITH(NOLOCK)
 			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 			ON MS.Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND MS.Shop_CreateUser=@USER_ID

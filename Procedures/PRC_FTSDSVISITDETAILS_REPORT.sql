@@ -33,6 +33,8 @@ Module	   : Employee DS Visit Details.Refer: 0024868
 												Refer: 0026474
 7.0		v2.0.41		Debashis	09-08-2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 8.0		v2.0.44		Debashis	27/02/2024		'Sale Value' Field required in DS Visit Details/DS Visit Summary.Refer: 0027276
+9.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
+												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -377,7 +379,10 @@ BEGIN
 			--End of Rev 4.0
 			--Rev 6.0
 			SET @SqlStr+='CASE WHEN DAYSTARTEND.DAYSTTIME<>'''' OR DAYSTARTEND.DAYSTTIME IS NOT NULL THEN 1 ELSE 0 END AS ATTENDANCE,'
-			SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+			--Rev 9.0
+			--SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+			SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+			--End of Rev 9.0
 			SET @SqlStr+='(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 			SET @SqlStr+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT))>=240 '
 			SET @SqlStr+='THEN 1 ELSE 0 END AS QUALIFIEDPRESENT,'

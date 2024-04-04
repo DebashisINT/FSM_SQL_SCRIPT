@@ -34,6 +34,7 @@ AS
 11.0	v2.0.37		Debashis	21-04-2023		Added two new fields as DistFromProfileAddrKms & StationCode.Row: 820
 12.0	v2.0.40		Debashis	10-07-2023		After revisit a shop Last Visit Time is getting updated as '00:00:00' in shop master table.Now it has been taken care of.
 												Refer: 0026541
+13.0	v2.0.45		Debashis	03/04/2024		Some new fields have been added.Row: 915
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -70,6 +71,9 @@ BEGIN
 					 --Rev 11.0
 					 ,DistFromProfileAddrKms,StationCode
 					 --End of Rev 11.0
+					 --Rev 13.0
+					 ,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+					 --End of Rev 13.0
 					 )
 	
 					SELECT DISTINCT @user_id,
@@ -91,8 +95,7 @@ BEGIN
 					,
 					case when XMLproduct.value('(isFirstShopVisited/text())[1]','varchar(40)')='true' then  1 else 0 end	,
 					case when XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')>=@OUTSTATION_DISTANCE	 then  1 else 0 end,
-					XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)')	,
-
+					XMLproduct.value('(distanceFromHomeLoc/text())[1]','decimal(18,2)'),
 					--Rev 2.0 End
 					XMLproduct.value('(early_revisit_reason/text())[1]','varchar(100)')
 					,XMLproduct.value('(device_model/text())[1]','varchar(100)')
@@ -121,7 +124,11 @@ BEGIN
 					,XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
 					,XMLproduct.value('(stationCode/text())[1]','int')
 					--End of Rev 11.0
-
+					--Rev 13.0
+					,XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+					,XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+					,XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+					--End of Rev 13.0
 					from
 					@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					inner join tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
@@ -160,6 +167,11 @@ BEGIN
 					,DistFromProfileAddrKms=XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
 					,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
 					--End of Rev 11.0
+					--Rev 13.0
+					,SHOP_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+					,SHOP_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+					,SHOP_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+					--End of Rev 13.0
 					from tbl_trans_shopActivitysubmit TTSAS
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
 					ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)')	 and visited_date=XMLproduct.value('(visited_date/text())[1]','date')
@@ -181,6 +193,9 @@ BEGIN
 							--Rev 11.0
 							,DistFromProfileAddrKms,StationCode
 							--End of Rev 11.0
+							--Rev 13.0
+							 ,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+							 --End of Rev 13.0
 							)
 	
 							SELECT DISTINCT @user_id,
@@ -223,6 +238,11 @@ BEGIN
 							,XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
 							,XMLproduct.value('(stationCode/text())[1]','int')
 							--End of Rev 11.0
+							--Rev 13.0
+							,XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+							,XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+							,XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+							--End of Rev 13.0
 							from
 							@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 							INNER JOIN tbl_Master_shop on Shop_Code=XMLproduct.value('(shop_id/text())[1]','nvarchar(MAX)')	
@@ -262,6 +282,11 @@ BEGIN
 							,DistFromProfileAddrKms=XMLproduct.value('(distFromProfileAddrKms/text())[1]','decimal(18,2)')
 							,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
 							--End of Rev 11.0
+							--Rev 13.0
+							,SHOP_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+							,SHOP_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+							,SHOP_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+							--End of Rev 13.0
 							from tbl_trans_shopActivitysubmit TTSAS
 							INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
 							ON shop_id=XMLproduct.value('(shop_id/text())[1]','nvarchar(100)') AND visited_date=XMLproduct.value('(visited_date/text())[1]','date')
@@ -326,3 +351,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO

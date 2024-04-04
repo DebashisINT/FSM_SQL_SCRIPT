@@ -22,6 +22,8 @@ Written by : Debashis Talukder ON 05/11/2022
 Module	   : Qualified Attendance Report.Refer: 0025416
 1.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
 2.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
+3.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
+												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -201,7 +203,10 @@ BEGIN
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
 	SET @SqlStr+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC,USR.user_loginId AS CONTACTNO,ST.ID AS STATEID,ST.state AS STATE,DESG.DEG_ID,DESG.deg_designation AS DESIGNATION,'
 	SET @SqlStr+='CONVERT(NVARCHAR(10),EMP.emp_dateofJoining,105) AS DATEOFJOINING,RPTTO.REPORTTOID,RPTTO.REPORTTOUID,RPTTO.REPORTTO,RPTTO.RPTTODESG,STG.Stage AS DSTYPE,CH.CH_ID,CH.CHANNEL,'
-	SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+	--Rev 3.0
+	--SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+	SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
+	--End of Rev 3.0
 	SET @SqlStr+='(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
 	SET @SqlStr+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYSTTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT))>=240 '
 	SET @SqlStr+='THEN 1 ELSE 0 END AS PRESENTABSENT '
@@ -267,3 +272,4 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
+GO
