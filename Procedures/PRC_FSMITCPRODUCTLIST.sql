@@ -21,7 +21,7 @@ BEGIN
 
 	IF @ACTION='GETPRODUCTLISTS'
 		BEGIN
-			SELECT TOP 10 sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,PCLS.ProductClass_Name AS category_name,
+			SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,PCLS.ProductClass_Name AS category_name,
 			sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name
 			FROM Master_sProducts AS MP
 			INNER JOIN tbl_master_brand BRND ON MP.sProducts_Brand=BRND.Brand_Id

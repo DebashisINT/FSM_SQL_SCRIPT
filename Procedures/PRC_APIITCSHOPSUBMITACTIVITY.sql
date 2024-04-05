@@ -157,15 +157,15 @@ BEGIN
 			IF OBJECT_ID('tempdb..#TEMP_TABLE') IS NOT NULL
 				DROP TABLE #TEMP_TABLE
 
-			--Rev 14.0 && Added some fields as SHOP_LAT,SHOP_LONG & SHOP_ADDRESS
+			--Rev 14.0 && Added some fields as SHOPACT_LAT,SHOPACT_LONG & SHOPACT_ADDRESS
 			CREATE TABLE #TEMP_TABLE
 			([User_Id] BIGINT,[Shop_Id] NVARCHAR(100),visited_date DATE,visited_time DATETIME,spent_duration NVARCHAR(100),total_visit_count INT,Createddate DATETIME,Is_Newshopadd BIT,
 			distance_travelled DECIMAL(18,2),IsFirstVisit BIT,device_model NVARCHAR(200),android_version NVARCHAR(200),battery NVARCHAR(200),net_status NVARCHAR(200),net_type NVARCHAR(200),
-			start_timestamp NVARCHAR(200),SHOP_LAT NVARCHAR(50),SHOP_LONG NVARCHAR(50),SHOP_ADDRESS NVARCHAR(500))
+			start_timestamp NVARCHAR(200),SHOPACT_LAT NVARCHAR(50),SHOPACT_LONG NVARCHAR(50),SHOPACT_ADDRESS NVARCHAR(500))
 			CREATE NONCLUSTERED INDEX IX1 ON #TEMP_TABLE(Shop_Id ASC,visited_date ASC)
 
 			INSERT INTO #TEMP_TABLE([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,
-			device_model,android_version,battery,net_status,net_type,start_timestamp,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS)			
+			device_model,android_version,battery,net_status,net_type,start_timestamp,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS)			
 
 			SELECT DISTINCT @user_id,
 			XMLproduct.value('(shop_id/text())[1]','NVARCHAR(100)'),
@@ -253,7 +253,7 @@ BEGIN
 
 					--Rev 14.0 && Added some fields as SHOP_LAT,SHOP_LONG & SHOP_ADDRESS
 					INSERT INTO [FSM_ITC_MIRROR]..Trans_ShopActivitySubmit_TodayData ([User_Id],[Shop_Id],visited_date,visited_time,spent_duration,total_visit_count,Createddate,Is_Newshopadd,distance_travelled,
-					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS)
+					IsFirstVisit,device_model,android_version,battery,net_status,net_type,start_timestamp,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS)
 					--End of Rev 12.0
 
 					SELECT [User_Id],[Shop_Id],visited_date,visited_time,
@@ -264,7 +264,7 @@ BEGIN
 					total_visit_count,Createddate,Is_Newshopadd,distance_travelled,IsFirstVisit,device_model,
 					android_version,battery,net_status,net_type,start_timestamp,
 					--Rev 14.0
-					SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+					SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS
 					--End of Rev 14.0
 					FROM #TEMP_TABLE
 					ORDER BY [User_Id]
