@@ -16,6 +16,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSEMPLOYEEOUTLETMASTER_REPORT]
 --Rev 5.0
 @ISPAGELOAD NVARCHAR(1)=NULL,
 --End of Rev 5.0
+-- Rev 9.0
+@ISINACTIVEOUTLETS NVARCHAR(1)=NULL,
+-- End of Rev 9.0
 @USERID INT
 ) --WITH ENCRYPTION
 AS
@@ -30,6 +33,7 @@ Module	   : Employee Outlet Master.Refer: 0024448
 6.0		v2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
 7.0		v2.0.41		Sanchita	02/06/2023		Employee Outlet Master : Report, Outlet ID shall be showing Internal ID. Refer: 26239
 8.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
+9.0		v2.0.46		Sanchita	02/04/2024		0027343: Employee Outlet Master : Report parameter one check box required 'Consider Inactive Outlets'
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -272,6 +276,10 @@ BEGIN
 				SET @StrSql+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 			IF @EMPID<>''
 				SET @Strsql+='AND EXISTS (SELECT emp_contactId FROM #EMPLOYEE_LIST AS EMP WHERE EMP.emp_contactId=CNT.cnt_internalId) '
+			-- Rev 9.0
+			IF @ISINACTIVEOUTLETS='0'
+				SET @Strsql+='AND MS.Entity_Status=1 '
+			-- End of Rev 9.0
 			--SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 	--Rev 5.0
@@ -289,3 +297,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO

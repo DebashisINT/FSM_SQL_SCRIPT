@@ -14,8 +14,12 @@ ALTER PROCEDURE [dbo].[PRC_FTSORDERREGISTER_REPORT]
 @EMPID NVARCHAR(MAX)=NULL,
 @USERID INT ,
 --Rev 9.0
-@BRANCHID NVARCHAR(MAX)=NULL
+@BRANCHID NVARCHAR(MAX)=NULL,
 --Rev 9.0 End
+-- Rev 10.0
+@SHOWMRP INT=0,
+@SHOWDISCOUNT INT=0
+-- End of Rev 10.0
 ) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
@@ -30,6 +34,7 @@ Module	   : FTS Order Register
 7.0		v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
 8.0		v2.0.39		Debashis	07/02/2023		Order Register Report is not working.Increased the field length of SHOPNAME.Refer: 0025651
 9.0		V2.0.42		Priti	    19/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
+10.0	V2.0.46		10.0    19/07/2023      027345: Two checkbox required in parameter for Order register report.
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -206,7 +211,11 @@ BEGIN
 		  Employee_ID NVARCHAR(100) NULL,
 		  Scheme_Qty DECIMAL(18,2),
 		  Scheme_Rate DECIMAL(18,2),
-		  Total_Scheme_Price DECIMAL(18,2)
+		  Total_Scheme_Price DECIMAL(18,2),
+		  -- Rev 10.0
+		  MRP DECIMAL(18,2),
+		  DISCOUNT DECIMAL(18,2)
+		  -- End of Rev 10.0
 		)
 		CREATE NONCLUSTERED INDEX IX1 ON FTSORDERREGISTER_REPORT (SEQ)
 	END
@@ -221,7 +230,10 @@ BEGIN
 	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID) '
 	--rev 0.5
 	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID) '
-	SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price) '
+	-- Rev 10.0
+	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price) '
+	SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,DISCOUNT) '
+	-- End of Rev 10.0
 	--End of rev 0.5
 	--End of Rev 3.0
 	 --End of Rev 1.0
@@ -246,6 +258,17 @@ BEGIN
 	--End of rev 0.5
 	--SET @Strsql+='FROM tbl_Master_shop AS SHOP '
 	--SET @Strsql+='INNER JOIN tbl_master_user USR ON SHOP.SHOP_CREATEUSER=USR.USER_ID '
+	-- Rev 10.0
+	IF(@SHOWMRP=1)
+		SET @Strsql+=' ,ORDDET.ORDER_MRP '
+	ELSE
+		SET @Strsql+=' ,0 AS ORDER_MRP '
+
+	IF(@SHOWDISCOUNT=1)
+		SET @Strsql+=' ,ORDDET.ORDER_DISCOUNT '
+	ELSE
+		SET @Strsql+=' ,0 AS ORDER_DISCOUNT '
+	-- End of Rev 10.0
 	SET @Strsql+='FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	--Rev 3.0
@@ -325,3 +348,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END 
+GO
