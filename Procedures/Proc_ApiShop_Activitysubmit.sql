@@ -72,7 +72,7 @@ BEGIN
 					 ,DistFromProfileAddrKms,StationCode
 					 --End of Rev 11.0
 					 --Rev 13.0
-					 ,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+					 ,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS
 					 --End of Rev 13.0
 					 )
 	
@@ -168,9 +168,9 @@ BEGIN
 					,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
 					--End of Rev 11.0
 					--Rev 13.0
-					,SHOP_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
-					,SHOP_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
-					,SHOP_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+					,SHOPACT_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+					,SHOPACT_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+					,SHOPACT_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
 					--End of Rev 13.0
 					from tbl_trans_shopActivitysubmit TTSAS
 					INNER JOIN 	@JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)  
@@ -194,7 +194,7 @@ BEGIN
 							,DistFromProfileAddrKms,StationCode
 							--End of Rev 11.0
 							--Rev 13.0
-							 ,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+							 ,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS
 							 --End of Rev 13.0
 							)
 	
@@ -283,9 +283,9 @@ BEGIN
 							,StationCode=XMLproduct.value('(stationCode/text())[1]','int')
 							--End of Rev 11.0
 							--Rev 13.0
-							,SHOP_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
-							,SHOP_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
-							,SHOP_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
+							,SHOPACT_LAT=XMLproduct.value('(shop_lat/text())[1]','NVARCHAR(50)')
+							,SHOPACT_LONG=XMLproduct.value('(shop_long/text())[1]','NVARCHAR(50)')
+							,SHOPACT_ADDRESS=XMLproduct.value('(shop_addr/text())[1]','NVARCHAR(500)')
 							--End of Rev 13.0
 							from tbl_trans_shopActivitysubmit TTSAS
 							INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 

@@ -70,15 +70,15 @@ BEGIN
 
 	--SELECT @DateTime
 
-	--Rev 5.0 && Added some fields as SHOP_LAT,SHOP_LONG & SHOP_ADDRESS
+	--Rev 5.0 && Added some fields as SHOPACT_LAT,SHOPACT_LONG & SHOP_ADDRESS
 	INSERT INTO tbl_trans_shopActivitysubmit_Archive
 	(User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,
 	MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,device_model,battery,net_status,net_type,
-	android_version,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS)
+	android_version,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS)
 
 	SELECT User_Id,Shop_Id,visited_date,visited_time,spent_duration,Createddate,total_visit_count,shopvisit_image,Is_Newshopadd,distance_travelled,ISUSED,LATITUDE,LONGITUDE,REMARKS,MEETING_ADDRESS,MEETING_PINCODE,
 	MEETING_TYPEID,ISMEETING,IsOutStation,IsFirstVisit,Outstation_Distance,early_revisit_reason,CheckIn_Time,CheckIn_Address,CheckOut_Time,CheckOut_Address,start_timestamp,device_model,battery,net_status,net_type,
-	android_version,SHOP_LAT,SHOP_LONG,SHOP_ADDRESS
+	android_version,SHOPACT_LAT,SHOPACT_LONG,SHOPACT_ADDRESS
 	FROM tbl_trans_shopActivitysubmit where CAST(visited_time as DATE)<CAST(@DateTime as DATE)
 
 	DELETE FROm  tbl_trans_shopActivitysubmit where CAST(visited_time as DATE)<CAST(@DateTime as DATE)
