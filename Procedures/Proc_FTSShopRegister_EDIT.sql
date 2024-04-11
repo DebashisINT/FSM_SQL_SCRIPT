@@ -128,8 +128,11 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 @crm_referenceID_type VARCHAR(50)=NULL,
 @crm_stage_ID INT=NULL,
 @assign_to INT=NULL,
-@saved_from_status VARCHAR(100)=NULL
+@saved_from_status VARCHAR(100)=NULL,
 --End of Rev 21.0
+--Rev 22.0
+@isFromCRM BIT=NULL
+--End of Rev 22.0
 ) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
@@ -156,6 +159,7 @@ As
 19.0	v2.0.35		Debashis		02-11-2022			New Parameter added.Row: 753 to 759
 20.0	v2.0.42		Debashis		06-10-2023			New Parameter added.Row: 873 & 874
 21.0	v2.0.43		Debashis		22-12-2023			Some new parameters have been added.Row: 893,894,896 & 897
+22.0	v2.0.45		Debashis		11-04-2024			A new field added as ISFROMCRM.Row: 917
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -389,7 +393,10 @@ BEGIN
 			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE @crm_referenceID_type END,
 			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID=0 THEN Shop_CRMStageID ELSE @crm_stage_ID END,
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
-			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
+			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END,
+			 --End of Rev 21.0
+			 --Rev 21.0
+			 ISFROMCRM=CASE WHEN @isFromCRM IS NULL OR @isFromCRM=0 THEN ISFROMCRM ELSE @isFromCRM END
 			 --End of Rev 21.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
@@ -487,7 +494,10 @@ BEGIN
 			 Shop_CRMReferenceType=CASE WHEN @crm_referenceID_type IS NULL OR @crm_referenceID_type='' THEN Shop_CRMReferenceType ELSE @crm_referenceID_type END,
 			 Shop_CRMStageID=CASE WHEN @crm_stage_ID IS NULL OR @crm_stage_ID=0 THEN Shop_CRMStageID ELSE @crm_stage_ID END,
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
-			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END
+			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END,
+			 --End of Rev 21.0
+			 --Rev 21.0
+			 ISFROMCRM=CASE WHEN @isFromCRM IS NULL OR @isFromCRM=0 THEN ISFROMCRM ELSE @isFromCRM END
 			 --End of Rev 21.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
