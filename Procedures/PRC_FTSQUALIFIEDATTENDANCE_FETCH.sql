@@ -24,6 +24,7 @@ Module	   : Qualified Attendance Report.Refer: 0025416
 2.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 3.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
+4.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -243,7 +244,10 @@ BEGIN
 	SET @SqlStr+='SELECT User_Id,cnt_internalId,NEWSHOP_VISITED,RE_VISITED,VISITED_TIME FROM #TMPSHOPACTIVITYSUBMITQA '
 	SET @SqlStr+=') AA GROUP BY User_Id,cnt_internalId,VISITED_TIME) SHOPACT ON CNT.cnt_internalId=SHOPACT.cnt_internalId AND DAYSTARTEND.STARTENDDATE=SHOPACT.VISITED_TIME '
 	SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG WITH (NOLOCK) ON USR.FaceRegTypeID=STG.StageID '
-	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	--Rev 4.0
+	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2,36,37) '
+	--End of Rev 4.0
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
 	IF @EMPID<>''

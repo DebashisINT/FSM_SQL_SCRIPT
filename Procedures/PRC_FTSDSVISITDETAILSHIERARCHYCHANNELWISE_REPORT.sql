@@ -20,6 +20,7 @@ AS
 Written by : Debashis Talukder ON 23/11/2022
 Module	   : DS Visit - Hierarchy & Channel Wise.Refer: 0025220
 1.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
+2.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -497,7 +498,10 @@ BEGIN
 	SET @SqlStr+='SELECT USERID,MIN(DAYSTTIME) AS DAYSTTIME,MAX(DAYENDTIME) AS DAYENDTIME,STARTENDDATE FROM('
 	SET @SqlStr+='SELECT USERID,DAYSTTIME,DAYENDTIME,STARTENDDATE FROM #TMPDAYSTARTENDDSVHC '
 	SET @SqlStr+=') DAYSTEND GROUP BY USERID,STARTENDDATE) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id AND ATTEN.Login_datetime=DAYSTARTEND.STARTENDDATE '
-	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	--Rev 2.0
+	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2,36,37) '
+	--End of Rev 2.0
 	SET @SqlStr+='AND EXISTS (SELECT LC.CH_ID FROM #LOGINUSERCHANNELLISTDSVHC LC WHERE CH.ch_id=LC.CH_ID) '
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
@@ -532,3 +536,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO

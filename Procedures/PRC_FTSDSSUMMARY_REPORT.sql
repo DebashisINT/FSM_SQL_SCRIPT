@@ -31,6 +31,7 @@ Module	   : Employee DS Summary.Refer: 0024492
 												Refer: 0026955
 7.0		v2.0.43		Debashis	28/12/2023		System is getting logged out while generating DS Summary & DS Performance report in ITC.Refer: 0027103
 8.0		v2.0.44		Debashis	27/02/2024		'Sale Value' Field required in DS Visit Details/DS Visit Summary.Refer: 0027276
+9.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -440,7 +441,10 @@ BEGIN
 	SET @SqlStr+=') DAYSTEND GROUP BY USERID,STARTENDDATE) DAYSTARTEND ON DAYSTARTEND.USERID=USR.user_id AND ATTEN.Login_datetime=DAYSTARTEND.STARTENDDATE '
 	--Rev 1.0
 	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' '
-	SET @SqlStr+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
+	--Rev 9.0
+	--SET @SqlStr+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
+	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2,36,37) '
+	--End of Rev 9.0
 	--End of Rev 1.0
 	IF @BRANCHID<>''
 		SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
