@@ -35,6 +35,7 @@ Module	   : Employee DS Visit Details.Refer: 0024868
 8.0		v2.0.44		Debashis	27/02/2024		'Sale Value' Field required in DS Visit Details/DS Visit Summary.Refer: 0027276
 9.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
+10.0	v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -481,7 +482,10 @@ BEGIN
 			--End of Rev 5.0
 			--Rev 4.0
 			--SET @SqlStr+='WHERE DESG.deg_designation IN(''DS'',''TL'') '
-			SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+			--Rev 10.0
+			--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+			SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2,36,37) '
+			--End of Rev 10.0
 			--End of Rev 4.0
 			IF @BRANCHID<>''
 				SET @SqlStr+='AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.branch_id) '
