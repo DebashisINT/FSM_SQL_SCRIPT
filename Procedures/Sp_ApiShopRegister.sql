@@ -142,7 +142,7 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 @saved_from_status VARCHAR(100)=NULL,
 --End of Rev 26.0
 --Rev 28.0
-@isFromCRM BIT=NULL
+@isFromCRM BIT=0
 --End of Rev 28.0
 ) --WITH ENCRYPTION
 AS
