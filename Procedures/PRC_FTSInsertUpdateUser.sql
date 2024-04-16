@@ -301,6 +301,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 -- Rev 34.0
 ,@IsCallLogHistoryActivated INT=0
 -- End of Rev 34.0
+-- Rev 35.0
+,@IsShowMenuCRMContacts INT=0
+,@IsCheckBatteryOptimization INT=0
+-- End of Rev 35.0
 
 ) --WITH ENCRYPTION
 AS
@@ -347,6 +351,7 @@ AS
 33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
 34.0    V2.0.44     19/12/2023      Sanchita    Call log facility is required in the FSM App - IsCallLogHistoryActivated” - 
                                                 User Account - Add User master settings. Mantis: 27063
+35.0    v2.0.47		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -533,6 +538,10 @@ BEGIN
 			-- Rev 34.0
 			,IsCallLogHistoryActivated
 			-- End of Rev 34.0
+			-- Rev 35.0
+			,IsShowMenuCRMContacts
+			,IsCheckBatteryOptimization
+			-- End of Rev 35.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -695,6 +704,10 @@ BEGIN
 			-- Rev 34.0
 			,isnull(@IsCallLogHistoryActivated,0)
 			-- End of Rev 34.0
+			-- Rev 35.0
+			,isnull(@IsShowMenuCRMContacts,0)
+			,isnull(@IsCheckBatteryOptimization,0)
+			-- End of Rev 35.0
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1122,6 +1135,10 @@ BEGIN
 				 -- Rev 34.0
 				 OR IsCallLogHistoryActivated<>@IsCallLogHistoryActivated
 				 -- End of Rev 34.0
+				 -- Rev 35.0
+				 OR IsShowMenuCRMContacts<>@IsShowMenuCRMContacts
+				 OR IsCheckBatteryOptimization<>@IsCheckBatteryOptimization
+				 -- End of Rev 35.0
 				 )
 				)
 			BEGIN
@@ -1328,6 +1345,10 @@ BEGIN
 			-- Rev 34.0
 			,IsCallLogHistoryActivated = @IsCallLogHistoryActivated
 			-- End of Rev 34.0
+			-- Rev 35.0
+			,IsShowMenuCRMContacts = @IsShowMenuCRMContacts
+			,IsCheckBatteryOptimization = @IsCheckBatteryOptimization
+			-- End of Rev 35.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1591,6 +1612,10 @@ BEGIN
 			-- Rev 34.0
 			,ISNULL(IsCallLogHistoryActivated,0) as IsCallLogHistoryActivated
 			-- End of Rev 34.0
+			-- Rev 35.0
+			,ISNULL(IsShowMenuCRMContacts,0) as IsShowMenuCRMContacts
+			,ISNULL(IsCheckBatteryOptimization,0) as IsCheckBatteryOptimization
+			-- End of Rev 35.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1746,6 +1771,10 @@ BEGIN
 			-- Rev 32.0
 			,'IsCallLogHistoryActivated'
 			-- End of Rev 32.0
+			-- Rev 35.0
+			,'IsShowMenuCRMContacts'
+			,'IsCheckBatteryOptimization'
+			-- End of Rev 35.0
 			)
 		END
 	-- Rev 18.0
