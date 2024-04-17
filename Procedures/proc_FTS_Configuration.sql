@@ -201,7 +201,8 @@ BEGIN
 	179.0		Debashis	14-03-2024	ADD SETTINGS @Action=GlobalCheck'	ShowPartyWithGeoFence,ShowPartyWithCreateOrder & Allow_past_days_for_apply_reimbursement.
 																			Row 901 & Refer: 0027279,0027285 & 0027282
 	180.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	loc_k & firebase_k.Row 903
-	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904
+	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904	
+	182.0		Debashis	17-04-2024	ADD SETTINGS @Action=UserCheck'		ShowPartyWithGeoFence & ShowPartyWithCreateOrder.Row 920 & Refer: 0027372 & 0027374
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -2095,6 +2096,14 @@ BEGIN
 		SELECT 'IsAllDataInPortalwithHeirarchy' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllDataInPortalwithHeirarchy) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 175.0
+		--Rev 182.0
+		UNION ALL
+		SELECT 'ShowUserwisePartyWithGeoFence' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwisePartyWithGeoFence) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ShowUserwisePartyWithCreateOrder' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwisePartyWithCreateOrder) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 182.0
 	END
 
 	SET NOCOUNT OFF
