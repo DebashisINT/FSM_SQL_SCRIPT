@@ -203,6 +203,8 @@ BEGIN
 	180.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	loc_k & firebase_k.Row 903
 	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904	
 	182.0		Debashis	17-04-2024	ADD SETTINGS @Action=UserCheck'		ShowPartyWithGeoFence & ShowPartyWithCreateOrder.Row 920 & Refer: 0027372 & 0027374
+	183.0		Debashis	23-04-2024	ADD SETTINGS @Action=UserCheck'		AdditionalinfoRequiredforContactListing,AdditionalinfoRequiredforContactAdd & ContactAddresswithGeofence.
+																			Row 922
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -2104,6 +2106,17 @@ BEGIN
 		SELECT 'ShowUserwisePartyWithCreateOrder' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwisePartyWithCreateOrder) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 182.0
+		--Rev 183.0
+		UNION ALL
+		SELECT 'AdditionalinfoRequiredforContactListing' AS [Key],CONVERT(NVARCHAR(15),USR.AdditionalinfoRequiredforContactListing) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'AdditionalinfoRequiredforContactAdd' AS [Key],CONVERT(NVARCHAR(15),USR.AdditionalinfoRequiredforContactAdd) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'ContactAddresswithGeofence' AS [Key],CONVERT(NVARCHAR(15),USR.ContactAddresswithGeofence) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 183.0
 	END
 
 	SET NOCOUNT OFF
