@@ -395,9 +395,9 @@ BEGIN
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
 			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END,
 			 --End of Rev 21.0
-			 --Rev 21.0
+			 --Rev 22.0
 			 ISFROMCRM=CASE WHEN @isFromCRM IS NULL OR @isFromCRM=0 THEN ISFROMCRM ELSE @isFromCRM END
-			 --End of Rev 21.0
+			 --End of Rev 22.0
 			 where Shop_Code=@shop_id
 			 --End of Rev 17.0
 	--Rev 13.0
@@ -496,9 +496,9 @@ BEGIN
 			 Shop_CreateUser=CASE WHEN @assign_to IS NULL OR @assign_to='' THEN Shop_CreateUser ELSE @assign_to END,
 			 saved_from_status=CASE WHEN @saved_from_status IS NULL OR @saved_from_status='' THEN saved_from_status ELSE @saved_from_status END,
 			 --End of Rev 21.0
-			 --Rev 21.0
+			 --Rev 22.0
 			 ISFROMCRM=CASE WHEN @isFromCRM IS NULL OR @isFromCRM=0 THEN ISFROMCRM ELSE @isFromCRM END
-			 --End of Rev 21.0
+			 --End of Rev 22.0
 			WHERE Shop_Code=@shop_id
 			 --End of Rev 17.0
 		END

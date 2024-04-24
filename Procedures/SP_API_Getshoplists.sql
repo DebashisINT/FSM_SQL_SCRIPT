@@ -43,6 +43,7 @@ AS
 21.0	Debashis	v2.0.44		05-02-2024		total_visit_count and last_visit_date fields value should be fetched from tbl_master_shop instead of previous logic.
 												Refer: 0027177
 22.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 921
+23.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 924
 ****************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -147,8 +148,11 @@ BEGIN
 			set @sql+='usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status,'
 			--End of Rev 20.0
 			--Rev 22.0
-			set @sql+='shop.Remarks AS remarks '
+			set @sql+='shop.Remarks AS remarks,'
 			--End of Rev 22.0
+			--Rev 23.0
+			set @sql+='CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate '
+			--End of Rev 23.0
 			set @sql+=' from tbl_Master_shop as shop WITH(NOLOCK)  '
 			set @sql+=' INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype as typs WITH(NOLOCK) on typs.shop_typeId=shop.type   '
@@ -216,8 +220,11 @@ BEGIN
 					shop.Shop_CRMReferenceID AS crm_referenceID,SHOP.Shop_CRMReferenceType AS crm_referenceID_type,ISNULL(CRMSTAG.STAGE_NAME,'') AS crm_stage,shop.Shop_CRMStageID AS crm_stage_ID,
 					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status,
 					--Rev 22.0
-					shop.Remarks AS remarks 
+					shop.Remarks AS remarks, 
 					--End of Rev 22.0
+					--Rev 23.0
+					CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate 
+					--End of Rev 23.0
 					FROM tbl_Master_shop as shop WITH(NOLOCK) 
 					INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
@@ -312,8 +319,11 @@ BEGIN
 					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status, 
 					--End of Rev 20.0
 					--Rev 22.0
-					shop.Remarks AS remarks 
+					shop.Remarks AS remarks,
 					--End of Rev 22.0
+					--Rev 23.0
+					CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate 
+					--End of Rev 23.0
 					from tbl_Master_shop as shop WITH(NOLOCK) 
 					INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
