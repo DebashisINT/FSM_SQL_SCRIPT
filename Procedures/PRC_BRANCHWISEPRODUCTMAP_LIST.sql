@@ -9,7 +9,8 @@ ALTER PROCEDURE [dbo].[PRC_BRANCHWISEPRODUCTMAP_LIST]
 @FINYEAR NVARCHAR(12),
 @Products NVARCHAR(MAX),
 @USERID INT ,
-@ACTION NVARCHAR(200)
+@ACTION NVARCHAR(200),
+@BRANCHID NVARCHAR(MAX)=NULL
 ) --WITH ENCRYPTION
 As
 /*****************************************************************************************************************************************
@@ -39,6 +40,23 @@ BEGIN
 			EXEC SP_EXECUTESQL @sql
 		End
 
+
+		IF OBJECT_ID('tempdb..#Branch_List') IS NOT NULL
+		DROP TABLE #Branch_List
+		CREATE TABLE #Branch_List (Branch_Id BIGINT NULL)
+		CREATE NONCLUSTERED INDEX Branch_Id ON #Branch_List (Branch_Id ASC)
+		IF @BRANCHID <> ''
+		BEGIN
+			SET @BRANCHID=REPLACE(@BRANCHID,'''','')
+			SET @sql=''
+			SET @sql=' INSERT INTO #Branch_List select branch_id from tbl_master_branch where branch_id in('+@BRANCHID+')'
+			EXEC SP_EXECUTESQL @sql
+		END
+		else
+		begin
+			SET @sql='INSERT INTO #Branch_List select branch_id from tbl_master_branch '
+			EXEC SP_EXECUTESQL @sql
+		end
 
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'PRODUCTBRANCHMAPLIST') AND TYPE IN (N'U'))
 		BEGIN
@@ -84,6 +102,7 @@ BEGIN
 			INNER JOIN tbl_master_user CU ON  PSPB.CREATED_BY=CU.user_id 
 			LEFT OUTER JOIN tbl_master_user MU ON  PSPB.MODIFIED_BY=MU.user_id 
 			where EXISTS (select Product_Id from #Product_List as PL where PL.Product_Id=PSPB.PRODUCT_ID)	
+			and EXISTS (select Branch_Id from #Branch_List as BL where BL.Branch_Id=PSPB.BRANCH_ID)	
 
 		--WHERE ISNULL(TSO.ISPROJECTORDER,0)=0
 		--and CAST(Order_Date AS DATE) BETWEEN @FROMDATE AND @TODATE 
@@ -94,6 +113,7 @@ BEGIN
 	
 
 	DROP TABLE #Product_List
+	DROP TABLE #Branch_List
 	SET NOCOUNT OFF
 END
 GO
