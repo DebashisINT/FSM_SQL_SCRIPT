@@ -42,7 +42,10 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
 @Entity_Type BIGINT=NULL,
 @ShopOwner_PAN NVARCHAR(15)=NULL,
 @ShopOwner_Aadhar NVARCHAR(20)=NULL,
-@ShopCode nvarchar(100)=null,
+-- Rev 17.0
+--@ShopCode nvarchar(100)=null,
+@ShopCode nvarchar(max)=null,
+-- End of Rev 17.0
 @Remarks NVARCHAR(500)=NULL,
 @CountryId NVARCHAR(50)=NULL,
 @Area_id nvarchar(10)=null,
@@ -92,6 +95,7 @@ AS
 14.0		v2.0.38		Sanchita	27-01-2023		Bulk modification feature is required in Parties menu. Refer: 25609
 15.0		v2.0.38		Sanchita	27-01-2023		Assign to DD is not showing while making shop from Portal. Refer: 25606
 16.0		V2.0.41		Sanchita	05-06-2023		Inactive DD/PP is showing in the Assign to PP/DD list while creating any Shop. Refer: 26262
+17.0		V2.0.46		Sanchita	12-04-2024		0027348: FSM: Master > Contact > Parties [Delete Facility]
 ******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
@@ -367,20 +371,280 @@ BEGIN
 
 	IF @ACTION='DeleteParty'
 	BEGIN
-		IF ((SELECT count(0) FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@ShopCode)>1)
-		BEGIN
-			SELECT 'Can not delete use in another module.' as MSG
-		END
-		ELSE IF EXISTS(SELECT 1 FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=@ShopCode)
-		BEGIN
-			SELECT 'Can not delete use in another module.' as MSG
-		END
-		ELSE
-		BEGIN
-			DELETE FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@ShopCode
-			DELETE FROM TBL_MASTER_SHOP WHERE SHOP_CODE=@ShopCode
-			SELECT 'Delete Succesfully.' as MSG
-		END
+		-- Rev 17.0
+		--IF ((SELECT count(0) FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@ShopCode)>1)
+		--BEGIN
+		--	SELECT 'Can not delete use in another module.' as MSG
+		--END
+		--ELSE IF EXISTS(SELECT 1 FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=@ShopCode)
+		--BEGIN
+		--	SELECT 'Can not delete use in another module.' as MSG
+		--END
+		--ELSE
+		--BEGIN
+		--	DELETE FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@ShopCode
+		--	DELETE FROM TBL_MASTER_SHOP WHERE SHOP_CODE=@ShopCode
+		--	SELECT 'Delete Succesfully.' as MSG
+		--END
+
+		DECLARE @SqlStrTable NVARCHAR(MAX), @Shop_Code_Del varchar(100), @deleted int, @notDeleted int
+
+		BEGIN TRY
+		BEGIN TRANSACTION
+			
+			IF OBJECT_ID('tempdb..#SHOPCODE_LIST') IS NOT NULL
+					DROP TABLE #SHOPCODE_LIST
+			CREATE TABLE #SHOPCODE_LIST (Shop_Code VARCHAR(100) NULL)
+			CREATE NONCLUSTERED INDEX Shop_Code ON #SHOPCODE_LIST (Shop_Code ASC)
+
+			IF @ShopCode<>''
+			BEGIN
+					
+				SET @SqlStrTable=''
+				SET @ShopCode= ''''+REPLACE(@ShopCode,',',''',''')+''''
+				--SET @ShopCode=REPLACE(@ShopCode,'''','')
+				SET @sqlStrTable='INSERT INTO #SHOPCODE_LIST SELECT Shop_Code FROM tbl_master_SHOP WHERE Shop_Code IN ('+@ShopCode+')'
+				EXEC SP_EXECUTESQL @SqlStrTable
+			END
+
+			IF(SELECT [Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [key]='ShopDeleteWithAllTransactions')=0
+			begin
+				
+				SET @deleted = 0
+
+				INSERT INTO [FTS_BulkDeleteLog] ([Shop_Code], [Reason], [UpdateOn], [UpdatedBy])
+				SELECT SHOP_CODE, 'Shop Deleted Succesfully', GETDATE(), @user_id FROM tbl_Master_shop WHERE EXISTS 
+				(SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Code FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM FSMITCORDERHEADER WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM ORDERPRODUCTATTRIBUTE WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+
+
+				INSERT INTO [FTS_BulkDeleteLog] ([Shop_Code], [Reason], [UpdateOn], [UpdatedBy])
+				SELECT SHOP_CODE, 'Shop Code does not exists.', GETDATE(), @user_id FROM #SHOPCODE_LIST BTABLE 
+				WHERE NOT EXISTS (SELECT [Shop_Code] FROM tbl_Master_shop WHERE [Shop_Code]=BTABLE.Shop_Code)
+
+
+				INSERT INTO [FTS_BulkDeleteLog] ([Shop_Code], [Reason], [UpdateOn], [UpdatedBy])
+				SELECT SHOP_CODE, 'Can not delete use in another module.', GETDATE(), @user_id FROM #SHOPCODE_LIST PARTY
+				WHERE EXISTS (SELECT Shop_Code FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=PARTY.Shop_Code)
+				OR EXISTS (SELECT Shop_Code FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=PARTY.Shop_Code)
+				OR EXISTS (SELECT Shop_Id FROM FSMITCORDERHEADER WHERE Shop_Id=PARTY.Shop_Code)
+				OR EXISTS (SELECT Shop_Id FROM ORDERPRODUCTATTRIBUTE WHERE Shop_Id=PARTY.Shop_Code)
+
+
+				DELETE FROM tbl_Master_shop WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Code FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM FSMITCORDERHEADER WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+				AND NOT EXISTS (SELECT Shop_Id FROM ORDERPRODUCTATTRIBUTE WHERE Shop_Id=tbl_Master_shop.Shop_Code)
+
+				SELECT 'Delete Succesfully.' as MSG
+
+				--------DECLARE CUR_SHOPDELETE CURSOR FOR 
+				--------SELECT Shop_Code FROM #SHOPCODE_LIST
+				--------OPEN CUR_SHOPDELETE 
+				--------FETCH NEXT FROM CUR_SHOPDELETE INTO @Shop_Code_Del
+				--------WHILE @@FETCH_STATUS=0
+				--------BEGIN
+				--------	IF ((SELECT count(0) FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@Shop_Code_Del)>1)
+				--------	BEGIN
+				--------		SET @notDeleted = 1
+				--------		--SELECT 'Can not delete use in another module.' as MSG
+				--------	END
+				--------	ELSE IF EXISTS(SELECT 1 FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=@Shop_Code_Del)
+				--------	BEGIN
+				--------		SET @notDeleted = 1
+				--------		--SELECT 'Can not delete use in another module.' as MSG
+				--------	END
+				--------	-- Rev Sanchita
+				--------	ELSE IF EXISTS(SELECT 1 FROM ORDERPRODUCTATTRIBUTE WHERE SHOP_ID=@Shop_Code_Del)
+				--------	BEGIN
+				--------		SET @notDeleted = 1
+				--------		--SELECT 'Can not delete use in another module.' as MSG
+				--------	END
+				--------	-- End of Rev Sanchita
+				--------	ELSE
+				--------	BEGIN
+				--------		DELETE FROM tbl_trans_shopActivitysubmit WHERE Shop_Id=@Shop_Code_Del
+				--------		DELETE FROM TBL_MASTER_SHOP WHERE SHOP_CODE=@Shop_Code_Del
+				--------		SET @deleted = 1
+				--------		--SELECT 'Delete Succesfully.' as MSG
+				--------	END
+
+				--------FETCH NEXT FROM CUR_SHOPDELETE INTO @Shop_Code_Del
+				--------END
+    -------- 			CLOSE CUR_SHOPDELETE
+				--------DEALLOCATE CUR_SHOPDELETE
+
+				--------SELECT 'Delete Succesfully.' as MSG
+				----------IF @deleted = 1 AND @notDeleted = 1
+				----------BEGIN
+				----------	SELECT 'Party that are not used in other modules delete Succesfully.' as MSG
+				----------END
+				----------ELSE IF @deleted = 1 AND @notDeleted = 0
+				----------BEGIN
+				----------	SELECT 'Delete Succesfully.' as MSG
+				----------END
+				----------ELSE 
+				----------BEGIN
+				----------	SELECT 'Can not delete used in another module.' as MSG
+				----------END
+			END
+			ELSE
+			BEGIN
+
+				IF OBJECT_ID('tempdb..#SHOPIMAGE_LIST') IS NOT NULL
+					DROP TABLE #SHOPIMAGE_LIST
+				CREATE TABLE #SHOPIMAGE_LIST (Shop_Image NVARCHAR(500) NULL)
+				CREATE NONCLUSTERED INDEX Shop_Image ON #SHOPIMAGE_LIST (Shop_Image ASC)
+
+				--IF OBJECT_ID('tempdb..#SHOPCODE_LIST') IS NOT NULL
+				--	DROP TABLE #SHOPCODE_LIST
+				--CREATE TABLE #SHOPCODE_LIST (Shop_Code VARCHAR(100) NULL)
+				--CREATE NONCLUSTERED INDEX Shop_Code ON #SHOPCODE_LIST (Shop_Code ASC)
+
+				--IF @ShopCode<>''
+				--BEGIN
+					
+				--	SET @SqlStrTable=''
+				--	SET @ShopCode= ''''+REPLACE(@ShopCode,',',''',''')+''''
+				--	--SET @ShopCode=REPLACE(@ShopCode,'''','')
+				--	SET @sqlStrTable='INSERT INTO #SHOPCODE_LIST SELECT Shop_Code FROM tbl_master_SHOP WHERE Shop_Code IN ('+@ShopCode+')'
+				--	EXEC SP_EXECUTESQL @SqlStrTable
+				--END
+
+
+				--------DECLARE CUR_SHOPDELETE CURSOR FOR 
+				--------SELECT Shop_Code FROM #SHOPCODE_LIST
+				--------OPEN CUR_SHOPDELETE 
+				--------FETCH NEXT FROM CUR_SHOPDELETE INTO @Shop_Code_Del
+				--------WHILE @@FETCH_STATUS=0
+				--------BEGIN
+					
+				--------	IF EXISTS(SELECT shop_code FROM TBL_MASTER_SHOP WHERE Shop_Code=@Shop_Code_Del)
+				--------	BEGIN
+					
+				--------		DELETE FROM FTS_STAGEMAP WHERE [Shop_Id]=@Shop_Code_Del
+					
+				--------		DELETE FROM tbl_trans_shopActivitysubmit WHERE [Shop_Id]=@Shop_Code_Del
+					
+				--------		DELETE FROM tbl_trans_shopActivitysubmit_Archive WHERE [Shop_Id]=@Shop_Code_Del 
+
+				--------		DELETE FROM tbl_trans_fts_Orderupdate WHERE Shop_Code=@Shop_Code_Del
+					
+				--------		DELETE FROM tbl_FTs_OrderdetailsProduct WHERE Shop_code=@Shop_Code_Del
+
+			
+				--------		--SET @ORDER_CODE = (SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE SHOP_ID=@Shop_Code_Del)
+				--------		DELETE FROM FSMITCORDERDETAIL WHERE EXISTS (SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE SHOP_ID=@Shop_Code_Del)
+				--------		DELETE FROM FSMITCORDERHEADER WHERE SHOP_ID=@Shop_Code_Del
+
+				--------		DELETE FROM ORDERPRODUCTATTRIBUTEDET WHERE EXISTS (SELECT ORDER_ID FROM ORDERPRODUCTATTRIBUTE WHERE SHOP_ID=@Shop_Code_Del)
+				--------		DELETE FROM ORDERPRODUCTATTRIBUTE WHERE SHOP_ID=@Shop_Code_Del
+
+
+				--------		--SET @SHOP_ID = (SELECT Shop_ID FROM TBL_MASTER_SHOP WHERE Shop_Code=@Shop_Code_Del)
+				--------		DELETE FROM FTS_ShopMoreDetails WHERE EXISTS (SELECT Shop_ID FROM TBL_MASTER_SHOP WHERE Shop_Code=@Shop_Code_Del)
+				--------		DELETE FROM FTS_DOCTOR_DETAILS  WHERE EXISTS (SELECT Shop_ID FROM TBL_MASTER_SHOP WHERE Shop_Code=@Shop_Code_Del)
+
+
+				--------		IF EXISTS (SELECT 1 FROM sys.databases WHERE [name] = 'FSM_ITC_MIRROR')
+				--------		BEGIN
+				--------			IF (SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [KEY]='IsUpdateVisitDataInTodayTable' )=1
+				--------			BEGIN
+				--------				delete FROM FSM_ITC_MIRROR..Trans_ShopActivitySubmit_TodayData WHERE SHOP_ID=@Shop_Code_Del
+				--------			END
+
+				--------			delete FROM FSM_ITC_MIRROR..tbl_trans_shopActivitysubmit_Archive WHERE SHOP_ID=@Shop_Code_Del
+				--------		END
+				--------		ELSE
+				--------		BEGIN
+				--------			delete FROM tbl_trans_shopActivitysubmit_Archive WHERE SHOP_ID=@Shop_Code_Del
+				--------		END
+					
+				--------		SET @SHOP_IMAGE = (SELECT TOP 1 Shop_Image FROM tbl_Master_shop WHERE Shop_Code=@Shop_Code_Del)
+				--------		INSERT INTO #SHOPIMAGE_LIST (Shop_Image) VALUES(@SHOP_IMAGE)
+
+				--------		DELETE FROM tbl_Master_shop WHERE Shop_Code=@Shop_Code_Del
+
+						
+				--------	END
+
+				--------FETCH NEXT FROM CUR_SHOPDELETE INTO @Shop_Code_Del
+				--------END
+    -------- 			CLOSE CUR_SHOPDELETE
+				--------DEALLOCATE CUR_SHOPDELETE
+
+				DELETE FROM FTS_STAGEMAP WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=FTS_STAGEMAP.SHOP_ID)
+					
+				DELETE FROM tbl_trans_shopActivitysubmit WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_trans_shopActivitysubmit.SHOP_ID)
+					
+				DELETE FROM tbl_trans_shopActivitysubmit_Archive WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_trans_shopActivitysubmit_Archive.SHOP_ID)
+
+				DELETE FROM tbl_trans_fts_Orderupdate WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_trans_fts_Orderupdate.Shop_Code)
+					
+				DELETE FROM tbl_FTs_OrderdetailsProduct WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_FTs_OrderdetailsProduct.Shop_Code)
+
+			
+				--SET @ORDER_CODE = (SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE SHOP_ID=@Shop_Code_Del)
+				DELETE FROM FSMITCORDERDETAIL WHERE EXISTS (SELECT ORDER_CODE FROM FSMITCORDERHEADER H INNER JOIN #SHOPCODE_LIST B ON H.SHOP_ID=B.Shop_Code)
+				DELETE FROM FSMITCORDERHEADER WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=FSMITCORDERHEADER.SHOP_ID)
+
+				DELETE FROM ORDERPRODUCTATTRIBUTEDET WHERE EXISTS (SELECT ORDER_ID FROM ORDERPRODUCTATTRIBUTE H INNER JOIN #SHOPCODE_LIST B ON H.SHOP_ID=B.Shop_Code)
+				DELETE FROM ORDERPRODUCTATTRIBUTE WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=ORDERPRODUCTATTRIBUTE.SHOP_ID)
+
+
+				--SET @SHOP_ID = (SELECT Shop_ID FROM TBL_MASTER_SHOP WHERE Shop_Code=@Shop_Code_Del)
+				DELETE FROM FTS_ShopMoreDetails WHERE EXISTS (SELECT SH.Shop_ID FROM TBL_MASTER_SHOP SH INNER JOIN #SHOPCODE_LIST B ON SH.Shop_Code=B.Shop_Code)
+				DELETE FROM FTS_DOCTOR_DETAILS  WHERE EXISTS (SELECT SH.Shop_ID FROM TBL_MASTER_SHOP SH INNER JOIN #SHOPCODE_LIST B ON SH.Shop_Code=B.Shop_Code)
+
+
+				IF EXISTS (SELECT 1 FROM sys.databases WHERE [name] = 'FSM_ITC_MIRROR')
+				BEGIN
+					IF (SELECT [VALUE] FROM FTS_APP_CONFIG_SETTINGS WHERE [KEY]='IsUpdateVisitDataInTodayTable' )=1
+					BEGIN
+						delete FROM FSM_ITC_MIRROR..Trans_ShopActivitySubmit_TodayData WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=FSM_ITC_MIRROR..Trans_ShopActivitySubmit_TodayData.SHOP_ID)
+					END
+
+					delete FROM FSM_ITC_MIRROR..tbl_trans_shopActivitysubmit_Archive WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=FSM_ITC_MIRROR..tbl_trans_shopActivitysubmit_Archive.SHOP_ID)
+				END
+				ELSE
+				BEGIN
+					delete FROM tbl_trans_shopActivitysubmit_Archive WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_trans_shopActivitysubmit_Archive.SHOP_ID)
+				END
+					
+				--SET @SHOP_IMAGE = (SELECT TOP 1 Shop_Image FROM tbl_Master_shop WHERE Shop_Code=@Shop_Code_Del)
+				INSERT INTO #SHOPIMAGE_LIST (Shop_Image) 
+				SELECT distinct Shop_Image FROM tbl_Master_shop WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_Master_shop.Shop_Code)
+
+				INSERT INTO [FTS_BulkDeleteLog] ([Shop_Code], [Reason], [UpdateOn], [UpdatedBy])
+				SELECT SHOP_CODE, 'Shop Deleted Succesfully', GETDATE(), @user_id FROM tbl_Master_shop WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_Master_shop.Shop_Code)
+
+				INSERT INTO [FTS_BulkDeleteLog] ([Shop_Code], [Reason], [UpdateOn], [UpdatedBy])
+				SELECT SHOP_CODE, 'Shop Code does not exists.', GETDATE(), @user_id FROM #SHOPCODE_LIST BTABLE WHERE NOT EXISTS (SELECT [Shop_Code] FROM tbl_Master_shop WHERE [Shop_Code]=BTABLE.Shop_Code)
+
+				DELETE FROM tbl_Master_shop WHERE EXISTS (SELECT [Shop_Code] FROM #SHOPCODE_LIST WHERE [Shop_Code]=tbl_Master_shop.Shop_Code)
+
+
+				SELECT 'Delete Succesfully.' as MSG, Shop_Image as SHOP_IMAGE FROM #SHOPIMAGE_LIST
+			END
+
+			IF OBJECT_ID('tempdb..#SHOPCODE_LIST') IS NOT NULL
+					DROP TABLE #SHOPCODE_LIST
+			IF OBJECT_ID('tempdb..#SHOPIMAGE_LIST') IS NOT NULL
+					DROP TABLE #SHOPIMAGE_LIST
+
+			COMMIT TRANSACTION
+			
+		END TRY
+
+		BEGIN CATCH
+			ROLLBACK TRANSACTION
+			SELECT 'Error in Delte.' as MSG
+		END CATCH
+		-- End of Rev 17.0
 	END
 
 	IF @ACTION='GetddShopType'
@@ -437,4 +701,84 @@ BEGIN
 				)
 	END
 	-- End of Rev 16.0
+	-- Rev 17.0
+	IF @ACTION='GetMassDeleteShopList'
+	BEGIN
+		DECLARE @Strsql NVARCHAR(MAX)
+
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			DECLARE @empcode VARCHAR(50)=(select user_contactId from Tbl_master_user where user_id=@USER_ID)		
+			CREATE TABLE #EMPHR
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+
+			CREATE TABLE #EMPHR_EDIT
+			(
+			EMPCODE VARCHAR(50),
+			RPTTOEMPCODE VARCHAR(50)
+			)
+		
+			INSERT INTO #EMPHR
+			SELECT emp_cntId EMPCODE,ISNULL(TME.emp_contactId,'') RPTTOEMPCODE 
+			FROM tbl_trans_employeeCTC CTC LEFT JOIN tbl_master_employee TME on TME.emp_id= CTC.emp_reportTO WHERE emp_effectiveuntil IS NULL
+		
+			;with cte as(select	
+			EMPCODE,RPTTOEMPCODE
+			from #EMPHR 
+			where EMPCODE IS NULL OR EMPCODE=@empcode  
+			union all
+			select	
+			a.EMPCODE,a.RPTTOEMPCODE
+			from #EMPHR a
+			join cte b
+			on a.RPTTOEMPCODE = b.EMPCODE
+			) 
+			INSERT INTO #EMPHR_EDIT
+			select EMPCODE,RPTTOEMPCODE  from cte 
+
+		END
+
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+			DROP TABLE #TEMPCONTACT
+			CREATE TABLE #TEMPCONTACT
+			(
+				cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				cnt_ucc NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+				USER_ID BIGINT
+			)
+		CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+		INSERT INTO #TEMPCONTACT
+		SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType,CNT.cnt_UCC,USR.user_id FROM TBL_MASTER_CONTACT CNT
+		INNER JOIN tbl_master_user USR ON USR.user_contactId=CNT.cnt_internalId WHERE cnt_contactType IN('EM')
+		
+		SET @Strsql=''
+
+		SET @Strsql+=' select top(20) shop.Shop_Code, shop.Entity_Location, Replace(shop.Shop_Name,'''',''&#39;'') as Shop_Name, shop.EntityCode, '
+		SET @Strsql+=' shop.Shop_Owner_Contact, shoptype.Name as ShopType_Name '
+		SET @Strsql+=' from tbl_Master_shop shop '
+		SET @Strsql+=' LEFT OUTER JOIN tbl_shoptype shoptype ON shoptype.shop_typeId=shop.[type] '
+
+		IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USER_ID)=1)
+		BEGIN
+			SET @Strsql+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE    '
+		END
+
+		SET @Strsql+=' where (shop.Shop_Name like ''%'+ @SearchKey +'%'') '
+		SET @Strsql+=' or  (shop.EntityCode like ''%'+ @SearchKey +'%'' ) '
+		SET @Strsql+=' or (shop.Shop_Owner_Contact like ''%'+ @SearchKey +'%'' ) '
+		EXEC SP_EXECUTESQL @Strsql
+		
+		--select @Strsql
+
+		DROP TABLE #TEMPCONTACT
+	END
+	-- End of Rev 17.0
 END
+GO
