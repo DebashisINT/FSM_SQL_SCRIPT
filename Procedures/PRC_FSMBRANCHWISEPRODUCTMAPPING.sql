@@ -404,7 +404,8 @@ Begin try
 									--					where map.Emp_Contactid in('+@ChildEMPID+')'
 
 														
-									SET @sqlStrTable='select distinct map.BranchId,emp.emp_contactId,map.Emp_Contactid from FTS_EmployeeBranchMap map 
+									SET @sqlStrTable='INSERT INTO #CHILDEMP_List(BranchId,Parent_contactId,Child_contactId) '
+									SET @sqlStrTable+='select distinct map.BranchId,emp.emp_contactId,map.Emp_Contactid from FTS_EmployeeBranchMap map 
 									inner join tbl_trans_employeeCTC ctc on ctc.emp_cntId=map.Emp_Contactid
 									left outer join 
 									(select emp_id,emp1.emp_contactId,BranchId from tbl_master_employee emp1
@@ -422,9 +423,9 @@ Begin try
 									
 
 									DECLARE db_cursorCHILDEMP CURSOR FOR  
-									select Child_contactId,Parent_contactId,BranchId from #CHILDEMP_List  where BranchId=@Branch_Id  									
+									select Child_contactId,BranchId from #CHILDEMP_List  where BranchId=@Branch_Id  									
 									OPEN db_cursorCHILDEMP   
-									FETCH NEXT FROM db_cursorCHILDEMP INTO @Child_Contactid,@Emp_Contactid,@Branch_Id									
+									FETCH NEXT FROM db_cursorCHILDEMP INTO @Child_Contactid,@Branch_Id									
 									WHILE @@FETCH_STATUS = 0   
 									BEGIN
 
@@ -436,12 +437,12 @@ Begin try
 													BEGIN													
 								
 														select top 1 @LastCount=PRODUCTBRANCHMAP_ID from PRODUCT_BRANCH_MAP  order by PRODUCTBRANCHMAP_ID desc
-														select @IsExist=count(0) from PRODUCT_BRANCH_MAP  where BRANCH_ID=@Branch_Id  and PRODUCT_ID=@PRODUCT_ID  and isnull(PARENTEMP_INTERNALID,'')=@Emp_Contactid  and isnull(CHILDEMP_INTERNALID,'')=@Child_Contactid
+														select @IsExist=count(0) from PRODUCT_BRANCH_MAP  where BRANCH_ID=@Branch_Id  and PRODUCT_ID=@PRODUCT_ID    and isnull(CHILDEMP_INTERNALID,'')=@Child_Contactid
 														
 														if(@IsExist=0)
 														Begin
-															insert into PRODUCT_BRANCH_MAP(PRODUCTBRANCHMAP_ID,BRANCH_ID,PRODUCT_CODE,PRODUCT_ID,PARENTEMP_INTERNALID,CHILDEMP_INTERNALID,CREATED_BY,CREATED_ON)
-															select @LastCount+1,@Branch_Id,@sProducts_Code,@PRODUCT_ID,@Emp_Contactid,@Child_Contactid,@UserId,Getdate()
+															insert into PRODUCT_BRANCH_MAP(PRODUCTBRANCHMAP_ID,BRANCH_ID,PRODUCT_CODE,PRODUCT_ID,CHILDEMP_INTERNALID,CREATED_BY,CREATED_ON)
+															select @LastCount+1,@Branch_Id,@sProducts_Code,@PRODUCT_ID,@Child_Contactid,@UserId,Getdate()
 
 															set @LASTID=SCOPE_IDENTITY();													
 														END
@@ -452,7 +453,7 @@ Begin try
 													CLOSE db_cursorProduct   
 													DEALLOCATE db_cursorProduct
 
-									FETCH NEXT FROM db_cursorCHILDEMP INTO @Child_Contactid,@Emp_Contactid,@Branch_Id
+									FETCH NEXT FROM db_cursorCHILDEMP INTO @Child_Contactid,@Branch_Id
 									END   
 
 									CLOSE db_cursorCHILDEMP   
@@ -857,14 +858,14 @@ Begin try
 
 	END
  commit tran t1          
-SELECT @SUCCESS AS Success,ERROR_MESSAGE() as MSG ,@HASLOG AS HasLog  ,@LASTID as internal_id 
+SELECT @SUCCESS AS Success,'SUCCESS' as MSG ,@HASLOG AS HasLog  ,@LASTID as internal_id 
  return         
 End Try      
       
 Begin Catch      
 rollback tran t1
  
-select @SUCCESS AS Success ,ERROR_MESSAGE() as MSG,@HASLOG AS HasLog  ,'' as internal_id            
+select ERROR_MESSAGE() AS Success ,ERROR_MESSAGE() as MSG,@HASLOG AS HasLog  ,@LASTID as internal_id            
 		
 return    
 
