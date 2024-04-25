@@ -20,6 +20,7 @@ AS
 /****************************************************************************************************************************************************************************
 Written by Sanchita on 23-11-2023 for V2.0.43	A new design page is required as Contact (s) under CRM menu. 
 												Refer: 27034
+1.0		Sanchita	V2.0.46		23-04-2024		27384 - Contact module issue for Portal
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -50,7 +51,16 @@ BEGIN
 			Shop_Remarks NVARCHAR(max) NULL,
 			Shop_Amount Decimal(18,2) NULL,
 			Shop_NextFollowupDate NVARCHAR(50) NULL,
-			Shop_Entity_Status VARCHAR(10) NULL
+			Shop_Entity_Status VARCHAR(10) NULL,
+			-- Rev 1.0
+			Shop_Pincode NVARCHAR(120) NULL,
+			Shop_WhatsappNoForCustomer NVARCHAR(100) NULL,
+			Shop_Entered_ByName NVARCHAR(50) NULL,
+			Shop_Entered_On DATETIME NULL,
+			Shop_LastUpdated_ByName NVARCHAR(50) NULL,
+			Shop_LastUpdated_On DATETIME NULL,
+			-- End of Rev 1.0
+			
 		)
 		CREATE NONCLUSTERED INDEX IX1 ON CRM_CONTACT_LISTING (SEQ)
 	END
@@ -79,21 +89,28 @@ BEGIN
 			INSERT INTO #TEMPCONTACT
 			SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_UCC,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
  
+			-- columns Pincode, WhatsappNoForCustomer, Entered_By,	Entered_On,	LastUpdated_By,	LastUpdated_On added
  			SET @Strsql=' INSERT INTO CRM_CONTACT_LISTING (USERID, SEQ, Shop_Code, Shop_FirstName, Shop_LastName, Shop_Owner_Contact, '
 			SET @Strsql+=' Shop_Owner_Email, Shop_Address, Shop_DOB, Shop_date_aniversary, Shop_CompanyName, Shop_JobTitle, '
 			SET @Strsql+=' Shop_CreateUserName, Shop_TypeName, Shop_StatusName, Shop_SourceName, Shop_ReferenceName, Shop_StageName, '
-			SET @Strsql+=' Shop_Remarks, Shop_Amount, Shop_NextFollowupDate, Shop_Entity_Status) '
+			SET @Strsql+=' Shop_Remarks, Shop_Amount, Shop_NextFollowupDate, Shop_Entity_Status,'
+			SET @Strsql+=' Shop_Pincode, Shop_WhatsappNoForCustomer, Shop_Entered_ByName, Shop_Entered_On, Shop_LastUpdated_ByName, Shop_LastUpdated_On) '
 			SET @Strsql+=' select '+STR(@USERID)+',ROW_NUMBER() OVER(ORDER BY SH.Shop_CreateTime) AS SEQ,SH.Shop_Code, SH.Shop_FirstName, '
 			SET @Strsql+=' SH.Shop_LastName, SH.Shop_Owner_Contact, SH.Shop_Owner_Email, SH.Address, CONVERT(NVARCHAR(10),SH.DOB,105), CONVERT(NVARCHAR(10),SH.date_aniversary,105), '
 			SET @Strsql+=' ISNULL(COMP.COMPANY_NAME,''''), SH.Shop_JobTitle, USR.user_name, TYP.TYPE_NAME, STAT.STATUS_NAME, SRC.SOURCE_NAME, '
 			SET @Strsql+=' REF.REF_NAME AS REFERENCE_NAME, STG.STAGE_NAME, SH.Remarks, SH.Amount, CONVERT(NVARCHAR(10),SH.Shop_NextFollowupDate,105), '
 			SET @Strsql+=' (CASE WHEN SH.Entity_Status=1 THEN ''Yes'' else ''No'' END ) '
+			SET @Strsql+=' ,SH.Pincode, SH.WhatsappNoForCustomer, USR_ADD.user_name, SH.Entered_On,	USR_MOD.user_name, SH.LastUpdated_On '
 			SET @Strsql+=' FROM TBL_MASTER_SHOP SH '
 			SET @Strsql+=' LEFT OUTER JOIN CRM_CONTACT_COMPANY COMP ON SH.Shop_CRMCompID=COMP.COMPANY_ID '
 			SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER USR ON SH.Shop_CreateUser=USR.USER_ID '
 			SET @Strsql+=' LEFT OUTER JOIN CRM_CONTACT_TYPE TYP ON SH.Shop_CRMTypeID = TYP.TYPE_ID '
 			SET @Strsql+=' LEFT OUTER JOIN CRM_CONTACT_STATUS STAT ON SH.Shop_CRMStatusID = STAT.STATUS_ID '
 			SET @Strsql+=' LEFT OUTER JOIN CRM_CONTACT_SOURCE SRC ON SH.Shop_CRMSourceID = SRC.SOURCE_ID '
+			-- Rev 1.0
+			SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER USR_ADD ON SH.Entered_By=USR_ADD.USER_ID '
+			SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER USR_MOD ON SH.LastUpdated_By=USR_MOD.USER_ID '
+			-- End of Rev 1.0
 			--SET @Strsql+=' LEFT OUTER JOIN CRM_CONTACT_REFERENCE REF ON SH.Shop_CRMReferenceID = REF.REFERENCE_ID '
 			--SET @Strsql+=' LEFT OUTER JOIN TBL_MASTER_USER REF ON SH.Shop_CRMReferenceID = REF.user_contactId '
 			SET @Strsql+=' LEFT OUTER JOIN '
