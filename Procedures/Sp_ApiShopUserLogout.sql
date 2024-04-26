@@ -17,7 +17,8 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopUserLogout]
 ) --WITH ENCRYPTION
 AS
 /*******************************************************************************************************************************************
-1.0		TANMOY GHOSH		29-01-2020		UniqueKey CREATE LOGIC CHANGE ADD MILISECOND
+1.0		TANMOY GHOSH		29-01-2020					UniqueKey CREATE LOGIC CHANGE ADD MILISECOND
+2.0		Debashis			26-04-2023		V2.0.46		Added a new field as user_ShopStatus.Row: 927
 *******************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -41,6 +42,10 @@ BEGIN
 	DECLARE @IsDatatableUpdateForDashboardAttendanceTab NVARCHAR(100)
 	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
 	--End of Rev Debashis
+
+	--Rev 2.0
+	UPDATE tbl_master_user WITH(TABLOCK) SET user_ShopStatus=0 WHERE user_id=@user_id AND user_ShopStatus=1
+	--End of Rev 2.0
 
 	UPDATE tbl_master_user WITH(TABLOCK) SET SessionToken=NULL,user_status=0 WHERE user_id=@user_id
 
@@ -101,3 +106,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO

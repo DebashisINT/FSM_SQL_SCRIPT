@@ -133,7 +133,7 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 --Rev 22.0
 @isFromCRM BIT=0
 --End of Rev 22.0
-) WITH ENCRYPTION
+) --WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
 1.0					TANMOY			31-12-2019			EDIT EXTER FIELD FOR MORE DETAILS AND INSER NEW TABLE WITHE HEADER ID
@@ -278,6 +278,11 @@ BEGIN
 		where usr.user_id=@user_id)
 	END
 
+	-- Rev 23.0
+	UPDATE USR WITH(TABLOCK) SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
+					WHERE SH.SHOP_CODE=@shop_id AND @Entity_Status IS NOT NULL AND @Entity_Status<>'' AND Entity_Status<>@Entity_Status
+	-- End of Rev 23.0
+
 	--Rev 13.0
 	IF @shop_image='' OR @shop_image IS NULL
 		BEGIN
@@ -327,11 +332,6 @@ BEGIN
 			----End of Rev 16.0
 			-- where Shop_Code=@shop_id
 
-			-- Rev 23.0
-			UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
-							WHERE SH.SHOP_CODE=@shop_id AND @Entity_Status IS NOT NULL AND @Entity_Status<>'' AND Entity_Status<>@Entity_Status
-			-- End of Rev 23.0
-			 
 			 UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			 [Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
 			 [Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
@@ -433,11 +433,7 @@ BEGIN
 			----End of Rev 16.0
 			--WHERE Shop_Code=@shop_id
 
-			-- Rev 23.0
-			UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
-							WHERE SH.SHOP_CODE=@shop_id AND @Entity_Status IS NOT NULL AND @Entity_Status<>'' AND Entity_Status<>@Entity_Status
-			-- End of Rev 23.0
-
+			
 			UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			[Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
 			[Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
@@ -525,7 +521,7 @@ BEGIN
 
 	IF @shopStatusUpdate=0
 	BEGIN
-		UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
+		UPDATE USR WITH(TABLOCK) SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
 					WHERE SH.SHOP_CODE=@shop_id and SH.Entity_Status=1
 
 		UPDATE [tbl_Master_shop] WITH(TABLOCK) SET Entity_Status=0 WHERE Shop_Code=@shop_id

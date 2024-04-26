@@ -37,6 +37,7 @@ REV NO.		DATE			VERSION			DEVELOPER			CHANGES										           	INSTRUCTED BY
 																Refer: 25738
 12.0		24-04-2023		V2.0.39			Debashis			Added two new fields as add_Lat & add_Long.Row: 819
 13.0		19-05-2023		V2.0.39			Debashis			Added some new fields as visit_location_id,area_location_id & area_location_name.Row: 843
+14.0		26-04-2023		V2.0.46			Debashis			Added a new field as user_ShopStatus.Row: 927
 ****************************************************************************************************************************************************************************************************/
 BEGIN
 	--BEGIN  TRAN
@@ -390,8 +391,11 @@ BEGIN
 						addr.add_Lat AS profile_latitude,addr.add_Long AS profile_longitude
 						--End of Rev 12.0
 						--Rev 13.0
-						,@visit_location_id AS visit_location_id,area_id AS area_location_id,area_name AS area_location_name
+						,@visit_location_id AS visit_location_id,area_id AS area_location_id,area_name AS area_location_name,
 						--End of Rev 13.0
+						--Rev 14.0
+						CAST(user_ShopStatus AS bit) AS user_ShopStatus
+						--End of Rev 14.0
 						FROM tbl_master_user as usr WITH(NOLOCK) 
 						LEFT OUTER JOIN [Master_AppVersionUsages] ver WITH(NOLOCK) on  usr.user_id=ver.UserId
 						--Rev Debashis
@@ -491,3 +495,4 @@ BEGIN
 	
 	SET NOCOUNT OFF
 END
+GO
