@@ -36,7 +36,6 @@ Module	   : Employee DS Visit Details.Refer: 0024868
 9.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
 10.0	v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
-11.0	v2.0.46		Debashis	25/04/2024		In the below reports, please fetch only active customers count for the Outlets Mapped coloumn.Refer: 0027404
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -463,9 +462,6 @@ BEGIN
 			--End of Rev 5.0
 			SET @SqlStr+='LEFT OUTER JOIN ('
 			SET @SqlStr+='SELECT Shop_CreateUser,COUNT(Shop_Code) AS OUTLETSMAPPED FROM tbl_Master_shop WITH (NOLOCK) '
-			--Rev 11.0
-			SET @SqlStr+='WHERE Entity_Status=1 '
-			--End of Rev 11.0
 			SET @SqlStr+='GROUP BY Shop_CreateUser) SHOP ON SHOP.Shop_CreateUser=USR.user_id '
 			--Rev 5.0
 			--SET @SqlStr+='LEFT OUTER JOIN ('

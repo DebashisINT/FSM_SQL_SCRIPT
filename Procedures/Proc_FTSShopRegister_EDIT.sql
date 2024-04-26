@@ -133,7 +133,7 @@ ALTER PROCEDURE [dbo].[Proc_FTSShopRegister_EDIT]
 --Rev 22.0
 @isFromCRM BIT=0
 --End of Rev 22.0
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 As
 /************************************************************************************************************************************************
 1.0					TANMOY			31-12-2019			EDIT EXTER FIELD FOR MORE DETAILS AND INSER NEW TABLE WITHE HEADER ID
@@ -160,6 +160,8 @@ As
 20.0	v2.0.42		Debashis		06-10-2023			New Parameter added.Row: 873 & 874
 21.0	v2.0.43		Debashis		22-12-2023			Some new parameters have been added.Row: 893,894,896 & 897
 22.0	v2.0.45		Debashis		11-04-2024			A new field added as ISFROMCRM.Row: 917
+23.0	v2.0.46		Sanchita		26-04-2024			A flag shall be created in the user master when any customer is made inactive or delete against a particular user.
+														Refer: 0027414
 ************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -324,6 +326,11 @@ BEGIN
 			--,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
 			----End of Rev 16.0
 			-- where Shop_Code=@shop_id
+
+			-- Rev 23.0
+			UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
+							WHERE SH.SHOP_CODE=@shop_id AND @Entity_Status IS NOT NULL AND @Entity_Status<>'' AND Entity_Status<>@Entity_Status
+			-- End of Rev 23.0
 			 
 			 UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			 [Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
@@ -425,6 +432,12 @@ BEGIN
 			--,AlternateNoForCustomer=@alternateNoForCustomer,WhatsappNoForCustomer=@whatsappNoForCustomer
 			----End of Rev 16.0
 			--WHERE Shop_Code=@shop_id
+
+			-- Rev 23.0
+			UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
+							WHERE SH.SHOP_CODE=@shop_id AND @Entity_Status IS NOT NULL AND @Entity_Status<>'' AND Entity_Status<>@Entity_Status
+			-- End of Rev 23.0
+
 			UPDATE [tbl_Master_shop] WITH(TABLOCK) SET [Shop_Name]=CASE WHEN @shop_name IS NULL OR @shop_name='' THEN Shop_Name ELSE @shop_name END,
 			[Address]=CASE WHEN @address IS NULL OR @address='' THEN [Address] ELSE @address END,
 			[Pincode]=CASE WHEN @pin_code IS NULL OR @pin_code='' THEN [Pincode] ELSE @pin_code END,
@@ -505,9 +518,19 @@ BEGIN
 	--End of Rev 13.0
 
 	--Rev 18.0
+	-- Rev 23.0
+	--IF @shopStatusUpdate=0
+	--	UPDATE [tbl_Master_shop] WITH(TABLOCK) SET Entity_Status=0 WHERE Shop_Code=@shop_id
+	----End of Rev 18.0
+
 	IF @shopStatusUpdate=0
+	BEGIN
+		UPDATE USR SET USR.user_ShopStatus=1 FROM TBL_MASTER_USER USR INNER JOIN TBL_MASTER_SHOP SH ON USR.user_id=SH.Shop_CreateUser
+					WHERE SH.SHOP_CODE=@shop_id and SH.Entity_Status=1
+
 		UPDATE [tbl_Master_shop] WITH(TABLOCK) SET Entity_Status=0 WHERE Shop_Code=@shop_id
-	--End of Rev 18.0
+	END
+	-- End of Rev 23.0
 
 	 IF(ISNULL(@stage_id,'')<>'')
 		BEGIN
