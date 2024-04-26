@@ -162,7 +162,7 @@ As
 22.0	v2.0.45		Debashis		11-04-2024			A new field added as ISFROMCRM.Row: 917
 23.0	v2.0.46		Sanchita		26-04-2024			A flag shall be created in the user master when any customer is made inactive or delete against a particular user.
 														Refer: 0027414
-************************************************************************************************************************************************/
+*************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 	--IF ISNULL(@Entered_by,'')=''

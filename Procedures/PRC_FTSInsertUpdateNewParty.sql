@@ -98,7 +98,7 @@ AS
 17.0		V2.0.46		Sanchita	12-04-2024		0027348: FSM: Master > Contact > Parties [Delete Facility]
 18.0		v2.0.46		Sanchita	26-04-2024		A flag shall be created in the user master when any customer is made inactive or delete against a particular user.
 													Refer: 0027414
-******************************************************************************************************************************/
+*******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
 	set @Lastvisit_date =GETDATE()
