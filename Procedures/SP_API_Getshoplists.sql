@@ -44,6 +44,7 @@ AS
 												Refer: 0027177
 22.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 921
 23.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 924
+24.0	Debashis	v2.0.47		29-04-2024		user_shopstatus updation process update.Refer: 0027418
 ****************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -350,6 +351,10 @@ BEGIN
 				END
 			--End of Rev 21.0
 		END
+
+	--Rev 24.0
+	UPDATE tbl_master_user SET user_ShopStatus=0 WHERE user_id=@user_id AND user_ShopStatus=1
+	--End of Rev 24.0
 
 	SET NOCOUNT OFF
 END

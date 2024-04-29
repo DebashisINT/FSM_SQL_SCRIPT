@@ -17,7 +17,9 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopUserLogout]
 ) --WITH ENCRYPTION
 AS
 /*******************************************************************************************************************************************
-1.0		TANMOY GHOSH		29-01-2020		UniqueKey CREATE LOGIC CHANGE ADD MILISECOND
+1.0		TANMOY GHOSH		29-01-2020					UniqueKey CREATE LOGIC CHANGE ADD MILISECOND
+2.0		Debashis			26-04-2023		V2.0.46		Added a new field as user_ShopStatus.Row: 927
+3.0		Debashis			29-04-2024		V2.0.47		user_shopstatus updation process update.Refer: 0027418
 *******************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -42,7 +44,13 @@ BEGIN
 	SELECT @IsDatatableUpdateForDashboardAttendanceTab=[Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsDatatableUpdateForDashboardAttendanceTab'
 	--End of Rev Debashis
 
-	UPDATE tbl_master_user WITH(TABLOCK) SET SessionToken=NULL,user_status=0 WHERE user_id=@user_id
+	--Rev 2.0
+	--Rev 3.0
+	--UPDATE tbl_master_user SET user_ShopStatus=0 WHERE user_id=@user_id AND user_ShopStatus=1
+	--End of Rev 3.0
+	--End of Rev 2.0
+
+	UPDATE tbl_master_user SET SessionToken=NULL,user_status=0 WHERE user_id=@user_id
 
 	IF(@@ROWCOUNT>0)
 		BEGIN
@@ -50,7 +58,7 @@ BEGIN
 				BEGIN
 					IF EXISTS(SELECT VisitId FROM tbl_trans_shopuser WITH(NOLOCK) WHERE CAST(SDate as date) =cast(@logout_time as date) and User_Id=@user_id)
 					BEGIN
-						INSERT INTO tbl_trans_shopuser WITH(TABLOCK) ([User_Id],Lat_visit,Long_visit,sdate,Createddate,location_name,LoginLogout,distance_covered)
+						INSERT INTO tbl_trans_shopuser ([User_Id],Lat_visit,Long_visit,sdate,Createddate,location_name,LoginLogout,distance_covered)
 						VALUES(@user_id,@latitude,@longitude,@logout_time,@datefetch,@location_name,0,@distance)
 					END
 				END
@@ -59,7 +67,7 @@ BEGIN
 					DECLARE @isonleave NVARCHAR(50)=(SELECT TOP 1 Isonleave FROM tbl_fts_UserAttendanceLoginlogout WITH(NOLOCK) WHERE User_Id=@user_id AND Login_datetime IS NOT NULL 
 					AND CAST(Login_datetime AS DATE)=CAST(@datefetch AS DATE) ORDER BY Id)
 					
-					INSERT INTO tbl_fts_UserAttendanceLoginlogout WITH(TABLOCK) (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_datetime,Isonleave) 
+					INSERT INTO tbl_fts_UserAttendanceLoginlogout (User_Id,Login_datetime,Logout_datetime,Latitude,Longitude,Work_datetime,Isonleave) 
 					VALUES(@user_id,null,@datefetch,@latitude,@longitude,@datefetch,@isonleave)
 				END
 
@@ -69,21 +77,21 @@ BEGIN
 			IF @IsDatatableUpdateForDashboardAttendanceTab='1'
 				BEGIN
 			--End of Rev Debashis
-					INSERT INTO tbl_EmpAttendanceDetails WITH(TABLOCK)(UniqueKey,Emp_InternalId,LogTime)values(@SessionToken,@InternalID,@datefetch)
+					INSERT INTO tbl_EmpAttendanceDetails (UniqueKey,Emp_InternalId,LogTime)values(@SessionToken,@InternalID,@datefetch)
 
 					IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_Employee_Attendance WITH(NOLOCK) WHERE CONVERT(DATE,Att_Date)=CONVERT(DATE,@datefetch) AND Emp_InternalId=@InternalID)
 						BEGIN
-							INSERT INTO tbl_Employee_Attendance WITH(TABLOCK)(UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
+							INSERT INTO tbl_Employee_Attendance (UniqueKey,Emp_InternalId,Att_Date,In_Time,Out_Time,UpdatedBy,UpdatedOn,YYMM,Emp_status,Remarks)
 							VALUES (@SessionToken,@InternalID,@datefetch,@datefetch,NULL,@user_id,@datefetch,
 							RIGHT(DATEPART(yy,@datefetch),2)+RIGHT('00' + CAST(DATEPART(mm, @datefetch) AS varchar(2)), 2),'P','')
 						END
 					ELSE
 						BEGIN
-							UPDATE tbl_Employee_Attendance WITH(TABLOCK) SET Out_Time=@datefetch WHERE CONVERT(DATE,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID
+							UPDATE tbl_Employee_Attendance SET Out_Time=@datefetch WHERE CONVERT(DATE,Att_Date)=convert(date,@datefetch) and Emp_InternalId=@InternalID
 						END
 					IF NOT EXISTS(SELECT Emp_InternalId FROM tbl_EmpWiseAttendanceStatus WITH(NOLOCK) WHERE Emp_InternalId=@InternalID)
 						BEGIN
-							INSERT INTO tbl_EmpWiseAttendanceStatus WITH(TABLOCK) (UniqueKey,Emp_InternalId,YYMM)
+							INSERT INTO tbl_EmpWiseAttendanceStatus (UniqueKey,Emp_InternalId,YYMM)
 							VALUES(@SessionToken,@InternalID,right(datepart(yy,@datefetch),2)+ RIGHT('00' + CAST(DATEPART(mm, @datefetch) AS varchar(2)), 2))
 						END
 			--Rev Debashis
@@ -101,3 +109,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
