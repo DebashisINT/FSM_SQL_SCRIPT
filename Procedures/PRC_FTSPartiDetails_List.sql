@@ -3,8 +3,6 @@ BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSPartiDetails_List] AS' 
 END
 GO
-
-
 --EXEC PRC_FTSPartiDetails_List '2020-05-01','2020-05-25','','',1
 ALTER PROCEDURE [dbo].[PRC_FTSPartiDetails_List]
 (
