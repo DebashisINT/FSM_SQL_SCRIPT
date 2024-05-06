@@ -61,6 +61,7 @@ AS
 17.0	V2.0.44		Sanchita	20/12/2023		Contact Name column is required in the Shop list report. Mantis: 27110
 18.0	v2.0.45		sANCHITA	19/01/2024		Supervisor name column is required in Shops report. Mantis: 27199
 19.0    V2.0.46     Priti       19/04/2024      System is getting logged out while trying to export the Shops data into excel. Mantis: 0027324
+20.0	V2.0.47		Priti		03/05/2023      0027407: "Party Status" - needs to add in the following reports.
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -614,6 +615,9 @@ BEGIN
 				BRANCH_ID int,
 				BRANCHDESC nvarchar(200),
 				REPORTTO_NAME nvarchar(200)
+				--Rev 20.0
+				,PARTYSTATUS varchar(250) NULL
+				--Rev 20.0 End
 
 			)
 
@@ -625,18 +629,28 @@ BEGIN
 			--Rev 19.0  
 			IF @ISPAGELOAD='1'
 			Begin
-					SET @sql=''
-					SET @sql=' INSERT INTO FSM_SHOPLIST_REPORT (
+			SET @sql=''
+			--Rev 20.0
+			--SET @sql=' INSERT INTO FSM_SHOPLIST_REPORT (
+			--SEQ ,USERID ,shop_Auto ,statename ,shop_id ,shop_name ,EntityCode ,Entity_Location ,Entity_Status ,Specification ,ShopOwner_PAN ,ShopOwner_Aadhar ,address  ,pin_code ,shop_lat ,
+			--shop_long ,Shop_City ,owner_name ,Shop_WebSite ,owner_email ,owner_contact_no ,user_name ,Shop_CreateUser ,Shop_CreateTime ,time_shop ,Shop_ModifyUser ,Shop_ModifyTime ,
+			--Shop_Image ,dob ,date_aniversary ,Shoptype ,type ,UserName ,countactivity ,PP ,DD ,Lastactivitydate ,District ,Cluster ,SubType ,Alt_MobileNo1 ,Shop_Owner_Email2  ,gstn_number ,
+			--trade_licence_number ,Beat ,AttachmentImage1 ,AttachmentImage2 ,AttachmentImage3 ,AttachmentImage4 ,CONTACT_NAME1 ,CONTACT_NUMBER1 ,CONTACT_EMAIL1 ,CONTACT_DOA1 ,CONTACT_DOB1 ,
+			--CONTACT_NAME2 ,CONTACT_NUMBER2 ,CONTACT_EMAIL2 ,CONTACT_DOA2 ,CONTACT_DOB2 ,CONTACT_NAME3 ,CONTACT_NUMBER3 ,CONTACT_EMAIL3 ,CONTACT_DOA3 ,CONTACT_DOB3 ,CONTACT_NAME4 ,
+			--CONTACT_NUMBER4 ,CONTACT_EMAIL4 ,CONTACT_DOA4 ,CONTACT_DOB4 ,CONTACT_NAME5 ,CONTACT_NUMBER5 ,CONTACT_EMAIL5 ,CONTACT_DOA5 ,CONTACT_DOB5 ,CONTACT_NAME6 ,CONTACT_NUMBER6 ,
+			--CONTACT_EMAIL6 ,CONTACT_DOA6 ,CONTACT_DOB6 ,LASTVISITDATE ,LASTVISITTIME ,LASTVISITEDBY ,BRANCH_ID ,BRANCHDESC ,REPORTTO_NAME)'
+			
+
+			SET @sql=' INSERT INTO FSM_SHOPLIST_REPORT (
 			SEQ ,USERID ,shop_Auto ,statename ,shop_id ,shop_name ,EntityCode ,Entity_Location ,Entity_Status ,Specification ,ShopOwner_PAN ,ShopOwner_Aadhar ,address  ,pin_code ,shop_lat ,
 			shop_long ,Shop_City ,owner_name ,Shop_WebSite ,owner_email ,owner_contact_no ,user_name ,Shop_CreateUser ,Shop_CreateTime ,time_shop ,Shop_ModifyUser ,Shop_ModifyTime ,
 			Shop_Image ,dob ,date_aniversary ,Shoptype ,type ,UserName ,countactivity ,PP ,DD ,Lastactivitydate ,District ,Cluster ,SubType ,Alt_MobileNo1 ,Shop_Owner_Email2  ,gstn_number ,
 			trade_licence_number ,Beat ,AttachmentImage1 ,AttachmentImage2 ,AttachmentImage3 ,AttachmentImage4 ,CONTACT_NAME1 ,CONTACT_NUMBER1 ,CONTACT_EMAIL1 ,CONTACT_DOA1 ,CONTACT_DOB1 ,
 			CONTACT_NAME2 ,CONTACT_NUMBER2 ,CONTACT_EMAIL2 ,CONTACT_DOA2 ,CONTACT_DOB2 ,CONTACT_NAME3 ,CONTACT_NUMBER3 ,CONTACT_EMAIL3 ,CONTACT_DOA3 ,CONTACT_DOB3 ,CONTACT_NAME4 ,
 			CONTACT_NUMBER4 ,CONTACT_EMAIL4 ,CONTACT_DOA4 ,CONTACT_DOB4 ,CONTACT_NAME5 ,CONTACT_NUMBER5 ,CONTACT_EMAIL5 ,CONTACT_DOA5 ,CONTACT_DOB5 ,CONTACT_NAME6 ,CONTACT_NUMBER6 ,
-			CONTACT_EMAIL6 ,CONTACT_DOA6 ,CONTACT_DOB6 ,LASTVISITDATE ,LASTVISITTIME ,LASTVISITEDBY ,BRANCH_ID ,BRANCHDESC ,REPORTTO_NAME)'
-			
-			
-		    
+			CONTACT_EMAIL6 ,CONTACT_DOA6 ,CONTACT_DOB6 ,LASTVISITDATE ,LASTVISITTIME ,LASTVISITEDBY ,BRANCH_ID ,BRANCHDESC ,REPORTTO_NAME,PARTYSTATUS)'
+		    --Rev 20.0 End
+
 			--SET @sql+='select distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,'		
 			--Rev 19.0  end
 			
@@ -710,7 +724,16 @@ BEGIN
 			-- Rev 18.0
 			SET @sql+=',RPTTO.REPORTTO as REPORTTO_NAME '
 			-- End of Rev 18.0
+			
+			--Rev 20.0
+			SET @sql+=' ,ISNULL(PSTATUS.PARTYSTATUS,'''')PARTYSTATUS '
+			--Rev 20.0 End
+
 			SET @sql+='FROM tbl_Master_shop as shop '
+			--Rev 20.0
+			SET @sql+='LEFT OUTER JOIN FSM_PARTYSTATUS PSTATUS ON SHOP.Party_Status_id=PSTATUS.ID '
+			--Rev 20.0 End
+
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
 			--End of Rev 2.0
@@ -739,6 +762,9 @@ BEGIN
 			--INNER JOIN @ReportTABLE as rt on rt.userid=usr.user_id
 			SET @sql +='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId = usr.user_contactId
 			INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId = EMP.emp_contactId '
+
+			
+
 			--INNER JOIN   tbl_trans_shopActivitysubmit as Act on Act.Shop_Id=shop.Shop_Code 
 			--LEFT OUTER  JOIN   tbl_salesman_address as saladdr on shop.Shop_CreateUser=saladdr.UserId  '
 			--set @sql +=' LEFT OUTER JOIN
@@ -805,6 +831,11 @@ BEGIN
 			--,Shop_Owner_Email
 			--,Shop_Owner_Contact,shop.assigned_to_pp_id,assigned_to_dd_id,T.visited_time
 			--order  by Shop_ID  desc'
+
+			
+
+
+
 			SET @sql +='order by shop.Shop_code desc '
 			 --and  SessionToken=@session_token'
 			 --select @sql

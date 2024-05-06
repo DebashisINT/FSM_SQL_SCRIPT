@@ -34,7 +34,8 @@ Module	   : FTS Order Register
 7.0		v2.0.38		Debashis	03/01/2023		Quantity value up to 3 digit after decimal need to be incorporated in the Order related Reports.Refer: 0025365
 8.0		v2.0.39		Debashis	07/02/2023		Order Register Report is not working.Increased the field length of SHOPNAME.Refer: 0025651
 9.0		V2.0.42		Priti	    19/07/2023      Branch Parameter is required for various FSM reports.Refer:0026135
-10.0	V2.0.46		10.0    19/07/2023      027345: Two checkbox required in parameter for Order register report.
+10.0	V2.0.46		10.0		19/07/2023      027345: Two checkbox required in parameter for Order register report.
+11.0	V2.0.47		Priti		03/05/2023      0027407: "Party Status" - needs to add in the following reports.
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -216,6 +217,9 @@ BEGIN
 		  MRP DECIMAL(18,2),
 		  DISCOUNT DECIMAL(18,2)
 		  -- End of Rev 10.0
+		  --Rev 11.0
+		  ,PARTYSTATUS varchar(250) NULL
+		  --Rev 11.0 End
 		)
 		CREATE NONCLUSTERED INDEX IX1 ON FTSORDERREGISTER_REPORT (SEQ)
 	END
@@ -232,7 +236,10 @@ BEGIN
 	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID) '
 	-- Rev 10.0
 	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price) '
-	SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,DISCOUNT) '
+	-- Rev 11.0
+	--SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,DISCOUNT ) '
+	SET @Strsql='INSERT INTO FTSORDERREGISTER_REPORT(USERID,SEQ,EMPCODE,EMPNAME,BRANCHDESC,SHOPNAME,ENTITYCODE,ADDRESS,CONTACT,SHOPTYPE,ORDDATE,ORDID,ORDRNO,PRODUCT,QUANTITY,RATE,ORDVALUE,PPName,DDName,Employee_ID,Scheme_Qty,Scheme_Rate,Total_Scheme_Price,MRP,DISCOUNT ,PARTYSTATUS) '
+	-- Rev 11.0 End
 	-- End of Rev 10.0
 	--End of rev 0.5
 	--End of Rev 3.0
@@ -269,6 +276,10 @@ BEGIN
 	ELSE
 		SET @Strsql+=' ,0 AS ORDER_DISCOUNT '
 	-- End of Rev 10.0
+
+	--Rev 11.0
+	SET @Strsql+=' ,ISNULL(PSTATUS.PARTYSTATUS,'''')PARTYSTATUS '
+	--Rev 11.0 End
 	SET @Strsql+='FROM tbl_master_employee EMP '
 	SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	--Rev 3.0
@@ -308,6 +319,9 @@ BEGIN
 	SET @Strsql+='LEFT OUTER JOIN( '
 	SET @Strsql+='SELECT DISTINCT A.Shop_CreateUser,A.assigned_to_dd_id,A.Shop_Code,A.Shop_Name,A.Address,A.Shop_Owner_Contact,Type FROM tbl_Master_shop A '
 	SET @Strsql+=') SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code '
+	--Rev 11.0
+	SET @Strsql+='LEFT OUTER JOIN FSM_PARTYSTATUS PSTATUS ON SHOP.Party_Status_id=PSTATUS.ID '
+	--Rev 11.0 End
 	SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ORDHEAD.ORDERDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	IF @STATEID <> ''
 		SET @Strsql+='AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=SHOP.STATEID) '
