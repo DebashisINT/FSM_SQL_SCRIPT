@@ -205,6 +205,8 @@ BEGIN
 	182.0		Debashis	17-04-2024	ADD SETTINGS @Action=UserCheck'		ShowPartyWithGeoFence & ShowPartyWithCreateOrder.Row 920 & Refer: 0027372 & 0027374
 	183.0		Debashis	23-04-2024	ADD SETTINGS @Action=UserCheck'		AdditionalinfoRequiredforContactListing,AdditionalinfoRequiredforContactAdd & ContactAddresswithGeofence.
 																			Row 922
+	184.0		Debashis	26-04-2024	ADD SETTINGS @Action=UserCheck'		IsShowOtherInfoinActivity.Row 926
+	185.0		Debashis	07-05-2024	ADD SETTINGS @Action=UserCheck'		IsRouteUpdateForShopUser.Row 928
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -2117,6 +2119,16 @@ BEGIN
 		SELECT 'ContactAddresswithGeofence' AS [Key],CONVERT(NVARCHAR(15),USR.ContactAddresswithGeofence) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 183.0
+		--Rev 184.0
+		UNION ALL
+		SELECT 'IsShowOtherInfoinActivity' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowOtherInfoinActivity) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 184.0
+		--Rev 185.0
+		UNION ALL
+		SELECT 'IsRouteUpdateForShopUser' AS [Key],CONVERT(NVARCHAR(15),USR.IsRouteUpdateForShopUser) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 185.0
 	END
 
 	SET NOCOUNT OFF
