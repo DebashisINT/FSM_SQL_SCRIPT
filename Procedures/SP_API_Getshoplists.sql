@@ -42,9 +42,6 @@ AS
 20.0	Debashis	v2.0.43		22-12-2023		Some new fields have been added.Row: 898
 21.0	Debashis	v2.0.44		05-02-2024		total_visit_count and last_visit_date fields value should be fetched from tbl_master_shop instead of previous logic.
 												Refer: 0027177
-22.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 921
-23.0	Debashis	v2.0.46		24-04-2024		A new field has been added.Row: 924
-24.0	Debashis	v2.0.47		29-04-2024		user_shopstatus updation process update.Refer: 0027418
 ****************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -146,14 +143,8 @@ BEGIN
 			set @sql+='ISNULL(CRMSTAT.STATUS_NAME,'''') AS crm_status,ISNULL(CRMSRC.SOURCE_NAME,'''') AS crm_source,shop.Shop_CRMSourceID AS crm_sourceID,'
 			set @sql+='CASE WHEN shop.Shop_CRMReferenceType=''SHOP'' THEN shop.Shop_Name ELSE ISNULL(CRMCNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CRMCNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CRMCNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CRMCNT.CNT_LASTNAME,'''') END AS crm_reference,'
 			set @sql+='shop.Shop_CRMReferenceID AS crm_referenceID,SHOP.Shop_CRMReferenceType AS crm_referenceID_type,ISNULL(CRMSTAG.STAGE_NAME,'''') AS crm_stage,shop.Shop_CRMStageID AS crm_stage_ID,'
-			set @sql+='usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status,'
+			set @sql+='usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status '
 			--End of Rev 20.0
-			--Rev 22.0
-			set @sql+='shop.Remarks AS remarks,'
-			--End of Rev 22.0
-			--Rev 23.0
-			set @sql+='CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate '
-			--End of Rev 23.0
 			set @sql+=' from tbl_Master_shop as shop WITH(NOLOCK)  '
 			set @sql+=' INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id   '
 			set @sql+=' INNER JOIN  tbl_shoptype as typs WITH(NOLOCK) on typs.shop_typeId=shop.type   '
@@ -219,13 +210,7 @@ BEGIN
 					CASE WHEN shop.Shop_CRMReferenceType='SHOP' THEN shop.Shop_Name ELSE ISNULL(CRMCNT.CNT_FIRSTNAME,'')+' '+ISNULL(CRMCNT.CNT_MIDDLENAME,'')+(CASE WHEN ISNULL(CRMCNT.CNT_MIDDLENAME,'')<>'' THEN ' ' 
 					ELSE '' END)+ISNULL(CRMCNT.CNT_LASTNAME,'') END AS crm_reference,
 					shop.Shop_CRMReferenceID AS crm_referenceID,SHOP.Shop_CRMReferenceType AS crm_referenceID_type,ISNULL(CRMSTAG.STAGE_NAME,'') AS crm_stage,shop.Shop_CRMStageID AS crm_stage_ID,
-					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status,
-					--Rev 22.0
-					shop.Remarks AS remarks, 
-					--End of Rev 22.0
-					--Rev 23.0
-					CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate 
-					--End of Rev 23.0
+					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status 
 					FROM tbl_Master_shop as shop WITH(NOLOCK) 
 					INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
@@ -317,14 +302,8 @@ BEGIN
 					ISNULL(CRMSTAT.STATUS_NAME,'') AS crm_status,ISNULL(CRMSRC.SOURCE_NAME,'') AS crm_source,shop.Shop_CRMSourceID AS crm_sourceID,
 					CASE WHEN shop.Shop_CRMReferenceType='SHOP' THEN shop.Shop_Name ELSE ISNULL(CRMCNT.CNT_FIRSTNAME,'')+' '+ISNULL(CRMCNT.CNT_MIDDLENAME,'')+(CASE WHEN ISNULL(CRMCNT.CNT_MIDDLENAME,'')<>'' THEN ' ' ELSE '' END)+ISNULL(CRMCNT.CNT_LASTNAME,'') END AS crm_reference,
 					shop.Shop_CRMReferenceID AS crm_referenceID,SHOP.Shop_CRMReferenceType AS crm_referenceID_type,ISNULL(CRMSTAG.STAGE_NAME,'') AS crm_stage,shop.Shop_CRMStageID AS crm_stage_ID,
-					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status, 
+					usr.user_name AS assign_to,shop.saved_from_status AS saved_from_status 
 					--End of Rev 20.0
-					--Rev 22.0
-					shop.Remarks AS remarks,
-					--End of Rev 22.0
-					--Rev 23.0
-					CONVERT(NVARCHAR(10),shop.Shop_NextFollowupDate,120) AS Shop_NextFollowupDate 
-					--End of Rev 23.0
 					from tbl_Master_shop as shop WITH(NOLOCK) 
 					INNER JOIN  tbl_master_user usr WITH(NOLOCK) on shop.Shop_CreateUser=usr.user_id 
 					INNER JOIN  tbl_shoptype  as typs WITH(NOLOCK) on typs.shop_typeId=shop.type
@@ -351,10 +330,6 @@ BEGIN
 				END
 			--End of Rev 21.0
 		END
-
-	--Rev 24.0
-	UPDATE tbl_master_user SET user_ShopStatus=0 WHERE user_id=@user_id AND user_ShopStatus=1
-	--End of Rev 24.0
 
 	SET NOCOUNT OFF
 END

@@ -19,7 +19,6 @@ As
 /****************************************************************************************************************************************************************************
 1.0		v2.0.38		Sanchita	02-02-2023		Appconfig and User wise setting "IsAllDataInPortalwithHeirarchy = True" 
 												then data in portal shall be populated based on Hierarchy Only. Refer: 25504
-2.0	    V2.0.47		Priti		03-05-2023      0027407: "Party Status" - needs to add in the following reports.
 ****************************************************************************************************************************************************************************/
 BEGIN
 
@@ -108,7 +107,7 @@ BEGIN
 	select  Order_ProdId,Product_Id,Product_Qty,Product_Rate,Product_Price,ordprod.Shop_code,
 	mprod.sProducts_Name,Order_ID,shp.Shop_Name ,brnd.Brand_Name,clss.ProductClass_Name as Category,msize.Size_Name as Strength,
 	CNT.cnt_firstName+'' ''+CNT.cnt_middleName+'' ''+CNT.cnt_lastName as EmployeeName,ordupdate.Orderdate,
-	TYP.Name as Typename,DEG.deg_designation,STAT.state as StateName,ISNULL(PSTATUS.PARTYSTATUS,'''')PARTYSTATUS
+	TYP.Name as Typename,DEG.deg_designation,STAT.state as StateName
 	from tbl_FTs_OrderdetailsProduct as ordprod
 	inner join tbl_trans_fts_Orderupdate as ordupdate on ordprod.Order_ID=ordupdate.OrderId
 	inner join Master_sProducts as mprod on ordprod.Product_Id=mprod.sProducts_ID
@@ -119,11 +118,6 @@ BEGIN
 	inner join tbl_shoptype as TYP on shp.type=TYP.TypeId
 	inner join tbl_master_user as USR on USR.user_id=ordupdate.userID
 	inner join tbl_master_contact as CNT on CNT.cnt_internalId=USR.user_contactId '
-
-	--Rev 2.0
-	SET @SQL+='LEFT OUTER JOIN FSM_PARTYSTATUS PSTATUS ON shp.Party_Status_id=PSTATUS.ID '
-	--Rev 2.0 End
-
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@USERID)=1)
 		BEGIN
 			SET @SQL+=' INNER JOIN #EMPHR_EDIT HRY ON CNT.cnt_internalId=HRY.EMPCODE '

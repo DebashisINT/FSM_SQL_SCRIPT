@@ -1,4 +1,4 @@
---EXEC PRC_FTSAPILEADERBOARDPOINTSDETAILS 'OVERALL',54958,'1','1,118','M','http://localhost:16126/CommonFolder/ProfileImages/'
+--EXEC PRC_FTSAPILEADERBOARDPOINTSDETAILS 'OVERALL',54958,'1','1','M','http://localhost:16126/CommonFolder/ProfileImages/'
 --EXEC PRC_FTSAPILEADERBOARDPOINTSDETAILS 'BRANCHLISTS','','','','','','118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 138, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,1'
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSAPILEADERBOARDPOINTSDETAILS]') AND type in (N'P', N'PC'))
@@ -12,10 +12,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSAPILEADERBOARDPOINTSDETAILS]
 @ACTION NVARCHAR(20),
 @USERID BIGINT=NULL,
 @ACTIVITYBASED NVARCHAR(5)=NULL,
---Rev 1.0
---@BRANCHWISE BIGINT=NULL,
-@BRANCHWISE NVARCHAR(MAX)=NULL,
---End of Rev 1.0
+@BRANCHWISE BIGINT=NULL,
 @ACTIVITYMODE NCHAR(1)=NULL,
 @PROFILEIMAGEPATH NVARCHAR(500)=NULL,
 @CHILDBRANCH NVARCHAR(MAX)=NULL
@@ -24,35 +21,11 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 11/04/2024
 Module	   : Leaderboard Points Details.Row: 905 to 908 & Refer: 0027300
-1.0		v2.0.0		Debashis	19/04/2024		LeaderboardInfo/LeaderboardOverallList
-												LeaderboardInfo/LeaderboardOwnList
-												"branchwise" - this parameter will accept string value as like "123,127,152".Refer: 0027382
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @StrSql NVARCHAR(MAX)
-
-	--Rev 1.0
-	IF @ACTION IN('OVERALL','OWN')
-		BEGIN
-			IF OBJECT_ID('tempdb..#LBRANCH_LIST') IS NOT NULL
-				DROP TABLE #LBRANCH_LIST
-			CREATE TABLE #LBRANCH_LIST (BRANCH_ID BIGINT NULL)
-			CREATE NONCLUSTERED INDEX IX1 ON #LBRANCH_LIST (BRANCH_ID ASC)
-		
-			IF @BRANCHWISE<>''  
-				BEGIN
-					SET @BRANCHWISE = REPLACE(@BRANCHWISE,'''','')
-					SET @StrSql=''
-					SET @StrSql='INSERT INTO #LBRANCH_LIST(BRANCH_ID) '
-					SET @StrSql+='SELECT DISTINCT BRANCH_ID FROM TBL_MASTER_BRANCH WHERE branch_id IN('+@BRANCHWISE+') '
-
-					--SELECT @StrSql
-					EXEC SP_EXECUTESQL @StrSql
-				END
-		END
-	--End of Rev 1.0
 
 	IF @ACTION='OVERALL'
 		BEGIN
@@ -60,12 +33,8 @@ BEGIN
 			SET @StrSql+='ORDERPOINTS AS [order],ACTIVITIESPOINTS AS activities,POSITION AS position,TOTALSCORES AS totalscore,'
 			SET @StrSql+='CASE WHEN PROFILE_PICTURES_URL<>'''' THEN '''+@PROFILEIMAGEPATH+'''+PROFILE_PICTURES_URL ELSE '''' END AS profile_pictures_url '
 			SET @StrSql+='FROM FTSLEADERBOARDPOINTSDETAILS_REPORT WHERE ACTIVITYMODE='''+@ACTIVITYMODE+''' '
-			--Rev 1.0
-			--IF @BRANCHWISE<>0
-				--SET @StrSql+='AND BRANCH_ID='+TRIM(STR(@BRANCHWISE))+' '
-			IF @BRANCHWISE<>''
-				SET @StrSql+='AND EXISTS (SELECT BRANCH_ID FROM #LBRANCH_LIST AS F WHERE FTSLEADERBOARDPOINTSDETAILS_REPORT.BRANCH_ID=F.BRANCH_ID) '
-			--End of Rev 1.0
+			IF @BRANCHWISE<>0
+				SET @StrSql+='AND BRANCH_ID='+TRIM(STR(@BRANCHWISE))+' '
 			IF @ACTIVITYBASED<>'All'
 				BEGIN
 					IF @ACTIVITYBASED='1'
@@ -90,12 +59,8 @@ BEGIN
 			SET @StrSql+='ORDERPOINTS AS [order],ACTIVITIESPOINTS AS activities,POSITION AS position,TOTALSCORES AS totalscore,'
 			SET @StrSql+='CASE WHEN PROFILE_PICTURES_URL<>'''' THEN '''+@PROFILEIMAGEPATH+'''+PROFILE_PICTURES_URL ELSE '''' END AS profile_pictures_url '
 			SET @StrSql+='FROM FTSLEADERBOARDPOINTSDETAILS_REPORT WHERE USERID='+TRIM(STR(@USERID))+' AND ACTIVITYMODE='''+@ACTIVITYMODE+''' '
-			--Rev 1.0
-			--IF @BRANCHWISE<>0
-				--SET @StrSql+='AND BRANCH_ID='+TRIM(STR(@BRANCHWISE))+' '
-			IF @BRANCHWISE<>''
-				SET @StrSql+='AND EXISTS (SELECT BRANCH_ID FROM #LBRANCH_LIST AS F WHERE FTSLEADERBOARDPOINTSDETAILS_REPORT.BRANCH_ID=F.BRANCH_ID) '
-			--End of Rev 1.0
+			IF @BRANCHWISE<>0
+				SET @StrSql+='AND BRANCH_ID='+TRIM(STR(@BRANCHWISE))+' '
 			IF @ACTIVITYBASED<>'All'
 				BEGIN
 					IF @ACTIVITYBASED='1'
@@ -214,10 +179,6 @@ BEGIN
 			DROP TABLE #Branch_List
 			DROP TABLE #PBRANCH_LIST
 		END
-	--Rev 1.0
-	IF @ACTION IN('OVERALL','OWN')
-		DROP TABLE #LBRANCH_LIST
-	--End of Rev 1.0
 
 	SET NOCOUNT OFF
 END

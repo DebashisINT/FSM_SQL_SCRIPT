@@ -201,12 +201,7 @@ BEGIN
 	179.0		Debashis	14-03-2024	ADD SETTINGS @Action=GlobalCheck'	ShowPartyWithGeoFence,ShowPartyWithCreateOrder & Allow_past_days_for_apply_reimbursement.
 																			Row 901 & Refer: 0027279,0027285 & 0027282
 	180.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	loc_k & firebase_k.Row 903
-	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904	
-	182.0		Debashis	17-04-2024	ADD SETTINGS @Action=UserCheck'		ShowPartyWithGeoFence & ShowPartyWithCreateOrder.Row 920 & Refer: 0027372 & 0027374
-	183.0		Debashis	23-04-2024	ADD SETTINGS @Action=UserCheck'		AdditionalinfoRequiredforContactListing,AdditionalinfoRequiredforContactAdd & ContactAddresswithGeofence.
-																			Row 922
-	184.0		Debashis	26-04-2024	ADD SETTINGS @Action=UserCheck'		IsShowOtherInfoinActivity.Row 926
-	185.0		Debashis	07-05-2024	ADD SETTINGS @Action=UserCheck'		IsRouteUpdateForShopUser.Row 928
+	181.0		Debashis	03-04-2024	ADD SETTINGS @Action=GlobalCheck'	IsShowLeaderBoard.Row 904
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -2100,35 +2095,6 @@ BEGIN
 		SELECT 'IsAllDataInPortalwithHeirarchy' AS [Key],CONVERT(NVARCHAR(15),USR.IsAllDataInPortalwithHeirarchy) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 175.0
-		--Rev 182.0
-		UNION ALL
-		SELECT 'ShowUserwisePartyWithGeoFence' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwisePartyWithGeoFence) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		UNION ALL
-		SELECT 'ShowUserwisePartyWithCreateOrder' AS [Key],CONVERT(NVARCHAR(15),USR.ShowUserwisePartyWithCreateOrder) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		--End of Rev 182.0
-		--Rev 183.0
-		UNION ALL
-		SELECT 'AdditionalinfoRequiredforContactListing' AS [Key],CONVERT(NVARCHAR(15),USR.AdditionalinfoRequiredforContactListing) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		UNION ALL
-		SELECT 'AdditionalinfoRequiredforContactAdd' AS [Key],CONVERT(NVARCHAR(15),USR.AdditionalinfoRequiredforContactAdd) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		UNION ALL
-		SELECT 'ContactAddresswithGeofence' AS [Key],CONVERT(NVARCHAR(15),USR.ContactAddresswithGeofence) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		--End of Rev 183.0
-		--Rev 184.0
-		UNION ALL
-		SELECT 'IsShowOtherInfoinActivity' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowOtherInfoinActivity) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		--End of Rev 184.0
-		--Rev 185.0
-		UNION ALL
-		SELECT 'IsRouteUpdateForShopUser' AS [Key],CONVERT(NVARCHAR(15),USR.IsRouteUpdateForShopUser) AS [Value] 
-		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
-		--End of Rev 185.0
 	END
 
 	SET NOCOUNT OFF
