@@ -30,6 +30,8 @@ AS
 10.0		Sanchita	30-08-2023		V2.0.43		If Duplicate conact exists and Beat given in Import Excel, then while inserting record
 													in table "FTS_PartyImportLog", error comming for convertion failed from String to Bigint
 													for column "Beat_ID". Now taken care of. Refer: 26775
+11.0		Sanchita	13-05-2024		V2.0.47		A new coloumn named as Shop_id shall be implemented in place of existing shop_id coloumn of tbl_master_shop table.
+													Mantis: 27416													
 ******************************************************************************************************************************/
 BEGIN
 
@@ -66,14 +68,19 @@ DECLARE @Party_Status_ID NVARCHAR(500)=null
 DECLARE @Beat_ID NVARCHAR(300)=NULL
 
 DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
+-- Rev 11.0
+DECLARE @SHOP_ID_MANUAL BIGINT
+-- End of Rev 11.0
+
+-- Rev 11.0 [ THE NAME "IMPORT_TABLE" REPLACED WITH "SHOP_IMPORT_TABLE" ]
 
 -- Rev 9.0
 	if exists( select [Contact] from @IMPORT_TABLE group by [Contact] having count([Contact])>1  )
 	begin
-		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'IMPORT_TABLE') AND TYPE IN (N'U'))
-			DROP TABLE IMPORT_TABLE
+		IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'SHOP_IMPORT_TABLE') AND TYPE IN (N'U'))
+			DROP TABLE SHOP_IMPORT_TABLE
 
-		SELECT * INTO IMPORT_TABLE FROM (
+		SELECT * INTO SHOP_IMPORT_TABLE FROM (
 		SELECT 
 		[State],[City],[Area],[Cluster],[Type],[Shop type],[Entity Type],[Assigned To PP],[DD Type],[Assigned To DD],[Party Name],[Party Code],[Party Status],[Address],[Pin Code],[Owner],[DOB],[Anniversary],
 		[Contact],[Alternate Contact],[Alternate Contact 1],[Email],[Alternate Email],[Status],[Entity Category],[Owner PAN],[Owner Aadhaar],[GSTIN],[Trade License],[Location],[Group/Beat],[Account Holder],[Account No],[Bank Name],[IFSC Code],[UPI ID],
@@ -99,15 +106,15 @@ DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
 		,@Beat_ID,[Account Holder],[Account No],[Bank Name],[IFSC Code],[UPI ID],
 		-- End of Rev 10.0
 		[Remarks],[Assign to User],[Party Location Lat],[Party Location Lang]
-		,'Faild' ImportStatus,'Duplicate Contact Exist.' ImportMsg ,GETDATE() ImportDate,'' as CreateUser_Id FROM IMPORT_TABLE temp 
+		,'Faild' ImportStatus,'Duplicate Contact Exist.' ImportMsg ,GETDATE() ImportDate,'' as CreateUser_Id FROM SHOP_IMPORT_TABLE temp 
 		where [Contact] is not NULL 
-		and exists (select [Contact] from IMPORT_TABLE group by [Contact] having count([Contact])>1 and [Contact]=temp.[Contact] )
+		and exists (select [Contact] from SHOP_IMPORT_TABLE group by [Contact] having count([Contact])>1 and [Contact]=temp.[Contact] )
 
 		SELECT logs.* FROM FTS_PartyImportLog AS logs
-		 INNER JOIN IMPORT_TABLE temp ON logs.[Contact] =temp.[Contact] 
+		 INNER JOIN SHOP_IMPORT_TABLE temp ON logs.[Contact] =temp.[Contact] 
 
-		 IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'IMPORT_TABLE') AND TYPE IN (N'U'))
-			DROP TABLE IMPORT_TABLE
+		 IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'SHOP_IMPORT_TABLE') AND TYPE IN (N'U'))
+			DROP TABLE SHOP_IMPORT_TABLE
 
 	end
 	else
@@ -161,6 +168,10 @@ DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
 															BEGIN
 																IF ISNULL(@ShopTypeid,'')<>''
 																	BEGIN
+																		-- Rev 11.0
+																		SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+																		-- End of Rev 11.0
+
 																		INSERT INTO tbl_Master_shop(
 																		Shop_Code,Shop_Name,Address,Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_WebSite,Shop_Owner_Email,Shop_Owner_Contact,dob,date_aniversary,type,Shop_CreateUser,
 																		Shop_CreateTime,Shop_ModifyUser,Shop_ModifyTime,Shop_Image,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id,assigned_to_dd_id,
@@ -170,6 +181,9 @@ DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
 																		--rev 6.0
 																		,[Cluster],[Shop_Owner_Email2],[Alt_MobileNo1],[GSTN_NUMBER],[Trade_Licence_Number]
 																		--End of rev 6.0
+																		-- Rev 11.0
+																		,Shop_ID
+																		-- End of Rev 11.0
 																		)
 																		SELECT
 																		CAST(@user_id AS varchar(20)) + '_' + cast((CAST(DATEDIFF(SECOND,'1970-01-01',getdate()) AS bigint) * 1155)+@i AS varchar(20)) as Shop_Code,
@@ -193,6 +207,9 @@ DECLARE @Shop_Owner_Contact nVARCHAR(50)=''
 																		--rev 6.0
 																		,[Cluster],[Alternate Email],[Alternate Contact 1],[GSTIN],[Trade License]
 																		--End of rev 6.0
+																		-- Rev 11.0
+																		,@SHOP_ID_MANUAL
+																		-- End of Rev 11.0
 																		FROM @IMPORT_TABLE temp where [Contact]=@Shop_Owner_Contact
 																		----rev 6.0
 																		--INSERT INTO FTS_PartyImportLog

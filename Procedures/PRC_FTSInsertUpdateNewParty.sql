@@ -98,9 +98,15 @@ AS
 17.0		V2.0.46		Sanchita	12-04-2024		0027348: FSM: Master > Contact > Parties [Delete Facility]
 18.0		v2.0.46		Sanchita	26-04-2024		A flag shall be created in the user master when any customer is made inactive or delete against a particular user.
 													Refer: 0027414
-*******************************************************************************************************************************/
+19.0		V2.0.47		Sanchita	13-05-2024		A new coloumn named as Shop_id shall be implemented in place of existing shop_id coloumn of tbl_master_shop table.
+													Mantis: 27416
+******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
+	-- Rev 19.0
+	DECLARE @SHOP_ID_MANUAL BIGINT
+	-- End of Rev 19.0
+
 	set @Lastvisit_date =GETDATE()
 	IF @ACTION='Details'
 	BEGIN
@@ -234,6 +240,10 @@ BEGIN
 		BEGIN
 		-- End of Rev 9.0
 
+			-- Rev 19.0
+			SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+			-- End of Rev 19.0
+
 			INSERT INTO tbl_Master_shop
 			(Shop_Code,Shop_Name,Address,Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_WebSite,Shop_Owner_Email,Shop_Owner_Contact,dob,date_aniversary,
 			type,Shop_CreateUser,Shop_CreateTime,Shop_Image,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id,assigned_to_dd_id,
@@ -243,6 +253,9 @@ BEGIN
 			--rev 8.0
 			,GSTN_NUMBER,Trade_Licence_Number,Cluster,Alt_MobileNo1,Shop_Owner_Email2
 			--End of rev 8.0
+			-- Rev 19.0
+			,SHOP_ID
+			-- End of Rev 19.0
 			)
 
 			VALUES(@SHOP_CODE,@Shop_Name,@Address,@Pincode,@Shop_Lat,@Shop_Long,@Shop_City,@Shop_Owner,@Shop_WebSite,@Shop_Owner_Email,@Shop_Owner_Contact,@dob,@date_aniversary,
@@ -256,6 +269,9 @@ BEGIN
 			--rev 8.0
 			,@GSTN_NUMBER,@Trade_Licence_Number,@Cluster,@Alt_MobileNo1,@Shop_Owner_Email2
 			--End of rev 8.0
+			-- Rev 19.0
+			,@SHOP_ID_MANUAL
+			-- End of Rev 19.0
 			)
 		-- Rev 9.0
 		END

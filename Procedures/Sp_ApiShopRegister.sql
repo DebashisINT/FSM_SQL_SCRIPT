@@ -142,9 +142,12 @@ ALTER PROCEDURE [dbo].[Sp_ApiShopRegister]
 @saved_from_status VARCHAR(100)=NULL,
 --End of Rev 26.0
 --Rev 28.0
-@isFromCRM BIT=NULL
+@isFromCRM BIT=0,
 --End of Rev 28.0
-) --WITH ENCRYPTION
+--Rev 29.0
+@Shop_NextFollowupDate NVARCHAR(10)=NULL
+--End of Rev 29.0
+) WITH ENCRYPTION
 AS
 /********************************************************************************************************************************************************************************
 1.0			TANMOY			31-12-2019			ADD EXTER FIELD FOR MORE DETAILS AND INSER NEW TABLE WITHE HEADER ID
@@ -179,6 +182,9 @@ AS
 26.0		Debashis		22-12-2023			Some new parameters have been added.Row: 892 & 895
 27.0		Debashis		23-12-2023			"assign_to" parameter flow in Shop add.Refer: 0027123
 28.0		Debashis		11-04-2024			A new field added as ISFROMCRM.Row: 917
+29.0		Debashis		24-04-2024			A new field added as Shop_NextFollowupDate.Row: 923
+30.0		Sanchita		13-05-2024			A new coloumn named as Shop_id shall be implemented in place of existing shop_id coloumn of tbl_master_shop table.
+												Mantis: 27416
 ********************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -242,6 +248,11 @@ BEGIN
 	declare @currentdate  datetime=NULL
 	DECLARE @COUNT BIGINT
 	declare @StateID  varchar(50)=NULL
+	-- Rev 30.0
+	DECLARE @SHOP_ID_MANUAL BIGINT
+	-- End of Rev 30.0
+
+
 	set @currentdate=GETDATE();
 	if(isnull(@amount,'')='')
 		BEGIN
@@ -299,13 +310,21 @@ BEGIN
 							--Rev 25.0 && A new field added as FSSAILicNo
 							--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 							--Rev 28.0 && A new field added as ISFROMCRM
+							--Rev 29.0 && A new field added as Shop_NextFollowupDate
+							-- Rev 30.0
+							SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+							-- End of Rev 30.0
+
 							INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 									   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 										,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
 										,Entered_By,Entered_On,Model_id,Primary_id,Secondary_id,Lead_id,FunnelStage_id,Stage_id,Booking_amount,PartyType_id,Entity_Id,Party_Status_id,retailer_id
 										,dealer_id,beat_id,assigned_to_shop_id,actual_address,competitor_img,Agency_Name,Lead_Contact_Number,Project_Name,Landline_Number,
 										AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose,GSTN_Number,FSSAILicNo,Shop_FirstName,Shop_LastName,Shop_CRMCompID,Shop_JobTitle,Shop_CRMTypeID,
-										Shop_CRMStatusID,Shop_CRMSourceID,Shop_CRMReferenceID,Shop_CRMReferenceType,Shop_CRMStageID,saved_from_status,ISFROMCRM
+										Shop_CRMStatusID,Shop_CRMSourceID,Shop_CRMReferenceID,Shop_CRMReferenceType,Shop_CRMStageID,saved_from_status,ISFROMCRM,Shop_NextFollowupDate
+										-- Rev 30.0
+										,Shop_ID
+										-- End of Rev 30.0
 										)
 								 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,
 										--Rev 27.0
@@ -317,7 +336,11 @@ BEGIN
 										@funnel_stage_id,@stage_id,@booking_amount,@PartyType_id,@entity_id,@party_status_id,@retailer_id,@dealer_id,@beat_id,@assigned_to_shop_id,@actual_address,
 										@competitor_img,@agency_name,@lead_contact_number,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,
 										@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,@crm_companyID,@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,
-										@saved_from_status,@isFromCRM)
+										@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
+										-- Rev 30.0
+										,@SHOP_ID_MANUAL
+										-- End of Rev 30.0
+										)
 
 							SET @COUNT=SCOPE_IDENTITY();
 
@@ -344,13 +367,14 @@ BEGIN
 											--Rev 25.0 && A new field added as FSSAILicNo
 											--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 											--Rev 28.0 && A new field added as ISFROMCRM
+											--Rev 29.0 && A new field added as Shop_NextFollowupDate
 											select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 											,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 											,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 											,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 											@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,@crm_companyID,@crm_jobTitle,
-											@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM
+											@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
 									--Rev 23.0
 										END
 									ELSE IF @IsUpdateVisitDataInTodayTable='1'
@@ -363,13 +387,14 @@ BEGIN
 											--Rev 25.0 && A new field added as FSSAILicNo
 											--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 											--Rev 28.0 && A new field added as ISFROMCRM
+											--Rev 29.0 && A new field added as Shop_NextFollowupDate
 											select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 											,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 											,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 											,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 											@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 											@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,@crm_companyID,@crm_jobTitle,
-											@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM
+											@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
 										END
 									--End of Rev 23.0									
 
@@ -414,6 +439,11 @@ BEGIN
 									--Rev 25.0 && A new field added as FSSAILicNo
 									--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 									--Rev 28.0 && A new field added as ISFROMCRM
+									--Rev 29.0 && A new field added as Shop_NextFollowupDate
+									-- Rev 30.0
+									SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+									-- End of Rev 30.0
+
 									INSERT INTO [tbl_Master_shop] ([Shop_Name],[Address],[Pincode],[Shop_Lat],[Shop_Long],[Shop_Owner],[Shop_Owner_Email],[Shop_Owner_Contact],[Shop_CreateUser]
 											   ,[Shop_CreateTime],[type],dob,date_aniversary,[Shop_Image],Shop_Code,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id
 												,assigned_to_dd_id,stateId,Amount,EntityCode,Entity_Location,Alt_MobileNo,Entity_Status,Entity_Type,ShopOwner_PAN,ShopOwner_Aadhar,Remarks,Area_id,Shop_City
@@ -444,7 +474,10 @@ BEGIN
 												,competitor_img
 												,Agency_Name,Lead_Contact_Number
 												,Project_Name,Landline_Number,AlternateNoForCustomer,WhatsappNoForCustomer,IsShopDuplicate,Purpose,GSTN_Number,FSSAILicNo,Shop_FirstName,Shop_LastName,Shop_CRMCompID,
-												Shop_JobTitle,Shop_CRMTypeID,Shop_CRMStatusID,Shop_CRMSourceID,Shop_CRMReferenceID,Shop_CRMReferenceType,Shop_CRMStageID,saved_from_status,ISFROMCRM
+												Shop_JobTitle,Shop_CRMTypeID,Shop_CRMStatusID,Shop_CRMSourceID,Shop_CRMReferenceID,Shop_CRMReferenceType,Shop_CRMStageID,saved_from_status,ISFROMCRM,Shop_NextFollowupDate
+												-- Rev 30.0
+												,Shop_ID
+												-- End of Rev 30.0
 												)
 										 VALUES (@shop_name,@address,@pin_code,@shop_lat,@shop_long,@owner_name,@owner_email,@owner_contact_no,
 												--Rev 27.0
@@ -481,7 +514,10 @@ BEGIN
 												,@competitor_img
 												,@agency_name,@lead_contact_number
 												,@project_name,@landline_number,@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,
-												@crm_companyID,@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@saved_from_status,@isFromCRM
+												@crm_companyID,@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
+												-- Rev 30.0
+												,@SHOP_ID_MANUAL
+												-- End of Rev 30.0
 												)
 
 									SET @COUNT=SCOPE_IDENTITY();
@@ -515,13 +551,14 @@ BEGIN
 													--Rev 25.0 && A new field added as FSSAILicNo
 													--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 													--Rev 28.0 && A new field added as ISFROMCRM
+													--Rev 29.0 && A new field added as Shop_NextFollowupDate
 													select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 													,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 													,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 													,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 													@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 													@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,@crm_companyID,
-													@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM
+													@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
 											--Rev 23.0
 												END
 											ELSE IF @IsUpdateVisitDataInTodayTable='1'
@@ -534,13 +571,14 @@ BEGIN
 													--Rev 25.0 && A new field added as FSSAILicNo
 													--Rev 26.0 && Some new fields added as shop_firstName,shop_lastName,crm_companyID,crm_jobTitle,crm_typeID,crm_statusID,crm_sourceID,crm_referenceID,crm_referenceID_type,crm_stage_ID,assign_to,saved_from_status
 													--Rev 28.0 && A new field added as ISFROMCRM
+													--Rev 29.0 && A new field added as Shop_NextFollowupDate
 													select '200' as returncode,@shop_id as shop_id,@session_token as session_token,@shop_name as shop_name,@address as address,@pin_code as pin_code
 													,@shop_lat as shop_lat,@shop_long as shop_long,@owner_name as owner_name,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email
 													,@user_id as user_id,@address  as address,@pin_code as pin_code,@shop_lat  as shop_lat,@shop_long  as shop_long,@owner_name as owner_name
 													,@owner_contact_no  as owner_contact_no,@owner_email  as owner_email,@type as [type],@dob as dob,@date_aniversary  as date_aniversary,
 													@agency_name AS agency_name,@lead_contact_number AS lead_contact_number,@project_name AS project_name,@landline_number AS landline_number,
 													@alternateNoForCustomer,@whatsappNoForCustomer,@isShopDuplicate,@purpose,@ShopOwner_PAN,@GSTN_Number,@FSSAILicNo,@shop_firstName,@shop_lastName,@crm_companyID,
-													@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM
+													@crm_jobTitle,@crm_typeID,@crm_statusID,@crm_sourceID,@crm_referenceID,@crm_referenceID_type,@crm_stage_ID,@assign_to,@saved_from_status,@isFromCRM,@Shop_NextFollowupDate
 												END
 											----End of Rev 23.0											
 

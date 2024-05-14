@@ -49,13 +49,18 @@ AS
 /****************************************************************************************************************************************************************************
 Written by Sanchita on 23-11-2023 for V2.0.43	A new design page is required as Contact (s) under CRM menu. 
 												Refer: 27034
-Rev 1.0		Sanchita	V2.0.47		19/04/2024	0027384: Contact Module issues in Portal
+ 1.0		Sanchita	V2.0.47		19/04/2024	0027384: Contact Module issues in Portal
+ 2.0		Sanchita	V2.0.47		13-05-2024	A new coloumn named as Shop_id shall be implemented in place of existing shop_id coloumn of tbl_master_shop table.
+												Mantis: 27416
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 	DECLARE @Strsql NVARCHAR(MAX), @Shop_Name nvarchar(4000)
 	DECLARE @SHOP_CODE NVARCHAR(100)
 	Declare @ReferenceContactId nvarchar(100) = '', @ReferenceType VARCHAR(50)=''
+	-- Rev 2.0
+	DECLARE @SHOP_ID_MANUAL BIGINT
+	-- End of Rev 2.0
 	
 	set @Lastvisit_date =GETDATE()
 
@@ -95,6 +100,10 @@ BEGIN
 				END
 			END
 
+			-- Rev 2.0
+			SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+			-- End of Rev 2.0
+
 			-- Rev 1.0 [ columns Pincode, WhatsappNoForCustomer, Entered_By, Entered_On added ]
 			INSERT INTO tbl_Master_shop
 				(Shop_Code,Shop_Name,Shop_Owner_Contact,Shop_Owner_Email, Address, dob, date_aniversary, Shop_JobTitle, 
@@ -102,12 +111,18 @@ BEGIN
 					Shop_CRMStageID, Remarks, Amount, Shop_NextFollowupDate, Entity_Status, ISFROMCRM, Shop_CreateTime,
 					Shop_FirstName, Shop_LastName, Shop_CRMReferenceType,type, 
 					Pincode, WhatsappNoForCustomer, Entered_By, Entered_On, Shop_Lat, Shop_Long,saved_from_status
+					-- Rev 2.0
+					,SHOP_ID
+					-- End of Rev 2.0
 				)
 
 				VALUES(@SHOP_CODE,@Shop_Name,@PhoneNo, @Email, @Address, @DOB, @Anniversarydate, @JobTitle,
 					@CompanyId, @AssignedTo, @TypeId, @StatusId, @SourceId, @ReferenceContactId, 
 					@StageId, @Remarks, @ExpSalesValue, @NextFollowDate, @Active, 1, GETDATE(), @FirstName, @LastName, @ReferenceType,99,
 					@Pincode, @WhatsappNo, @Login_UserId, GETDATE(),0,0,'Manually'
+					-- Rev 2.0
+					,@SHOP_ID_MANUAL
+					-- End of Rev 2.0
 				)
 
 			set @RETURN_VALUE =  @SHOP_CODE
@@ -422,17 +437,28 @@ BEGIN
 																	AND Shop_CRMStageID=ISNULL(@StagesID1,0) AND TRIM(Remarks)=TRIM(@Remarks1) AND Amount=@ExpectedSalesValue1 
 																	AND CONVERT(DATE,Shop_NextFollowupDate)=CONVERT(DATE,@NextfollowUpDate1) )
 																BEGIN  -- 13
+																	
+																	-- Rev 2.0
+																	SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+																	-- End of Rev 2.0
+
 																	INSERT INTO tbl_Master_shop
 																	(Shop_Code,Shop_Name,Shop_Owner_Contact,Shop_Owner_Email, Address, dob, date_aniversary, Shop_JobTitle, 
 																		Shop_CRMCompID, Shop_CreateUser, Shop_CRMTypeID, Shop_CRMStatusID, Shop_CRMSourceID, Shop_CRMReferenceID,
 																		Shop_CRMStageID, Remarks, Amount, Shop_NextFollowupDate, Entity_Status, ISFROMCRM, Shop_CreateTime,
 																		Shop_FirstName, Shop_LastName, Shop_CRMReferenceType, type, Entered_By,Entered_On, Shop_Lat,Shop_Long,saved_from_status
+																		-- Rev 2.0
+																		,SHOP_ID
+																		-- End of Rev 2.0
 																	)
 
 																	VALUES(@SHOP_CODE,@Shop_Name,@Phone1, @Email1, @Address1, @DateofBirth1, @DateofAnniversary1, @JobTitle1,
 																		ISNULL(@CompanyID1,0), ISNULL(@AssignToID1,0), ISNULL(@TypeId1,0), ISNULL(@StatusId1,0), ISNULL(@SourceId1,0), 
 																		ISNULL(@ReferenceID1,0), ISNULL(@StagesID1,0), @Remarks1, @ExpectedSalesValue1, @NextfollowUpDate1, 
 																		@Active1, 1, GETDATE(), @FirstName1, @LastName1, @ReferenceType1,99, @user_id,GETDATE(),0,0,'Manually'
+																		-- Rev 2.0
+																		,@SHOP_ID_MANUAL
+																		-- End of Rev 2.0
 																	)
 												
 
