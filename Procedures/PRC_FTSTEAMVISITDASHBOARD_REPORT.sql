@@ -26,7 +26,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSTEAMVISITDASHBOARD_REPORT]
 @BRANCHID NVARCHAR(MAX)=NULL,
 --End of Rev 1.0
 @USERID INT
-) --WITH ENCRYPTION
+) WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder on 09/02/2022
@@ -50,6 +50,8 @@ Module	   : Team Visit Dashboard Summary & Detail.Refer: 0024666
 10.0	v2.0.33		Debashis	09-10-2022		Code optimized.Refer: 0025331
 11.0	V2.0.36		Sanchita	10-11-2022		When an Employee is mapped with Multiple States and Multiple Branch, the count of that employee should be considered as One
 												Refer: 25441
+12.0	V2.0.47		Sanchita	17-05-2024		In Portal Dashboard, under Field Visit and Team Visit tabs Order Value coloumn shall be added
+												Refer: 27403
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -333,6 +335,9 @@ BEGIN
 			  CHANNEL NVARCHAR(MAX),
 			  CIRCLE NVARCHAR(MAX),
 			  SECTION NVARCHAR(MAX)
+			  -- Rev 12.0
+			  ,ITCORDER_VALUE DEcimal(18,2)
+			  -- End of Rev 12.0
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSTEAMVISITDASHBOARD_REPORT (SEQ)
 		END
@@ -410,8 +415,8 @@ BEGIN
 			SET @Strsql='INSERT INTO FTSTEAMVISITDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,AT_WORK) '
 			-- Rev 11.0
 			--SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK '
-			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(AT_WORK) IS NULL THEN 0 ELSE COUNT(AT_WORK) END AS AT_WORK from ( '
-			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,ATTENLILO.AT_WORK '
+			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(cnt_internalId) IS NULL THEN 0 ELSE COUNT(cnt_internalId) END AS AT_WORK from ( '
+			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Summary'' AS RPTTYPE,CNT.cnt_internalId as cnt_internalId '
 			-- End of Rev 11.0
 			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -448,7 +453,7 @@ BEGIN
 				END
 			-- End of Rev 8.0
 			-- Rev 11.0
-			SET @Strsql+='GROUP BY ATTENLILO.AT_WORK '
+			SET @Strsql+='GROUP BY CNT.cnt_internalId '
 			SET @Strsql+=' ) A '
 			-- End of Rev 11.0
 			--End of Rev 1.0
@@ -460,8 +465,8 @@ BEGIN
 			SET @Strsql='INSERT INTO FTSTEAMVISITDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,ON_LEAVE) '
 			-- Rev 11.0
 			--SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ATTEN.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTEN.ON_LEAVE) END AS ON_LEAVE '
-			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ON_LEAVE) END AS ON_LEAVE from ( '
-			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,ATTEN.ON_LEAVE '
+			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,CASE WHEN COUNT(cnt_internalId) IS NULL THEN 0 ELSE COUNT(cnt_internalId) END AS ON_LEAVE from ( '
+			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''ON_LEAVE'' AS ACTION,''Summary'' AS RPTTYPE,CNT.cnt_internalId as cnt_internalId '
 			-- End of Rev 11.0
 			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -500,7 +505,7 @@ BEGIN
 				END
 			-- End of Rev 8.0
 			-- Rev 11.0
-			SET @Strsql+='GROUP BY ATTEN.ON_LEAVE '
+			SET @Strsql+='GROUP BY CNT.cnt_internalId '
 			SET @Strsql+=' ) A '
 			-- End of Rev 11.0
 			--End of Rev 1.0
@@ -573,8 +578,8 @@ BEGIN
 			SET @Strsql+='UNION ALL '
 			-- Rev 11.0
 			--SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(ATTENLILO.AT_WORK) IS NULL THEN 0 ELSE COUNT(ATTENLILO.AT_WORK) END AS AT_WORK,0 AS ON_LEAVE '
-			SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(AT_WORK) IS NULL THEN 0 ELSE COUNT(AT_WORK) END AS AT_WORK,0 AS ON_LEAVE from ( '
-			SET @Strsql+='SELECT 0 AS EMPCNT,ATTENLILO.AT_WORK,0 AS ON_LEAVE '
+			SET @Strsql+='SELECT 0 AS EMPCNT,CASE WHEN COUNT(cnt_internalId) IS NULL THEN 0 ELSE COUNT(cnt_internalId) END AS AT_WORK,0 AS ON_LEAVE from ( '
+			SET @Strsql+='SELECT 0 AS EMPCNT,CNT.cnt_internalId as cnt_internalId,0 AS ON_LEAVE '
 			-- End of Rev 11.0
 			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -611,15 +616,15 @@ BEGIN
 				END
 			-- End of Rev 8.0
 			-- Rev 11.0
-			SET @Strsql+='GROUP BY ATTENLILO.AT_WORK '
+			SET @Strsql+='GROUP BY CNT.cnt_internalId '
 			SET @Strsql+=' ) AS A '
 			-- End of Rev 11.0
 			--End of Rev 1.0
 			SET @Strsql+='UNION ALL '
 			-- Rev 11.0
 			--SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(ATTENLILO.ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ATTENLILO.ON_LEAVE) END AS ON_LEAVE '
-			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(ON_LEAVE) IS NULL THEN 0 ELSE COUNT(ON_LEAVE) END AS ON_LEAVE FROM ( '
-			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,ATTENLILO.ON_LEAVE '
+			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CASE WHEN COUNT(cnt_internalId) IS NULL THEN 0 ELSE COUNT(cnt_internalId) END AS ON_LEAVE FROM ( '
+			SET @Strsql+='SELECT 0 AS EMPCNT,0 AS AT_WORK,CNT.cnt_internalId as cnt_internalId '
 			-- End of Rev 11.0
 			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -657,7 +662,7 @@ BEGIN
 				END
 			-- End of Rev 8.0
 			-- Rev 11.0
-			SET @Strsql+='GROUP BY ATTENLILO.ON_LEAVE '
+			SET @Strsql+='GROUP BY CNT.cnt_internalId '
 			SET @Strsql+=' ) AS A '
 			-- End of Rev 11.0
 			--End of Rev 1.0
@@ -860,12 +865,18 @@ BEGIN
 			--Rev 10.0 && WITH (NOLOCK) has been added in all tables
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSTEAMVISITDASHBOARD_REPORT(USERID,ACTION,RPTTYPE,SEQ,BRANCH_ID,BRANCHDESC,EMPID,EMPCODE,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,LOGGEDIN,'
-			SET @Strsql+='LOGEDOUT,CURRENT_STATUS,TOTAL_HRS_WORKED,GPS_INACTIVE_DURATION,DISTANCE_COVERED,SHOPS_VISITED,TOTAL_ORDER_BOOKED_VALUE,TOTAL_COLLECTION,DEPARTMENT) '
+			SET @Strsql+='LOGEDOUT,CURRENT_STATUS,TOTAL_HRS_WORKED,GPS_INACTIVE_DURATION,DISTANCE_COVERED,SHOPS_VISITED,TOTAL_ORDER_BOOKED_VALUE,TOTAL_COLLECTION,DEPARTMENT '
+			-- Rev 12.0
+			SET @Strsql+=' , ITCORDER_VALUE )'
+			-- End of Rev 12.0
 			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,''AT_WORK'' AS ACTION,''Detail'' AS RPTTYPE,ROW_NUMBER() OVER(ORDER BY DESIGNATION) AS SEQ,BRANCH_ID,BRANCHDESC,EMPID,EMPCODE,EMPNAME,'
 			SET @Strsql+='STATEID,STATE,DEG_ID,DESIGNATION,CONTACTNO,REPORTTOUID,REPORTTO,LOGGEDIN,LOGEDOUT,CURRENT_STATUS,'
 			SET @Strsql+='CASE WHEN Total_Hrs_Worked>0 THEN RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(Total_Hrs_Worked AS VARCHAR) % 60 AS VARCHAR),2) ELSE ''--'' END AS Total_Hrs_Worked,'
 			SET @Strsql+='RIGHT(''0'' + CAST(CAST(GPS_Inactive_duration AS VARCHAR)/ 60 AS VARCHAR),2)  + '':'' +RIGHT(''0'' + CAST(CAST(GPS_Inactive_duration AS VARCHAR) % 60 AS VARCHAR),2) AS GPS_Inactive_duration,'
-			SET @Strsql+='DISTANCE_COVERED,Shops_Visited,Total_Order_Booked_Value,Total_Collection,DEPARTMENT FROM( '
+			SET @Strsql+='DISTANCE_COVERED,Shops_Visited,Total_Order_Booked_Value,Total_Collection,DEPARTMENT '
+			-- Rev 12.0
+			SET @Strsql+=' , ITCORDER_VALUE FROM( '
+			-- End of Rev 12.0
 			-- Rev 9.0
 			--SET @Strsql+='SELECT BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC,EMP.emp_uniqueCode AS EMPID,CNT.cnt_internalId AS EMPCODE,'
 			IF(@ActivateEmployeeBranchHierarchy = 0)
@@ -882,6 +893,9 @@ BEGIN
 			SET @Strsql+='- CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(ATTEN.LOGGEDIN,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(ATTEN.LOGGEDIN,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) AS Total_Hrs_Worked,'
 			SET @Strsql+='ISNULL(GPSSM.GPS_Inactive_duration,0) AS GPS_Inactive_duration,''--'' AS DISTANCE_COVERED,ISNULL(SHOPACT.shop_visited,0) AS Shops_Visited,ISNULL(ORDHEAD.Ordervalue,0) AS Total_Order_Booked_Value,ISNULL(COLLEC.collectionvalue,0) AS Total_Collection,'
 			SET @Strsql+='DEPT.cost_description AS DEPARTMENT '
+			-- Rev 12.0
+			SET @Strsql+=' , ISNULL(ITCORDER.PRODUCT_QTY,0) AS ITCORDER_VALUE '
+			-- End of Rev 12.0
 			SET @Strsql+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 			--Rev 5.0
@@ -947,6 +961,14 @@ BEGIN
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
 			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),SH.STARTENDDATE,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
 			SET @Strsql+='GROUP BY SH.USER_ID,CNT.cnt_internalId) ORDHEAD ON ORDHEAD.cnt_internalId=CNT.cnt_internalId '
+			-- Rev 12.0
+			SET @Strsql+='LEFT OUTER JOIN (SELECT ITCORDERDET.userID,CNT1.cnt_internalId,SUM(ISNULL(ITCORDERDET.PRODUCT_QTY,0)) AS PRODUCT_QTY FROM FSMITCORDERDETAIL ITCORDERDET WITH (NOLOCK) '
+			SET @Strsql+='INNER JOIN FSMITCORDERHEADER ITCORDERHEAD WITH (NOLOCK) ON ITCORDERDET.ORDER_CODE=ITCORDERHEAD.ORDER_CODE '
+			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ITCORDERDET.userID '
+			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT1 ON CNT1.cnt_internalId=USR.user_contactId '
+			SET @Strsql+='WHERE CONVERT(NVARCHAR(10),ITCORDERHEAD.ORDER_DATE,120)=CONVERT(NVARCHAR(10),'''+@TODAYDATE+''',120) '
+			SET @Strsql+='GROUP BY ITCORDERDET.userID,CNT1.cnt_internalId) ITCORDER ON ITCORDER.cnt_internalId=CNT.cnt_internalId '
+			-- End of Rev 12.0
 			SET @Strsql+='LEFT OUTER JOIN (SELECT COLLEC.user_id,CNT.cnt_internalId,SUM(ISNULL(COLLEC.collection,0)) AS collectionvalue FROM tbl_FTS_collection COLLEC WITH (NOLOCK) '
 			SET @Strsql+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=COLLEC.user_id '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
@@ -1217,10 +1239,11 @@ BEGIN
 			else
 			begin
 				IF @BRANCHID<>''
-					SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=BMAP.BRANCH_ID) '
+					--SET @Strsql+='WHERE EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=BMAP.BRANCH_ID) '
+					SET @Strsql+='AND EXISTS (SELECT Branch_Id FROM #BRANCHID_LIST AS BRAN WHERE BRAN.Branch_Id=DB.BRANCH_ID) '
 			end
 			-- End of Rev 8.0
-			--SELECT @Strsql
+			SELECT @Strsql
 			EXEC SP_EXECUTESQL @Strsql
 		END
 	ELSE IF @ACTION='NOT_LOGIN' AND @RPTTYPE='Detail'
@@ -1819,3 +1842,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
