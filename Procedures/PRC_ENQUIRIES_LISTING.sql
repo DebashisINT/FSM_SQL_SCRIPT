@@ -1,19 +1,18 @@
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_ENQUIRIES_LISTING]') AND type in (N'P', N'PC')) 
-BEGIN 
-	EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_ENQUIRIES_LISTING] AS'  
-END 
- 
+--exec PRC_ENQUIRIES_LISTING @USERID='378',@ENQUIRIESFROM='Exhibition',@FROMDATE='2024-05-11',@TODATE='2024-05-11'
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_ENQUIRIES_LISTING]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_ENQUIRIES_LISTING] AS' 
+END
 GO
 
--- exec PRC_ENQUIRIES_LISTING @USERID='378',@ENQUIRIESFROM='3,4,5',@FROMDATE='2020-01-01',@TODATE='2000-01-26'
 ALTER PROCEDURE [dbo].[PRC_ENQUIRIES_LISTING]
 (
 @USERID INT=NULL,
 @ENQUIRIESFROM NVARCHAR(500)=NULL,
 @FROMDATE NVARCHAR(10)=NULL,
 @TODATE NVARCHAR(10)=NULL
-)
- 
+) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************************************************************************
 Written by Sanchita. Refer: 24631
@@ -23,6 +22,8 @@ Written by Sanchita. Refer: 24631
 4.0		Sanchita	V2.0.42		21/08/2023		CRM Enquiries - Some of the Indiamart Enquiry are not coming while showing the enquiry list.
 												Mantis: 26736
 5.0		Sanchita	V2.0.43		27/07/2023		Eurobond Enquiry data entry and edit submit issue. Mantis : 27047
+6.0		Debashis	v2.0.47		13/05/2024		An error is showing while trying to generate Enquiries.Now it has been resolved.Refer: 0027441
+7.0		Sanchita	V2.0.47		17/05/2024		Location data is showing under state column in Enquiries module. Mantis: 27460
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -141,8 +142,12 @@ BEGIN
 			  Day NVARCHAR(10) NULL,
 			  Month NVARCHAR(10) NULL,
 			  Year NVARCHAR(10) NULL,
-			  State NVARCHAR(100) NULL,
-			  Area NVARCHAR(100) NULL,
+			  --Rev 6.0
+			  --State NVARCHAR(100) NULL,
+			  --Area NVARCHAR(100) NULL,
+			  State NVARCHAR(200) NULL,
+			  Area NVARCHAR(200) NULL,
+			  --End of Rev 6.0
 			 --End of rev 2.0
 			 --rev 3.0
 			 SalesmanAssign_date nvarchar(50) NULL,
@@ -204,10 +209,20 @@ BEGIN
 	--rev 2.0
 	--SET @Strsql+=',case when SalesmanId=0 then '''' when isnull(ReAssignedSalesman,0)<>0 then ura.user_name when SalesmanId<>0 then us.user_name end as ASSIGNED_TO   '
 	--End of rev 1.0
-	SET @Strsql+=',case when SalesmanId=0 then '''' else us.user_name end as ASSIGNED_TO'
-	SET @Strsql+=',case when isnull(ReAssignedSalesman,0)=0 then '''' else ura.user_name end as ReASSIGNED_TO '
+	-- Rev 7.0
+	--SET @Strsql+=',case when SalesmanId=0 then '''' else us.user_name end as ASSIGNED_TO'
+	--SET @Strsql+=',case when isnull(ReAssignedSalesman,0)=0 then '''' else ura.user_name end as ReASSIGNED_TO '
+	SET @Strsql+=',case when isnull(ReAssignedSalesman,0)<>0 then ura_REPTO.user_name when isnull(SalesmanId,0)<>0 then us_REPTO.user_name else '''' end as ASSIGNED_TO'
+	SET @Strsql+=',case when isnull(ReAssignedSalesman,0)<>0 then ura.user_name when isnull(SalesmanId,0)<>0 then us.user_name else '''' end as ReASSIGNED_TO '
+	-- End of Rev 7.0
 	SET @Strsql+=',FORMAT(h.Date,''dd'') as Day,FORMAT(h.Date,''MM'') as Month,FORMAT(h.Date,''yyyy'') as Year'
-	SET @Strsql+=',ISNULL(pvt.[location1],'''') AS State,ISNULL(pvt.[location2],'''') AS Area'
+	-- Rev 7.0
+	--SET @Strsql+=',ISNULL(pvt.[location1],'''') AS State,ISNULL(pvt.[location2],'''') AS Area'
+
+	SET @Strsql+=', (CASE WHEN (h.vend_type = ''Other'' OR h.vend_type = ''IndiaMart'' OR h.vend_type = ''IndiaMart (ARCHER)'' OR h.vend_type = ''MccoyMart'') THEN ISNULL(pvt.[location1],'''') ELSE '''' END) AS State'
+	SET @Strsql+=',(CASE WHEN (h.vend_type = ''Other'' OR h.vend_type = ''IndiaMart'' OR h.vend_type = ''IndiaMart (ARCHER)'' OR h.vend_type = ''MccoyMart'') THEN ISNULL(pvt.[location2],'''') ELSE '''' END) AS Area'
+
+	-- End of Rev 7.0
 	--End of rev 2.0
 	--rev 3.0
 	SET @Strsql+=',CONVERT(NVARCHAR(10),h.SalesmanAssign_dt,105)+'' ''+ CONVERT(NVARCHAR(10),h.SalesmanAssign_dt,108) as SalesmanAssign_date'
@@ -244,6 +259,15 @@ BEGIN
 	--rev 1.0
 	SET @Strsql+=' left outer join(select user_id,user_name from tbl_master_user ) ura on cast(ura.user_id as int)=h.ReAssignedSalesman'
 	--End of rev 1.0
+	-- Rev 7.0
+	SET @Strsql+=' left outer join(select UR.user_id, UREP.user_name from tbl_master_user UR  INNER JOIN tbl_trans_employeeCTC CTCREP ON UR.user_contactId=CTCREP.emp_cntId
+					INNER JOIN tbl_master_employee EREP ON EREP.emp_id= CTCREP.emp_reportTo
+					INNER JOIN TBL_MASTER_USER UREP ON EREP.emp_contactId=UREP.user_contactId ) us_REPTO on cast(us_REPTO.user_id as int)=h.SalesmanId '
+
+	SET @Strsql+=' left outer join(select UR.user_id, UREP.user_name from tbl_master_user UR  INNER JOIN tbl_trans_employeeCTC CTCREP ON UR.user_contactId=CTCREP.emp_cntId
+					INNER JOIN tbl_master_employee EREP ON EREP.emp_id= CTCREP.emp_reportTo
+					INNER JOIN TBL_MASTER_USER UREP ON EREP.emp_contactId=UREP.user_contactId ) ura_REPTO on cast(ura_REPTO.user_id as int)=h.ReAssignedSalesman '
+	-- End of Rev 7.0
 	--rev 2.0
 	SET @Strsql+=' left outer join (SELECT Crm_Id,''location''+ CAST(ROW_NUMBER()OVER(PARTITION BY crm_id ORDER BY crm_id) AS VARCHAR) AS Col,'
 	-- Rev 5.0
@@ -266,4 +290,5 @@ BEGIN
 	drop table #TEMPSALESMAN
 	drop table #TEMPMAXSALESMANFEEDBACK
 END
+
 GO
