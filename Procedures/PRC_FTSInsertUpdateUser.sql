@@ -1,5 +1,3 @@
-
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSInsertUpdateUser]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateUser] AS' 
@@ -308,13 +306,6 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@IsCheckBatteryOptimization INT=0
 -- End of Rev 35.0
 
--- Rev 36.0
-,@ShowUserwisePartyWithGeoFence INT=0
-,@ShowUserwisePartyWithCreateOrder INT=0
--- End of Rev 36.0
-
-
-
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -360,9 +351,7 @@ AS
 33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
 34.0    V2.0.44     19/12/2023      Sanchita    Call log facility is required in the FSM App - IsCallLogHistoryActivated” - 
                                                 User Account - Add User master settings. Mantis: 27063
-35.0    v2.0.46		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
-36.0    V2.0.46     17-04-2024      Priti       0027372: ShowPartyWithCreateOrder setting shall be available User wise setting also
-                                                0027374: ShowPartyWithGeoFence setting shall be available User wise setting also
+35.0    v2.0.47		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -553,10 +542,6 @@ BEGIN
 			,IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization
 			-- End of Rev 35.0
-			-- Rev 36.0
-			,ShowUserwisePartyWithGeoFence 
-			,ShowUserwisePartyWithCreateOrder 
-			-- End of Rev 36.0
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -723,11 +708,6 @@ BEGIN
 			,isnull(@IsShowMenuCRMContacts,0)
 			,isnull(@IsCheckBatteryOptimization,0)
 			-- End of Rev 35.0
-			-- Rev 36.0
-			,@ShowUserwisePartyWithGeoFence 
-			,@ShowUserwisePartyWithCreateOrder 
-			-- End of Rev 36.0
-
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1159,11 +1139,6 @@ BEGIN
 				 OR IsShowMenuCRMContacts<>@IsShowMenuCRMContacts
 				 OR IsCheckBatteryOptimization<>@IsCheckBatteryOptimization
 				 -- End of Rev 35.0
-				 -- Rev 36.0
-				OR ShowUserwisePartyWithGeoFence<>@ShowUserwisePartyWithGeoFence
-				OR ShowUserwisePartyWithCreateOrder<>@ShowUserwisePartyWithCreateOrder
-				-- End of Rev 36.0
-
 				 )
 				)
 			BEGIN
@@ -1374,13 +1349,6 @@ BEGIN
 			,IsShowMenuCRMContacts = @IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization = @IsCheckBatteryOptimization
 			-- End of Rev 35.0
-			-- Rev 36.0
-			,ShowUserwisePartyWithGeoFence=@ShowUserwisePartyWithGeoFence
-			,ShowUserwisePartyWithCreateOrder=@ShowUserwisePartyWithCreateOrder
-			-- End of Rev 36.0
-
-
-
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1648,10 +1616,6 @@ BEGIN
 			,ISNULL(IsShowMenuCRMContacts,0) as IsShowMenuCRMContacts
 			,ISNULL(IsCheckBatteryOptimization,0) as IsCheckBatteryOptimization
 			-- End of Rev 35.0
-			--Rev 36.0
-			,ShowUserwisePartyWithGeoFence
-			,ShowUserwisePartyWithCreateOrder
-			--Rev 36.0 End
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1811,10 +1775,6 @@ BEGIN
 			,'IsShowMenuCRMContacts'
 			,'IsCheckBatteryOptimization'
 			-- End of Rev 35.0
-			--Rev 36.0 
-			,'ShowPartyWithCreateOrder'
-			,'ShowPartyWithGeoFence'
-			--Rev 36.0 End
 			)
 		END
 	-- Rev 18.0

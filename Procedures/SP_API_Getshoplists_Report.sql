@@ -1,12 +1,13 @@
 --exec SP_API_Getshoplists_Report @Shoptype='2,4',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Prime Partner,Distributor'
 --exec SP_API_Getshoplists_Report @Shoptype='5',@Weburl='',@StateId='',@Action='Counter',@Create_UserId=378,@Shnm='Show All'
---EXEC SP_API_Getshoplists_Report @Action='Counter',@Shoptype='5',@user_id=378,@Create_UserId=378,@Weburl='',@ISREVISITCONTACTDETAILS=1,@ISPAGELOAD='1',@StateId='2,27,8,28,29,41,22,20,38,34,9,26,39,33,16,17,31,1,23,25,7,4,35,3,21,13,30,36,11,40,18,32,5,6,12,19,10,24,14,15',@BRANCHID='127,118,1,128,131,122,149,141,120,150,125,119,144,145,148,143,146,140,124,147,121,142'
+--EXEC SP_API_Getshoplists_Report @Action='Counter',@Shoptype='1',@user_id=378,@Weburl='',@ISREVISITCONTACTDETAILS=1
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[SP_API_Getshoplists_Report]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [SP_API_Getshoplists_Report] AS' 
 END
 GO
+
 ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 (
 @user_id varchar(50)=NULL,
@@ -35,9 +36,6 @@ ALTER PROCEDURE [dbo].[SP_API_Getshoplists_Report]
 --Rev 14.0
 @ISREVISITCONTACTDETAILS INT=NULL
 --End of Rev 14.0
---Rev 19.0
-,@ISPAGELOAD CHAR(1)='0'
---Rev 19.0 End
 ) --WITH ENCRYPTION
 AS
 /*================================================================================================================================================================
@@ -60,8 +58,6 @@ AS
 16.0	V2.0.41		Sanchita	19/07/2023		Add Branch parameter in Listing of Master -> Shops report. Refer: 26135
 17.0	V2.0.44		Sanchita	20/12/2023		Contact Name column is required in the Shop list report. Mantis: 27110
 18.0	v2.0.45		sANCHITA	19/01/2024		Supervisor name column is required in Shops report. Mantis: 27199
-19.0    V2.0.46     Priti       19/04/2024      System is getting logged out while trying to export the Shops data into excel. Mantis: 0027324
-20.0	V2.0.47		Priti		03/05/2023      0027407: "Party Status" - needs to add in the following reports.
 ==================================================================================================================================================================*/
 BEGIN
 	SET NOCOUNT ON
@@ -69,7 +65,6 @@ BEGIN
 	DECLARE @sql nvarchar(MAX)=''
 	DECLARE @topcount nvarchar(100)=@Uniquecont
 	DECLARE @ReportTABLE Table(userid int,userreport int)
-	DECLARE @Strsql NVARCHAR(MAX),@sqlStrTable NVARCHAR(MAX)
 	--Rev 10.0
 	DECLARE @SqlTable NVARCHAR(MAX)
 	--End of Rev 10.0
@@ -464,197 +459,64 @@ BEGIN
 		BEGIN
 			SELECT TypeId AS ID,Name FROM tbl_shoptype
 		END
-----------------------------------------------
+------------------------------------------------
 
 	IF(@Action='Counter')
 		BEGIN
-			--Rev 19.0  
-			IF @ISPAGELOAD='1'
-			Begin
-			--Rev 19.0   End
-					--Rev 7.0
-					CREATE TABLE #TMPSHOPTYPENAME(SHOPTYPENAME NVARCHAR(MAX))
-					--End of Rev 7.0
+			DECLARE @Strsql NVARCHAR(MAX),@sqlStrTable NVARCHAR(MAX)
+			--Rev 7.0
+			CREATE TABLE #TMPSHOPTYPENAME(SHOPTYPENAME NVARCHAR(MAX))
+			--End of Rev 7.0
 
-					--Rev 2.0
-					--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
-					IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
-					--End of Rev 2.0
-					DROP TABLE #STATEID_LIST
-					CREATE TABLE #STATEID_LIST (State_Id INT)
-					CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
-					IF @STATEID <> ''
-						BEGIN
-							SET @STATEID=REPLACE(@STATEID,'''','')
-							SET @sqlStrTable=''
-							SET @sqlStrTable=' INSERT INTO #STATEID_LIST SELECT id from tbl_master_state where id in('+@STATEID+')'
-							EXEC SP_EXECUTESQL @sqlStrTable
-						END
+			--Rev 2.0
+			--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#STATEID_LIST') AND TYPE IN (N'U'))
+			IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL
+			--End of Rev 2.0
+				DROP TABLE #STATEID_LIST
+			CREATE TABLE #STATEID_LIST (State_Id INT)
+			CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
+			IF @STATEID <> ''
+				BEGIN
+					SET @STATEID=REPLACE(@STATEID,'''','')
+					SET @sqlStrTable=''
+					SET @sqlStrTable=' INSERT INTO #STATEID_LIST SELECT id from tbl_master_state where id in('+@STATEID+')'
+					EXEC SP_EXECUTESQL @sqlStrTable
+				END
 
-					--Rev 2.0
-					--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
-					IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
-					--End of Rev 2.0
-					DROP TABLE #TEMPCONTACT
-					CREATE TABLE #TEMPCONTACT
-						(
-							cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-							cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-							cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-							cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-							cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
-						)
-					CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-					INSERT INTO #TEMPCONTACT
-					SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-
-					SET @Shoptype = REPLACE(''''+@Shoptype+'''',',',''',''')
-
-					SET @Shoptype=REPLACE(@Shoptype,'''','')
-			
-					--Rev 7.0
-					SET @sql='INSERT INTO #TMPSHOPTYPENAME(SHOPTYPENAME) SELECT (
-					ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '','' + [Name] FROM ShopTypeData WHERE [shop_typeId] IN('+@Shoptype+')	
-						FOR XML PATH(''''))),1,1,''''))),'''')) '
-					EXEC(@sql)
-					SET @sql=''
-					--End of Rev 7.0
-			
-
-			--Rev 19.0  		
-			END
-			--Rev 19.0  end
-
-			--Rev 19.0  
-			IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'FSM_SHOPLIST_REPORT') AND TYPE IN (N'U'))
-			BEGIN
-				Create table FSM_SHOPLIST_REPORT
+			--Rev 2.0
+			--IF EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'#TEMPCONTACT') AND TYPE IN (N'U'))
+			IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL
+			--End of Rev 2.0
+				DROP TABLE #TEMPCONTACT
+			CREATE TABLE #TEMPCONTACT
 				(
-				SEQ INT,
-				USERID BIGINT,			
-				shop_Auto nvarchar(200),
-				statename nvarchar(500),
-				shop_id nvarchar(200),
-				shop_name nvarchar(200),
-				EntityCode nvarchar(200),
-				Entity_Location nvarchar(200),
-				Entity_Status nvarchar(200),
-				Specification nvarchar(200),
-				ShopOwner_PAN nvarchar(50),
-				ShopOwner_Aadhar nvarchar(50),
-				address  nvarchar(500),
-				pin_code nvarchar(50),
-				shop_lat nvarchar(200),
-				shop_long nvarchar(200),
-				Shop_City nvarchar(200),
-				owner_name nvarchar(200),
-				Shop_WebSite nvarchar(200),
-				owner_email nvarchar(50),
-				owner_contact_no nvarchar(50),
-				user_name nvarchar(200),
-				Shop_CreateUser int,
-				Shop_CreateTime datetime,
-				time_shop datetime,
-				Shop_ModifyUser int,
-				Shop_ModifyTime datetime,
-				Shop_Image nvarchar(Max),
-				dob datetime,
-				date_aniversary datetime,
-				Shoptype varchar(50),
-				type int,
-				UserName nvarchar(200),
-				countactivity int,
-				PP nvarchar(500),
-				DD nvarchar(500),
-				Lastactivitydate nvarchar(200),
-				District nvarchar(200),
-				Cluster nvarchar(250),
-				SubType nvarchar(Max),
-				Alt_MobileNo1 nvarchar(50),
-				Shop_Owner_Email2  nvarchar(50),
-				gstn_number nvarchar(50),
-				trade_licence_number nvarchar(100),
-				Beat nvarchar(500),
-				AttachmentImage1 nvarchar(2000),
-				AttachmentImage2 nvarchar(2000),
-				AttachmentImage3 nvarchar(2000),
-				AttachmentImage4 nvarchar(2000),
-				CONTACT_NAME1 nvarchar(200),
-				CONTACT_NUMBER1 nvarchar(50),
-				CONTACT_EMAIL1 nvarchar(50),
-				CONTACT_DOA1 nvarchar(200),
-				CONTACT_DOB1 nvarchar(200),
-				CONTACT_NAME2 nvarchar(200),
-				CONTACT_NUMBER2 nvarchar(50),
-				CONTACT_EMAIL2 nvarchar(50),
-				CONTACT_DOA2 nvarchar(200),
-				CONTACT_DOB2 nvarchar(200),
-				CONTACT_NAME3 nvarchar(200),
-				CONTACT_NUMBER3 nvarchar(200),
-				CONTACT_EMAIL3 nvarchar(200),
-				CONTACT_DOA3 nvarchar(200),
-				CONTACT_DOB3 nvarchar(200),
-				CONTACT_NAME4 nvarchar(200),
-				CONTACT_NUMBER4 nvarchar(200),
-				CONTACT_EMAIL4 nvarchar(200),
-				CONTACT_DOA4 nvarchar(200),
-				CONTACT_DOB4 nvarchar(200),
-				CONTACT_NAME5 nvarchar(200),
-				CONTACT_NUMBER5 nvarchar(200),
-				CONTACT_EMAIL5 nvarchar(200),
-				CONTACT_DOA5 nvarchar(200),
-				CONTACT_DOB5 nvarchar(200),
-				CONTACT_NAME6 nvarchar(200),
-				CONTACT_NUMBER6 nvarchar(200),
-				CONTACT_EMAIL6 nvarchar(200),
-				CONTACT_DOA6 nvarchar(200),
-				CONTACT_DOB6 nvarchar(200),
-				LASTVISITDATE datetime,
-				LASTVISITTIME datetime,
-				LASTVISITEDBY nvarchar(200),
-				BRANCH_ID int,
-				BRANCHDESC nvarchar(200),
-				REPORTTO_NAME nvarchar(200)
-				--Rev 20.0
-				,PARTYSTATUS varchar(250) NULL
-				--Rev 20.0 End
+					cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+					cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+					cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+					cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+					cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+				)
+			CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
+			INSERT INTO #TEMPCONTACT
+			SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
 
-			)
+			SET @Shoptype = REPLACE(''''+@Shoptype+'''',',',''',''')
 
-				CREATE NONCLUSTERED INDEX IX1PF_PURREGPROD_RPT ON FSM_SHOPLIST_REPORT (SEQ)
-			END
-			DELETE FROM FSM_SHOPLIST_REPORT where USERID=@Create_UserId
-			--Rev 19.0  end
-
-			--Rev 19.0  
-			IF @ISPAGELOAD='1'
-			Begin
+			SET @Shoptype=REPLACE(@Shoptype,'''','')
+			
+			--Rev 7.0
+			SET @sql='INSERT INTO #TMPSHOPTYPENAME(SHOPTYPENAME) SELECT (
+			ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '','' + [Name] FROM ShopTypeData WHERE [shop_typeId] IN('+@Shoptype+')	
+				FOR XML PATH(''''))),1,1,''''))),'''')) '
+			EXEC(@sql)
 			SET @sql=''
-			--Rev 20.0
-			--SET @sql=' INSERT INTO FSM_SHOPLIST_REPORT (
-			--SEQ ,USERID ,shop_Auto ,statename ,shop_id ,shop_name ,EntityCode ,Entity_Location ,Entity_Status ,Specification ,ShopOwner_PAN ,ShopOwner_Aadhar ,address  ,pin_code ,shop_lat ,
-			--shop_long ,Shop_City ,owner_name ,Shop_WebSite ,owner_email ,owner_contact_no ,user_name ,Shop_CreateUser ,Shop_CreateTime ,time_shop ,Shop_ModifyUser ,Shop_ModifyTime ,
-			--Shop_Image ,dob ,date_aniversary ,Shoptype ,type ,UserName ,countactivity ,PP ,DD ,Lastactivitydate ,District ,Cluster ,SubType ,Alt_MobileNo1 ,Shop_Owner_Email2  ,gstn_number ,
-			--trade_licence_number ,Beat ,AttachmentImage1 ,AttachmentImage2 ,AttachmentImage3 ,AttachmentImage4 ,CONTACT_NAME1 ,CONTACT_NUMBER1 ,CONTACT_EMAIL1 ,CONTACT_DOA1 ,CONTACT_DOB1 ,
-			--CONTACT_NAME2 ,CONTACT_NUMBER2 ,CONTACT_EMAIL2 ,CONTACT_DOA2 ,CONTACT_DOB2 ,CONTACT_NAME3 ,CONTACT_NUMBER3 ,CONTACT_EMAIL3 ,CONTACT_DOA3 ,CONTACT_DOB3 ,CONTACT_NAME4 ,
-			--CONTACT_NUMBER4 ,CONTACT_EMAIL4 ,CONTACT_DOA4 ,CONTACT_DOB4 ,CONTACT_NAME5 ,CONTACT_NUMBER5 ,CONTACT_EMAIL5 ,CONTACT_DOA5 ,CONTACT_DOB5 ,CONTACT_NAME6 ,CONTACT_NUMBER6 ,
-			--CONTACT_EMAIL6 ,CONTACT_DOA6 ,CONTACT_DOB6 ,LASTVISITDATE ,LASTVISITTIME ,LASTVISITEDBY ,BRANCH_ID ,BRANCHDESC ,REPORTTO_NAME)'
+			--End of Rev 7.0
 			
 
-			SET @sql=' INSERT INTO FSM_SHOPLIST_REPORT (
-			SEQ ,USERID ,shop_Auto ,statename ,shop_id ,shop_name ,EntityCode ,Entity_Location ,Entity_Status ,Specification ,ShopOwner_PAN ,ShopOwner_Aadhar ,address  ,pin_code ,shop_lat ,
-			shop_long ,Shop_City ,owner_name ,Shop_WebSite ,owner_email ,owner_contact_no ,user_name ,Shop_CreateUser ,Shop_CreateTime ,time_shop ,Shop_ModifyUser ,Shop_ModifyTime ,
-			Shop_Image ,dob ,date_aniversary ,Shoptype ,type ,UserName ,countactivity ,PP ,DD ,Lastactivitydate ,District ,Cluster ,SubType ,Alt_MobileNo1 ,Shop_Owner_Email2  ,gstn_number ,
-			trade_licence_number ,Beat ,AttachmentImage1 ,AttachmentImage2 ,AttachmentImage3 ,AttachmentImage4 ,CONTACT_NAME1 ,CONTACT_NUMBER1 ,CONTACT_EMAIL1 ,CONTACT_DOA1 ,CONTACT_DOB1 ,
-			CONTACT_NAME2 ,CONTACT_NUMBER2 ,CONTACT_EMAIL2 ,CONTACT_DOA2 ,CONTACT_DOB2 ,CONTACT_NAME3 ,CONTACT_NUMBER3 ,CONTACT_EMAIL3 ,CONTACT_DOA3 ,CONTACT_DOB3 ,CONTACT_NAME4 ,
-			CONTACT_NUMBER4 ,CONTACT_EMAIL4 ,CONTACT_DOA4 ,CONTACT_DOB4 ,CONTACT_NAME5 ,CONTACT_NUMBER5 ,CONTACT_EMAIL5 ,CONTACT_DOA5 ,CONTACT_DOB5 ,CONTACT_NAME6 ,CONTACT_NUMBER6 ,
-			CONTACT_EMAIL6 ,CONTACT_DOA6 ,CONTACT_DOB6 ,LASTVISITDATE ,LASTVISITTIME ,LASTVISITEDBY ,BRANCH_ID ,BRANCHDESC ,REPORTTO_NAME,PARTYSTATUS)'
-		    --Rev 20.0 End
+			--SET @sqlStrTable=''
+			--SET @sqlStrTable=' INSERT INTO #Shop_List select branch_id from tbl_master_branch where branch_id in('+@Shoptype+')'
 
-			--SET @sql+='select distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,'		
-			--Rev 19.0  end
-			
-			SET @sql+=' select ROW_NUMBER() OVER (ORDER BY shop.Shop_ID DESC) as SEQ, '+LTRIM(RTRIM(STR(@Create_UserId)))+' AS USERID, cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,'
+			SET @sql='select distinct cast(shop.Shop_ID as varchar(50))	as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,'
 			--Rev 2.0
 			SET @sql+='SHOP.EntityCode,SHOP.Entity_Location,CASE WHEN SHOP.Entity_Status=1 THEN ''Active'' ELSE ''Inactive'' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,'
 			SET @sql+='SHOP.ShopOwner_Aadhar,'
@@ -716,7 +578,7 @@ BEGIN
 				END
 			--End of Rev 14.0
 			--REV 15.0
-			SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,120)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY '	
+			SET @sql+=' ,CONVERT(NVARCHAR(10),shop.Lastvisit_date,105)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,108)LASTVISITTIME,usr.user_name LASTVISITEDBY '	
 			--REV 15.0 End
 			-- Rev 16.0
 			SET @sql+=',BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC '
@@ -724,16 +586,7 @@ BEGIN
 			-- Rev 18.0
 			SET @sql+=',RPTTO.REPORTTO as REPORTTO_NAME '
 			-- End of Rev 18.0
-			
-			--Rev 20.0
-			SET @sql+=' ,ISNULL(PSTATUS.PARTYSTATUS,'''')PARTYSTATUS '
-			--Rev 20.0 End
-
 			SET @sql+='FROM tbl_Master_shop as shop '
-			--Rev 20.0
-			SET @sql+='LEFT OUTER JOIN FSM_PARTYSTATUS PSTATUS ON SHOP.Party_Status_id=PSTATUS.ID '
-			--Rev 20.0 End
-
 			--Rev 2.0
 			SET @sql+='LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID '
 			--End of Rev 2.0
@@ -762,9 +615,6 @@ BEGIN
 			--INNER JOIN @ReportTABLE as rt on rt.userid=usr.user_id
 			SET @sql +='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId = usr.user_contactId
 			INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId = EMP.emp_contactId '
-
-			
-
 			--INNER JOIN   tbl_trans_shopActivitysubmit as Act on Act.Shop_Id=shop.Shop_Code 
 			--LEFT OUTER  JOIN   tbl_salesman_address as saladdr on shop.Shop_CreateUser=saladdr.UserId  '
 			--set @sql +=' LEFT OUTER JOIN
@@ -831,17 +681,11 @@ BEGIN
 			--,Shop_Owner_Email
 			--,Shop_Owner_Contact,shop.assigned_to_pp_id,assigned_to_dd_id,T.visited_time
 			--order  by Shop_ID  desc'
-
-			
-
-
-
 			SET @sql +='order by shop.Shop_code desc '
 			 --and  SessionToken=@session_token'
 			 --select @sql
 			EXEC (@sql)
 
-			--select * from FSM_SHOPLIST_REPORT
 			--Rev 2.0
 			DROP TABLE #STATEID_LIST
 			DROP TABLE #TEMPCONTACT
@@ -849,294 +693,8 @@ BEGIN
 			--Rev 7.0
 			DROP TABLE #TMPSHOPTYPENAME
 			--End of Rev 7.0
-			--Rev 19.0  
-			End
-			--Rev 19.0  end
 		END
-	--IF(@Action='LINQ')
-	--	BEGIN
-			
-			
-	--		CREATE TABLE #TMPSHOPTYPENAME(SHOPTYPENAME NVARCHAR(MAX))
-			
 
-			
-	--		IF OBJECT_ID('tempdb..#STATEID_LIST') IS NOT NULL			
-	--		DROP TABLE #STATEID_LIST
-	--		CREATE TABLE #STATEID_LIST (State_Id INT)
-	--		CREATE NONCLUSTERED INDEX IX1 ON #STATEID_LIST (State_Id ASC)
-	--		IF @STATEID <> ''
-	--			BEGIN
-	--				SET @STATEID=REPLACE(@STATEID,'''','')
-	--				SET @sqlStrTable=''
-	--				SET @sqlStrTable=' INSERT INTO #STATEID_LIST SELECT id from tbl_master_state where id in('+@STATEID+')'
-	--				EXEC SP_EXECUTESQL @sqlStrTable
-	--			END
-
-		
-	--		IF OBJECT_ID('tempdb..#TEMPCONTACT') IS NOT NULL			
-	--		DROP TABLE #TEMPCONTACT
-	--		CREATE TABLE #TEMPCONTACT
-	--			(
-	--				cnt_internalId NVARCHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-	--				cnt_firstName NVARCHAR(150) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-	--				cnt_middleName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-	--				cnt_lastName NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-	--				cnt_contactType NVARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
-	--			)
-	--		CREATE NONCLUSTERED INDEX IX_PARTYID ON #TEMPCONTACT(cnt_internalId,cnt_contactType ASC)
-	--		INSERT INTO #TEMPCONTACT
-	--		SELECT cnt_internalId,cnt_firstName,cnt_middleName,cnt_lastName,cnt_contactType FROM TBL_MASTER_CONTACT WHERE cnt_contactType IN('EM')
-
-	--		SET @Shoptype = REPLACE(''''+@Shoptype+'''',',',''',''')
-
-	--		SET @Shoptype=REPLACE(@Shoptype,'''','')
-			
-			
-	--		SET @sql='INSERT INTO #TMPSHOPTYPENAME(SHOPTYPENAME) SELECT (
-	--		ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '','' + [Name] FROM ShopTypeData WHERE [shop_typeId] IN('+@Shoptype+')	
-	--			FOR XML PATH(''''))),1,1,''''))),'''')) '
-	--		EXEC(@sql)
-	--		SET @sql=''
-			
-
-            
-
-			
-	--		IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id=OBJECT_ID(N'FSM_SHOPLIST_REPORT') AND TYPE IN (N'U'))
-	--		BEGIN
-	--			Create table FSM_SHOPLIST_REPORT
-	--			(
-	--			SEQ INT,
-	--			USERID BIGINT,			
-	--			shop_Auto nvarchar(200),
-	--			statename nvarchar(500),
-	--			shop_id nvarchar(200),
-	--			shop_name nvarchar(200),
-	--			EntityCode nvarchar(200),
-	--			Entity_Location nvarchar(200),
-	--			Entity_Status nvarchar(200),
-	--			Specification nvarchar(200),
-	--			ShopOwner_PAN nvarchar(50),
-	--			ShopOwner_Aadhar nvarchar(50),
-	--			address  nvarchar(500),
-	--			pin_code nvarchar(50),
-	--			shop_lat nvarchar(200),
-	--			shop_long nvarchar(200),
-	--			Shop_City nvarchar(200),
-	--			owner_name nvarchar(200),
-	--			Shop_WebSite nvarchar(200),
-	--			owner_email nvarchar(50),
-	--			owner_contact_no nvarchar(50),
-	--			user_name nvarchar(200),
-	--			Shop_CreateUser int,
-	--			Shop_CreateTime datetime,
-	--			time_shop datetime,
-	--			Shop_ModifyUser int,
-	--			Shop_ModifyTime datetime,
-	--			Shop_Image nvarchar(Max),
-	--			dob datetime,
-	--			date_aniversary datetime,
-	--			Shoptype varchar(50),
-	--			type int,
-	--			UserName nvarchar(200),
-	--			countactivity int,
-	--			PP nvarchar(500),
-	--			DD nvarchar(500),
-	--			Lastactivitydate nvarchar(200),
-	--			District nvarchar(200),
-	--			Cluster nvarchar(250),
-	--			SubType nvarchar(Max),
-	--			Alt_MobileNo1 nvarchar(50),
-	--			Shop_Owner_Email2  nvarchar(50),
-	--			gstn_number nvarchar(50),
-	--			trade_licence_number nvarchar(100),
-	--			Beat nvarchar(500),
-	--			AttachmentImage1 nvarchar(2000),
-	--			AttachmentImage2 nvarchar(2000),
-	--			AttachmentImage3 nvarchar(2000),
-	--			AttachmentImage4 nvarchar(2000),
-	--			CONTACT_NAME1 nvarchar(200),
-	--			CONTACT_NUMBER1 nvarchar(50),
-	--			CONTACT_EMAIL1 nvarchar(50),
-	--			CONTACT_DOA1 nvarchar(200),
-	--			CONTACT_DOB1 nvarchar(200),
-	--			CONTACT_NAME2 nvarchar(200),
-	--			CONTACT_NUMBER2 nvarchar(50),
-	--			CONTACT_EMAIL2 nvarchar(50),
-	--			CONTACT_DOA2 nvarchar(200),
-	--			CONTACT_DOB2 nvarchar(200),
-	--			CONTACT_NAME3 nvarchar(200),
-	--			CONTACT_NUMBER3 nvarchar(200),
-	--			CONTACT_EMAIL3 nvarchar(200),
-	--			CONTACT_DOA3 nvarchar(200),
-	--			CONTACT_DOB3 nvarchar(200),
-	--			CONTACT_NAME4 nvarchar(200),
-	--			CONTACT_NUMBER4 nvarchar(200),
-	--			CONTACT_EMAIL4 nvarchar(200),
-	--			CONTACT_DOA4 nvarchar(200),
-	--			CONTACT_DOB4 nvarchar(200),
-	--			CONTACT_NAME5 nvarchar(200),
-	--			CONTACT_NUMBER5 nvarchar(200),
-	--			CONTACT_EMAIL5 nvarchar(200),
-	--			CONTACT_DOA5 nvarchar(200),
-	--			CONTACT_DOB5 nvarchar(200),
-	--			CONTACT_NAME6 nvarchar(200),
-	--			CONTACT_NUMBER6 nvarchar(200),
-	--			CONTACT_EMAIL6 nvarchar(200),
-	--			CONTACT_DOA6 nvarchar(200),
-	--			CONTACT_DOB6 nvarchar(200),
-	--			LASTVISITDATE datetime,
-	--			LASTVISITTIME datetime,
-	--			LASTVISITEDBY nvarchar(200),
-	--			BRANCH_ID int,
-	--			BRANCHDESC nvarchar(200),
-	--			REPORTTO_NAME nvarchar(200)
-
-	--		)
-
-	--			CREATE NONCLUSTERED INDEX IX1PF_PURREGPROD_RPT ON FSM_SHOPLIST_REPORT (SEQ)
-	--		END
-	--		DELETE FROM FSM_SHOPLIST_REPORT where USERID=@Create_UserId
-
-
-	--		INSERT INTO FSM_SHOPLIST_REPORT (
-	--		SEQ ,
-	--		USERID ,			
-	--		shop_Auto ,
-	--		statename ,
-	--		shop_id ,
-	--		shop_name ,
-	--		EntityCode ,
-	--		Entity_Location ,
-	--		Entity_Status ,
-	--		Specification ,
-	--		ShopOwner_PAN ,
-	--	    ShopOwner_Aadhar ,
-	--		address  ,
-	--		pin_code ,
-	--		shop_lat ,
-	--		shop_long ,
-	--		Shop_City ,
-	--		owner_name ,
-	--		Shop_WebSite ,
-	--		owner_email ,
-	--		owner_contact_no ,
-	--		user_name ,
-	--		Shop_CreateUser ,
-	--		Shop_CreateTime ,
-	--		time_shop ,
-	--		Shop_ModifyUser ,
-	--		Shop_ModifyTime ,
-	--		Shop_Image ,
-	--		dob ,
-	--		date_aniversary ,
-	--		Shoptype ,
-	--		type ,
-	--		UserName ,
-	--		countactivity ,
-	--		PP ,
-	--		DD ,
-	--		Lastactivitydate ,
-	--		District ,
-	--		Cluster ,
-	--		SubType ,
-	--		Alt_MobileNo1 ,
-	--		Shop_Owner_Email2  ,
-	--		gstn_number ,
-	--		trade_licence_number ,
-	--		Beat ,
-	--		AttachmentImage1 ,
-	--		AttachmentImage2 ,
-	--		AttachmentImage3 ,
-	--		AttachmentImage4 
-	--		,CONTACT_NAME1 ,
-	--		CONTACT_NUMBER1 ,
-	--		CONTACT_EMAIL1 ,
-	--		CONTACT_DOA1 ,
-	--		CONTACT_DOB1 ,
-	--		CONTACT_NAME2 ,
-	--		CONTACT_NUMBER2 ,
-	--		CONTACT_EMAIL2 ,
-	--		CONTACT_DOA2 ,
-	--		CONTACT_DOB2 ,
-	--		CONTACT_NAME3 ,
-	--		CONTACT_NUMBER3 ,
-	--		CONTACT_EMAIL3 ,
-	--		CONTACT_DOA3 ,
-	--		CONTACT_DOB3 ,
-	--		CONTACT_NAME4 ,
-	--		CONTACT_NUMBER4 ,
-	--		CONTACT_EMAIL4 ,
-	--		CONTACT_DOA4 ,
-	--		CONTACT_DOB4 ,
-	--		CONTACT_NAME5 ,
-	--		CONTACT_NUMBER5 ,
-	--		CONTACT_EMAIL5 ,
-	--		CONTACT_DOA5 ,
-	--		CONTACT_DOB5 ,
-	--		CONTACT_NAME6 ,
-	--		CONTACT_NUMBER6 ,
-	--		CONTACT_EMAIL6 ,
-	--		CONTACT_DOA6 ,
-	--		CONTACT_DOB6 
-	--		,LASTVISITDATE ,
-	--		LASTVISITTIME ,
-	--		LASTVISITEDBY ,
-	--		BRANCH_ID ,
-	--		BRANCHDESC ,
-	--		REPORTTO_NAME
-			
-	--		)
-
-
-
-	--	select ROW_NUMBER() OVER (ORDER BY shop.Shop_ID DESC),
-	--	 @Create_UserId,  cast(shop.Shop_ID as varchar(50)) as shop_Auto ,stat.state as statename ,shop.Shop_Code as shop_id,CAST(shop.Shop_Name as nvarchar(2500)) as shop_name,ISNULL(SHOP.EntityCode,'')EntityCode
-	--	,ISNULL(SHOP.Entity_Location,'')Entity_Location,CASE WHEN SHOP.Entity_Status=1 THEN 'Active' ELSE 'Inactive' END AS Entity_Status,MO.TypeName AS Specification,SHOP.ShopOwner_PAN,SHOP.ShopOwner_Aadhar
-	--	,shop.Address as [address],shop.Pincode as pin_code,Shop_Lat as shop_lat,Shop_Long as shop_long,Shop_City,Shop_Owner as owner_name,     Shop_WebSite,Shop_Owner_Email as owner_email
-	--	,Shop_Owner_Contact as owner_contact_no,     LTRIM(RTRIM((IsNull(CNT.cnt_firstName,'')+' '+IsNull(CNT.cnt_middleName,'')+' '+IsNull(CNT.cnt_lastName,'')))) as user_name
-	--	,Shop_CreateUser,Shop_CreateTime,     FORMAT(Shop_CreateTime,'hh:mm tt') as time_shop,Shop_ModifyUser,Shop_ModifyTime,'' + Shop_Image as Shop_Image,dob,date_aniversary
-	--	,typs.Name as Shoptype,     shop.type,CNT.cnt_firstName + ' '+ CNT.cnt_middleName +' '+CNT.cnt_lastName as UserName ,0 as countactivity ,SHOPPP.Shop_Name AS PP,SHOPDD.Shop_Name AS DD 
-	--	, null as Lastactivitydate,CITY.CITY_NAME AS District,shop.CLUSTER AS Cluster
-	--	,(SELECT ISNULL(STUFF((SELECT ',' + typsd.Name FROM tbl_shoptypeDetails AS typsd WHERE typs.shop_typeId=typsd.TYPE_ID ORDER BY typsd.Name FOR XML PATH('')), 1, 1, ''),'')) AS SubType
-	--	,shop.Alt_MobileNo1,shop.Shop_Owner_Email2 ,shop.gstn_number,shop.trade_licence_number , isnull(BEAT.NAME,'') as Beat 
-	--	, (case when AttachmentImage1<>'' then ''+ AttachmentImage1 else '' end ) as AttachmentImage1, (case when AttachmentImage2<>'' then ''+ AttachmentImage2 else '' end ) as AttachmentImage2
-	--	, (case when AttachmentImage3<>'' then ''+ AttachmentImage3 else '' end ) AttachmentImage3, (case when AttachmentImage4<>'' then ''+ AttachmentImage4 else '' end ) AttachmentImage4 
-
-	--	,NULL AS CONTACT_NAME1,NULL AS CONTACT_NUMBER1,NULL AS CONTACT_EMAIL1,NULL AS CONTACT_DOA1,NULL AS CONTACT_DOB1,NULL AS CONTACT_NAME2,NULL AS CONTACT_NUMBER2,NULL AS CONTACT_EMAIL2
-	--	,NULL AS CONTACT_DOA2,NULL AS CONTACT_DOB2,NULL AS CONTACT_NAME3,NULL AS CONTACT_NUMBER3,NULL AS CONTACT_EMAIL3,NULL AS CONTACT_DOA3,NULL AS CONTACT_DOB3,NULL AS CONTACT_NAME4
-	--	,NULL AS CONTACT_NUMBER4,NULL AS CONTACT_EMAIL4,NULL AS CONTACT_DOA4,NULL AS CONTACT_DOB4,NULL AS CONTACT_NAME5,NULL AS CONTACT_NUMBER5,NULL AS CONTACT_EMAIL5,NULL AS CONTACT_DOA5
-	--	,NULL AS CONTACT_DOB5,NULL AS CONTACT_NAME6,NULL AS CONTACT_NUMBER6,NULL AS CONTACT_EMAIL6,NULL AS CONTACT_DOA6,NULL AS CONTACT_DOB6  
-	--	,CONVERT(NVARCHAR(10),shop.Lastvisit_date,120)LASTVISITDATE,CONVERT(NVARCHAR(10),shop.Lastvisit_date,120)LASTVISITTIME,usr.user_name LASTVISITEDBY 
-	--	,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION AS BRANCHDESC ,RPTTO.REPORTTO as REPORTTO_NAME 
-	--	FROM tbl_Master_shop as shop 
-	--	LEFT OUTER JOIN Master_OutLetType MO ON SHOP.Entity_Type=MO.TypeID 
-	--	INNER JOIN tbl_master_user usr on shop.Shop_CreateUser=usr.user_id      
-	--	INNER JOIN tbl_shoptype as typs on typs.shop_typeId=shop.type 
-	--	LEFT OUTER JOIN tbl_master_state as stat on shop.stateId=stat.id 
-	--	LEFT OUTER JOIN TBL_MASTER_CITY CITY ON shop.Shop_City=CITY.city_id 
-	--	INNER JOIN tbl_master_branch BR ON usr.user_branchId=BR.branch_id  
-	--	LEFT OUTER JOIN (SELECT USR.user_id,  CNT.cnt_internalId,ISNULL(CNT.CNT_FIRSTNAME,'')+' '+ISNULL(CNT.CNT_MIDDLENAME,'')+' '+ISNULL(CNT.CNT_LASTNAME,'') AS REPORTTO    FROM TBL_MASTER_USER USR  
-	--	LEFT OUTER JOIN tbl_trans_employeeCTC CTC on USR.user_contactId=CTC.emp_cntId  LEFT OUTER JOIN tbl_master_employee EMP on CTC.emp_reportTo=EMP.emp_id  
-	--	LEFT OUTER JOIN #TEMPCONTACT CNT ON EMP.emp_contactId=CNT.cnt_internalId  ) RPTTO ON RPTTO.user_id=shop.Shop_CreateUser   
-	--	INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId = usr.user_contactId     
-	--	INNER JOIN tbl_master_employee EMP ON CNT.cnt_internalId = EMP.emp_contactId   
-	--	AND EXISTS (SELECT State_Id from #STATEID_LIST AS ST WHERE ST.State_Id=shop.stateId) 
-	--	AND EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=BR.BRANCH_ID)  
-	--	LEFT OUTER JOIN( SELECT DISTINCT A.Shop_Code,A.assigned_to_pp_id,A.Shop_Name FROM tbl_Master_shop A  ) SHOPPP ON SHOP.assigned_to_pp_id=SHOPPP.Shop_Code  
-	--	LEFT OUTER JOIN( SELECT DISTINCT A.Shop_Code,A.assigned_to_dd_id,A.Shop_Name FROM tbl_Master_shop A  ) SHOPDD ON SHOP.assigned_to_dd_id=SHOPDD.Shop_Code 
-	--	LEFT OUTER JOIN FSM_GROUPBEAT BEAT on shop.beat_id=BEAT.ID order by shop.Shop_code desc 
-			
-
-	--		SELECT * FROM FSM_SHOPLIST_REPORT
-			
-	--		DROP TABLE #STATEID_LIST
-	--		DROP TABLE #TEMPCONTACT
-		
-	--		DROP TABLE #TMPSHOPTYPENAME
-			
-	--	END
 	if(@Action='PPDDLIST')
 		BEGIN
 			--Rev 2.0
@@ -1196,3 +754,4 @@ BEGIN
 	SET NOCOUNT OFF
 	--End of Rev 2.0
 END
+GO

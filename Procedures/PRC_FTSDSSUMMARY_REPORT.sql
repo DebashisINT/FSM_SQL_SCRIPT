@@ -32,7 +32,6 @@ Module	   : Employee DS Summary.Refer: 0024492
 7.0		v2.0.43		Debashis	28/12/2023		System is getting logged out while generating DS Summary & DS Performance report in ITC.Refer: 0027103
 8.0		v2.0.44		Debashis	27/02/2024		'Sale Value' Field required in DS Visit Details/DS Visit Summary.Refer: 0027276
 9.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
-10.0	v2.0.46		Debashis	25/04/2024		In the below reports, please fetch only active customers count for the Outlets Mapped coloumn.Refer: 0027404
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -423,9 +422,6 @@ BEGIN
 	--Rev 3.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT Shop_CreateUser,COUNT(Shop_Code) AS OUTLETSMAPPED FROM tbl_Master_shop WITH (NOLOCK) '
-	--Rev 10.0
-	SET @SqlStr+='WHERE Entity_Status=1 '
-	--End of Rev 10.0
 	SET @SqlStr+='GROUP BY Shop_CreateUser) SHOP ON SHOP.Shop_CreateUser=USR.user_id '
 	--End of Rev 3.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
