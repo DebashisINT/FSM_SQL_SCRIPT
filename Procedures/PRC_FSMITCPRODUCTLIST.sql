@@ -54,7 +54,7 @@ BEGIN
 			IF (SELECT COUNT(0) FROM PRODUCT_BRANCH_MAP WHERE CHILDEMP_INTERNALID=@USERINTERNALID)>0
 				BEGIN
 			--End of Rev 1.0
-					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
 					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
 					FROM Master_sProducts AS MP
 					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
@@ -71,7 +71,7 @@ BEGIN
 				END
 			ELSE IF (SELECT COUNT(0) FROM PRODUCT_BRANCH_MAP WHERE PARENTEMP_INTERNALID=@USERINTERNALID)>0
 				BEGIN
-					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
 					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
 					FROM Master_sProducts AS MP
 					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
@@ -85,7 +85,7 @@ BEGIN
 				END
 			ELSE
 				BEGIN
-					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
 					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
 					FROM Master_sProducts AS MP
 					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
