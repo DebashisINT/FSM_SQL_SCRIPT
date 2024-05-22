@@ -21,6 +21,54 @@ BEGIN
 
 	IF @ACTION='GETPRODUCTLISTS'
 		BEGIN
+			--Rev 1.0
+			IF (SELECT COUNT(0) FROM PRODUCT_BRANCH_MAP WHERE CHILDEMP_INTERNALID=@USERINTERNALID)>0
+				BEGIN
+			--End of Rev 1.0
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
+					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
+					FROM Master_sProducts AS MP
+					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
+					INNER JOIN tbl_master_brand BRND ON MP.sProducts_Brand=BRND.Brand_Id
+					INNER JOIN Master_ProductClass AS PCLS ON MP.ProductClass_Code=PCLS.ProductClass_ID
+					--Rev 1.0
+					INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP
+					INNER JOIN tbl_master_user USR ON MAP.CHILDEMP_INTERNALID=USR.user_contactId AND USR.user_id=@USER_ID
+					GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID
+					--End of Rev 1.0
+					LEFT OUTER JOIN Master_Size AS MPSIZE ON MP.sProducts_Size=MPSIZE.Size_ID
+					WHERE MP.sProduct_Status<>'D'
+			--Rev 1.0
+				END
+			ELSE IF (SELECT COUNT(0) FROM PRODUCT_BRANCH_MAP WHERE PARENTEMP_INTERNALID=@USERINTERNALID)>0
+				BEGIN
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
+					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
+					FROM Master_sProducts AS MP
+					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
+					INNER JOIN tbl_master_brand BRND ON MP.sProducts_Brand=BRND.Brand_Id
+					INNER JOIN Master_ProductClass AS PCLS ON MP.ProductClass_Code=PCLS.ProductClass_ID
+					INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP
+					INNER JOIN tbl_master_user USR ON MAP.PARENTEMP_INTERNALID=USR.user_contactId AND USR.user_id=11984
+					GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID
+					LEFT OUTER JOIN Master_Size AS MPSIZE ON MP.sProducts_Size=MPSIZE.Size_ID
+					WHERE MP.sProduct_Status<>'D'
+				END
+			ELSE
+				BEGIN
+					SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_ID AS category_id,
+					PCLS.ProductClass_Name AS category_name,sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name,UOM.UOM_Name AS UOM
+					FROM Master_sProducts AS MP
+					INNER JOIN Master_UOM UOM ON MP.sProducts_TradingLotUnit=UOM.UOM_ID
+					INNER JOIN tbl_master_brand BRND ON MP.sProducts_Brand=BRND.Brand_Id
+					INNER JOIN Master_ProductClass AS PCLS ON MP.ProductClass_Code=PCLS.ProductClass_ID
+					INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP
+					INNER JOIN #BRANCH_LIST BR ON MAP.BRANCH_ID=BR.Branch_Id
+					GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID
+					LEFT OUTER JOIN Master_Size AS MPSIZE ON MP.sProducts_Size=MPSIZE.Size_ID
+					WHERE MP.sProduct_Status<>'D'
+				END
+			--End of Rev 1.0
 			SELECT sProducts_ID AS product_id,MP.sProducts_Name AS product_name,sProducts_Brand AS brand_id,brnd.Brand_Name AS brand_name,PCLS.ProductClass_Code AS category_id,PCLS.ProductClass_Name AS category_name,
 			sProducts_Size AS watt_id,ISNULL(MPSIZE.Size_Name,'Not Applicable') AS watt_name
 			FROM Master_sProducts AS MP
