@@ -9,7 +9,8 @@ ALTER PROCEDURE [dbo].[EmployeeDeleteBySelctName]
 @userID int =null
 AS
 /******************************************************************************************************************************************
-1.0		Sanchita		v2.0.26		Three Master Modules required under Master > Other Masters - Channel. Section, Circle. Refer: 24646
+1.0		Sanchita		v2.0.26					Three Master Modules required under Master > Other Masters - Channel. Section, Circle. Refer: 24646
+2.0		PRITI           V2.0.47     13-05-2024   0027425: At the time of any Employee creation, the branch ID shall be updated in employee branch mapping table
 *****************************************************************************************************************************************/
 BEGIN
 --declare @cnt_internalId varchar(50)
@@ -96,6 +97,10 @@ IF(@cnt_internalId <> '')
 			delete from Employee_CircleMap where EP_EMP_CONTACTID=@cnt_internalId
 			delete from Employee_SectionMap where EP_EMP_CONTACTID=@cnt_internalId
 			-- End of Rev 1.0
+
+			--REV 2.0
+			DELETE FROM FTS_EmployeeBranchMap WHERE Emp_Contactid=@cnt_internalId
+			--REV 2.0 END
 	END
 END
 

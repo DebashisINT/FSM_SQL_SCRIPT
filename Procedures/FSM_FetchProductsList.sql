@@ -1,3 +1,5 @@
+
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[FSM_FetchProductsList]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [FSM_FetchProductsList] AS' 
@@ -11,8 +13,9 @@ ALTER  Procedure [dbo].[FSM_FetchProductsList]
 )
 AS
 /*================================================================================================================================================================
-	Written by Sanchita	V.0.39		28/02/2023     FSM >> Product Master : Listing - Implement Show Button. Refer: 25709
+	Written by Sanchita	V.0.39			28/02/2023      FSM >> Product Master : Listing - Implement Show Button. Refer: 25709
 	Rev 1.0		Sanchita	V2.0.46		11/03/2024		FSM Product Master - Search, Filter not working. Converted to Linq. Mantis: 27307
+	Rev 2.0		Priti	    V2.0.47		21/05/2024		New column shall be implemented in Product Master. Mantis: 0027463
 ==================================================================================================================================================================*/
 BEGIN
 	DECLARE @DSql NVARCHAR(MAX)
@@ -30,6 +33,7 @@ BEGIN
 			sProducts_ModifyTime datetime,	HSNCODE varchar(50),	Brand_Name varchar(50),	sProduct_IsInventory varchar(10),	Is_ServiceItem varchar(10),
 			sProduct_IsCapitalGoods varchar(10),	sInv_MainAccount varchar(50),	sRet_MainAccount varchar(50),	
 			pInv_MainAccount varchar(50),	pRet_MainAccount varchar(50)
+			,sProduct_Status varchar(50)
 		)
 		CREATE NONCLUSTERED INDEX IX1 ON FSMProduct_Master (sProducts_ID)
 	END
@@ -49,7 +53,10 @@ BEGIN
 	SET @DSql += ',Brand_Name ,case sProduct_IsInventory when 1 then ''Yes'' else ''No'' end sProduct_IsInventory '
 	SET @DSql += ',case Is_ServiceItem when 1 then ''Yes'' else ''No'' end Is_ServiceItem ,case sProduct_IsCapitalGoods  when 1 then ''Yes'' else ''No'' end sProduct_IsCapitalGoods '
 	SET @DSql += ',sInv_MainAccount,sRet_MainAccount,pInv_MainAccount,pRet_MainAccount '
-	SET @DSql += 'FROM Master_sProducts MP '
+	--Rev 2.0
+	SET @DSql += ',case when sProduct_Status=''A'' then ''Active'' when sProduct_Status=''D'' then ''Dormant''   end as sProduct_Status'
+	--Rev 2.0 End
+	SET @DSql += ' FROM Master_sProducts MP '
 	SET @DSql += 'left join Master_ProductClass MPC '
 	SET @DSql += 'on MP.ProductClass_Code=MPC.ProductClass_ID  left outer join TBL_MASTER_SERVICE_TAX sac on '
 	SET @DSql += 'MP.sProducts_serviceTax=sac.TAX_ID '

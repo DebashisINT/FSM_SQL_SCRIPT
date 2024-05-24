@@ -87,6 +87,7 @@ Written By : Jitendra on 10/01/2018
 3.0		Sanchita			v2.0.37			02-12-2022		MRP' and Discount' entering facility required in Product Master. Refer: 25469, 25470
 4.0		Sanchita			V2.0.38			20-01-2023		Need to increase the length of the Description field of Product Master. Refer: 25603
 5.0		Sanchita			V2.0.46			11/03/2024		FSM Product Master - Search, Filter not working. Converted to Linq. Mantis: 27307
+6.0		Priti			    V2.0.47			10/05/2024		While saving the product name in FSM, extra space will be truncated. Mantis: 0027394
 ***************************************************************************************************/ 
 BEGIN
 	INSERT INTO Master_sProducts(
@@ -119,9 +120,14 @@ BEGIN
 					,sProducts_Discount
 					-- End of Rev 3.0
 					) VALUES(
-											UPPER(@ProductCode)
-											,UPPER(@ProductName)
-											,@ProductDescription
+											--Rev 6.0
+					--					     UPPER(@ProductCode)
+					--						,UPPER(@ProductName)
+											--,@ProductDescription
+											LTRIM(RTRIM(UPPER(@ProductCode)))
+											,LTRIM(RTRIM(UPPER(@ProductName)))
+											,LTRIM(RTRIM(@ProductDescription))
+											--Rev 6.0 End
 											,@ProductType
 											,@ProductClassCode
 											,@ProductGlobalCode
