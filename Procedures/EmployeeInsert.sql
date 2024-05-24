@@ -58,12 +58,16 @@ AS
 4.0						Sanchita		v2.0.26		Three new multi select window in General Tab - Channel, Section, Circle . Refer: 24646
 5.0		22-05-2023		Sanchita		V2.0.40		The first name field of the employee master should consider 150 character from the application end.  
 													Refer: 26187
+6.0		13-05-2024		PRITI			V2.0.47		0027425: At the time of any Employee creation, the branch ID shall be updated in employee branch mapping table
 ***********************************************************************************************************************************/
 begin
 declare @uniqueCode varchar(50)
 -- Rev 4.0
 DECLARE @sqlStrTable NVARCHAR(MAX) =''
 -- End of Rev 4.0
+--REV 6.0 
+DECLARE @ContactId_AUTO_ID BIGINT=0
+--REV 6.0 END
 declare @prifixId 	varchar(10),
 	@prifixIdN 	varchar(20),
 	@maxID 	varchar(20),
@@ -124,16 +128,28 @@ declare @prifixId 	varchar(10),
 				@cnt_anniversaryDate,@cnt_legalStatus,@cnt_education,/*@cnt_profession,@cnt_organization,@cnt_jobResponsibility,@cnt_designation,@cnt_industry,*/@cnt_contactSource,
 				@cnt_referedBy/*,@cnt_relation*/,@cnt_contactType,/*@cnt_contactStatus,*/@bloodgroup,getdate(),@lastModifyUser,@WebLogIn,@PassWord)
 					
-
+				--REV 6.0
+				set @ContactId_AUTO_ID=SCOPE_IDENTITY();	
+				--REV 6.0 END
 
 				--Entering data to Employee table
 				-- Rev 4.0
 				--Insert into tbl_master_employee (emp_contactId,emp_uniqueCode,CreateUser,emp_dateofJoining,CreateDate) values(@InternalId,@cnt_shortName,@lastModifyUser,@emp_dateofJoining,getdate())
 				
 				Insert into tbl_master_employee (emp_contactId,emp_uniqueCode,CreateUser,emp_dateofJoining,CreateDate, DefaultType) 
-					values(@InternalId,@cnt_shortName,@lastModifyUser,@emp_dateofJoining,getdate(),@DefaultType)
+				values(@InternalId,@cnt_shortName,@lastModifyUser,@emp_dateofJoining,getdate(),@DefaultType)
 				-- End of Rev 4.0
 				
+				
+				--REV 6.0
+				INSERT INTO FTS_EmployeeBranchMap(EmployeeId,BranchId,CreatedBy,CreatedOn,Emp_Contactid)
+				VALUES (@ContactId_AUTO_ID,@cnt_branchId,@lastModifyUser,GETDATE(),@InternalId)
+
+
+				INSERT INTO FTS_EmployeeBranchMap_Log(EmployeeId,BranchId,CreatedBy,CreatedOn,Emp_Contactid)
+				VALUES (@ContactId_AUTO_ID,@cnt_branchId,@lastModifyUser,GETDATE(),@InternalId)
+				--REV 6.0 END
+
 				-- Rev 4.0
 				if(@ChannelType is not null and @ChannelType<>'')
 				begin
