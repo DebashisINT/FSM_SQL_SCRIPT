@@ -59,6 +59,10 @@ BEGIN
 		,CanReassignedAreaRouteBeat = CAST(IsNull(acc_CanReassignedAreaRouteBeat, 0) as BIT)
 		,CanReassignedAreaRouteBeatLog = CAST(IsNull(acc_CanReassignedAreaRouteBeatLog, 0) as BIT)
 		-- End of Rev 3.0
+		-- Rev 3.0
+		,CanMassDelete = CAST(IsNull(acc_MassDelete, 0) as BIT)
+		,CanMassDeleteDownloadImport = CAST(IsNull(acc_MassDeleteDownloadImport, 0) as BIT)
+		-- End of Rev 3.0
 		from tbl_trans_access
 		where acc_userGroupId = @grp_id;
 	END
