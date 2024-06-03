@@ -50,6 +50,9 @@ RETURNS @Output TABLE (
 		  ,Has_CanMassDelete bit
 		  ,Has_CanMassDeleteDownloadImport bit
 		  -- End of Rev 4.0
+		  -- Rev 5.0
+		  ,Has_CanAttendanceLeaveClear bit
+		  -- End of Rev 5.0
 )
 AS
 /**************************************************************************************************************************************************************************
@@ -58,6 +61,7 @@ AS
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
 3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
 4.0		Sanchita		V2.0.47			30/05/2024		Mass Delete related tabs will be added in the security roles of Parties. Mantis: 27489
+5.0		Sanchita		V2.0.47			03-06-2024		27500: Attendance/ Leave Clear tab need to add in security Role of "Users"
 ****************************************************************************************************************************************************************************/
 BEGIN
       DECLARE @StartIndex INT, @EndIndex INT, @CheckVal NVARCHAR(MAX)
@@ -76,6 +80,9 @@ BEGIN
 	 -- Rev 4.0
 	 ,@Has_CanMassDelete bit, @Has_CanMassDeleteDownloadImport bit
 	 -- End of Rev 4.0
+	 -- Rev 5.0
+	 , @Has_CanAttendanceLeaveClear bit
+	 -- End of Rev 5.0
 
       SET @StartIndex = 1
       IF SUBSTRING(@Input, LEN(@Input) - 1, LEN(@Input)) <> @MainSplitDelimiter
@@ -135,6 +142,9 @@ BEGIN
 				SET @Has_CanMassDelete=0;
 				SET @Has_CanMassDeleteDownloadImport=0;
 				-- End of Rev 4.0
+				-- Rev 5.0
+				SET @Has_CanAttendanceLeaveClear=0;
+				-- End of Rev 5.0
 
 				IF SUBSTRING(@Value, LEN(@Value) - 1, LEN(@Value)) <> @ValueDelimiter
 				BEGIN
@@ -273,6 +283,12 @@ BEGIN
 							set @Has_CanMassDeleteDownloadImport=1;
 						END
 						-- End of Rev 4.0
+						-- Rev 5.0
+						ELSE IF @TempValue = '32'
+						BEGIN
+							set @Has_CanAttendanceLeaveClear=1;
+						END
+						-- End of Rev 5.0
 						
 					END
 					
@@ -295,6 +311,9 @@ BEGIN
 				-- Rev 4.0
 				,Has_CanMassDelete, Has_CanMassDeleteDownloadImport
 				-- End of Rev 4.0
+				-- Rev 5.0
+				, Has_CanAttendanceLeaveClear
+				-- End of Rev 5.0
 				)
 				--End of rev 1.0
 				VALUES (@MenuId, @Has_Add_Rights, @Has_Modify_Rights, @Has_Delete_Rights, @Has_View_Rights, @Has_Industry_Rights,
@@ -311,6 +330,9 @@ BEGIN
 				-- Rev 4.0
 				,@Has_CanMassDelete, @Has_CanMassDeleteDownloadImport
 				-- End of Rev 4.0
+				-- Rev 5.0
+				, @Has_CanAttendanceLeaveClear
+				-- End of Rev 5.0
 				);
 				--End of rev 1.0
 			END

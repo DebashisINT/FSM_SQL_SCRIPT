@@ -25,6 +25,7 @@ AS
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
 3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
 4.0		Sanchita		V2.0.47			30/05/2024		Mass Delete related tabs will be added in the security roles of Parties. Mantis: 27489
+5.0		Sanchita		V2.0.47			03-06-2024		27500: Attendance/ Leave Clear tab need to add in security Role of "Users"
 ****************************************************************************************************************************************************************************/
 BEGIN
 	IF @mode = 'INSERT'
@@ -63,6 +64,9 @@ BEGIN
 											  -- Rev 4.0
 											  ,acc_MassDelete, acc_MassDeleteDownloadImport
 											  -- End of Rev 4.0
+											  -- Rev 5.0
+											  , acc_CanAttendanceLeaveClear
+											  -- End of Rev 5.0
 											  )
 											  --End of rev 1.0
 											  
@@ -87,6 +91,9 @@ BEGIN
 				-- Rev 4.0
 				, Has_CanMassDelete, Has_CanMassDeleteDownloadImport
 				-- End of Rev 4.0
+				-- Rev 5.0
+				, Has_CanAttendanceLeaveClear
+				-- End of Rev 5.0
 				 FROM [dbo].[SplitStringForUserRights](@UserGroupRights, '^', '|', '_');
 				
 				IF @@ROWCOUNT <= 0
@@ -167,6 +174,9 @@ BEGIN
 											  -- Rev 4.0
 											  ,acc_MassDelete, acc_MassDeleteDownloadImport
 											  -- End of Rev 4.0
+											  -- Rev 5.0
+											  , acc_CanAttendanceLeaveClear
+											  -- End of Rev 5.0
 											  )
 											  --End of rev 1.0
 				SELECT @grp_id, MenuId, 'All', Has_Modify_Rights, Has_Delete_Rights, Has_Add_Rights, Has_View_Rights,  
@@ -190,6 +200,9 @@ BEGIN
 				-- Rev 4.0
 				,Has_CanMassDelete, Has_CanMassDeleteDownloadImport
 				-- End of Rev 4.0
+				-- Rev 5.0
+				, Has_CanAttendanceLeaveClear
+				-- End of Rev 5.0
 				 FROM [dbo].[SplitStringForUserRights](@UserGroupRights, '^', '|', '_');
 				
 				IF @@ROWCOUNT <= 0
