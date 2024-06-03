@@ -1,3 +1,5 @@
+
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSInsertUpdateUser]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateUser] AS' 
@@ -306,6 +308,30 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@IsCheckBatteryOptimization INT=0
 -- End of Rev 35.0
 
+-- Rev 36.0
+,@ShowUserwisePartyWithGeoFence INT=0
+,@ShowUserwisePartyWithCreateOrder INT=0
+-- End of Rev 36.0
+-- Rev 37.0
+,@AdditionalinfoRequiredforContactListing INT=0
+,@AdditionalinfoRequiredforContactAdd INT=0
+,@ContactAddresswithGeofence INT=0
+-- End of Rev 37.0
+
+-- Rev 38.0
+,@IsCRMPhonebookSyncEnable  INT=0
+,@IsCRMSchedulerEnable INT=0
+,@IsCRMAddEnable INT=0
+,@IsCRMEditEnable INT=0
+-- End of Rev 38.0
+-- Rev 39.0
+,@IsShowAddressInParty  INT=0
+,@IsShowUpdateInvoiceDetails INT=0
+-- End of Rev 39.0
+-- Rev 40.0
+,@IsSpecialPriceWithEmployee INT=0
+-- End of Rev 40.0
+
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -351,7 +377,13 @@ AS
 33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
 34.0    V2.0.44     19/12/2023      Sanchita    Call log facility is required in the FSM App - IsCallLogHistoryActivated” - 
                                                 User Account - Add User master settings. Mantis: 27063
-35.0    v2.0.47		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
+35.0    v2.0.46		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
+36.0    V2.0.46     17-04-2024      Priti       0027372: ShowPartyWithCreateOrder setting shall be available User wise setting also
+                                                0027374: ShowPartyWithGeoFence setting shall be available User wise setting also
+37.0	V2.0.46		26-04-2024		Sanchita	0027406: Some of the Global & user wise fields need to be visible in the front end of FSM App	
+38.0    V2.0.47     22-05-2024      Priti       0027467: Some changes are required in CRM Modules
+39.0    V2.0.47     25-05-2024      Sanchita    New User wise settings required. Mantis: 27474, 27477 
+40.0    V2.0.47     31-05-2024      Sanchita    27502: A new global settings is required as "IsSpecialPriceWithEmployee"
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -542,6 +574,31 @@ BEGIN
 			,IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,ShowUserwisePartyWithGeoFence 
+			,ShowUserwisePartyWithCreateOrder 
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,AdditionalinfoRequiredforContactListing
+			,AdditionalinfoRequiredforContactAdd
+			,ContactAddresswithGeofence
+			-- End of Rev 37.0
+
+			-- Rev 38.0
+			,IsCRMPhonebookSyncEnable  
+			,IsCRMSchedulerEnable 
+			,IsCRMAddEnable 
+			,IsCRMEditEnable 
+			-- End of Rev 38.0
+
+			-- Rev 39.0
+			,IsShowAddressInParty  
+			,IsShowUpdateInvoiceDetails 
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -708,6 +765,30 @@ BEGIN
 			,isnull(@IsShowMenuCRMContacts,0)
 			,isnull(@IsCheckBatteryOptimization,0)
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,isnull(@ShowUserwisePartyWithGeoFence,0) 
+			,isnull(@ShowUserwisePartyWithCreateOrder,0) 
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,isnull(@AdditionalinfoRequiredforContactListing,0)
+			,isnull(@AdditionalinfoRequiredforContactAdd,0)
+			,isnull(@ContactAddresswithGeofence,0)
+			-- End of Rev 37.0
+
+			-- Rev 38.0
+			,isnull(@IsCRMPhonebookSyncEnable ,0) 
+			,isnull(@IsCRMSchedulerEnable ,0) 
+			,isnull(@IsCRMAddEnable ,0) 
+			,isnull(@IsCRMEditEnable ,0) 
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,isnull(@IsShowAddressInParty,0)
+			,isnull(@IsShowUpdateInvoiceDetails,0)
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,isnull(@IsSpecialPriceWithEmployee,0)
+			-- End of Rev 40.0
+
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -1139,6 +1220,29 @@ BEGIN
 				 OR IsShowMenuCRMContacts<>@IsShowMenuCRMContacts
 				 OR IsCheckBatteryOptimization<>@IsCheckBatteryOptimization
 				 -- End of Rev 35.0
+				 -- Rev 36.0
+				OR ShowUserwisePartyWithGeoFence<>@ShowUserwisePartyWithGeoFence
+				OR ShowUserwisePartyWithCreateOrder<>@ShowUserwisePartyWithCreateOrder
+				-- End of Rev 36.0
+				-- Rev 37.0
+				OR AdditionalinfoRequiredforContactListing<>@AdditionalinfoRequiredforContactListing
+				OR AdditionalinfoRequiredforContactAdd<>@AdditionalinfoRequiredforContactAdd
+				OR ContactAddresswithGeofence<>@ContactAddresswithGeofence
+				-- End of Rev 37.0
+				-- Rev 38.0
+				OR IsCRMPhonebookSyncEnable<>@IsCRMPhonebookSyncEnable
+				OR IsCRMSchedulerEnable<>@IsCRMSchedulerEnable
+				OR IsCRMAddEnable<>@IsCRMAddEnable 
+				OR IsCRMEditEnable<>@IsCRMEditEnable 
+				-- End of Rev 38.0
+				-- Rev 39.0
+				OR IsShowAddressInParty<>@IsShowAddressInParty
+				OR IsShowUpdateInvoiceDetails<>@IsShowUpdateInvoiceDetails
+				-- End of Rev 39.0
+				-- Rev 40.0
+				OR IsSpecialPriceWithEmployee<>@IsSpecialPriceWithEmployee
+				-- End of Rev 40.0
+
 				 )
 				)
 			BEGIN
@@ -1349,6 +1453,29 @@ BEGIN
 			,IsShowMenuCRMContacts = @IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization = @IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,ShowUserwisePartyWithGeoFence=@ShowUserwisePartyWithGeoFence
+			,ShowUserwisePartyWithCreateOrder=@ShowUserwisePartyWithCreateOrder
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,AdditionalinfoRequiredforContactListing = @AdditionalinfoRequiredforContactListing
+			,AdditionalinfoRequiredforContactAdd = @AdditionalinfoRequiredforContactAdd
+			,ContactAddresswithGeofence = @ContactAddresswithGeofence
+			-- End of Rev 37.0
+			-- Rev 38.0
+			,IsCRMPhonebookSyncEnable=@IsCRMPhonebookSyncEnable
+			,IsCRMSchedulerEnable=@IsCRMSchedulerEnable
+			,IsCRMAddEnable=@IsCRMAddEnable 
+			,IsCRMEditEnable=@IsCRMEditEnable 
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,IsShowAddressInParty = @IsShowAddressInParty
+			,IsShowUpdateInvoiceDetails = @IsShowUpdateInvoiceDetails
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,IsSpecialPriceWithEmployee = @IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1616,6 +1743,31 @@ BEGIN
 			,ISNULL(IsShowMenuCRMContacts,0) as IsShowMenuCRMContacts
 			,ISNULL(IsCheckBatteryOptimization,0) as IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			--Rev 36.0
+			,ShowUserwisePartyWithGeoFence
+			,ShowUserwisePartyWithCreateOrder
+			--Rev 36.0 End
+			-- Rev 37.0
+			,ISNULL(AdditionalinfoRequiredforContactListing,0) as AdditionalinfoRequiredforContactListing
+			,ISNULL(AdditionalinfoRequiredforContactAdd,0) as AdditionalinfoRequiredforContactAdd
+			,ISNULL(ContactAddresswithGeofence,0) as ContactAddresswithGeofence
+			-- End of Rev 37.0
+
+			
+			-- Rev 38.0
+			,isnull(IsCRMPhonebookSyncEnable ,0) as IsCRMPhonebookSyncEnable 
+			,isnull(IsCRMSchedulerEnable ,0)as IsCRMSchedulerEnable 
+			,isnull(IsCRMAddEnable ,0)as IsCRMAddEnable
+			,isnull(IsCRMEditEnable ,0) as IsCRMEditEnable
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,ISNULL(IsShowAddressInParty,0) as IsShowAddressInParty
+			,ISNULL(IsShowUpdateInvoiceDetails,0) as IsShowUpdateInvoiceDetails
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,ISNULL(IsSpecialPriceWithEmployee,0) as IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1775,6 +1927,28 @@ BEGIN
 			,'IsShowMenuCRMContacts'
 			,'IsCheckBatteryOptimization'
 			-- End of Rev 35.0
+			--Rev 36.0 
+			,'ShowPartyWithCreateOrder'
+			,'ShowPartyWithGeoFence'
+			--Rev 36.0 End
+			-- Rev 37.0
+			,'AdditionalinfoRequiredforContactListing'
+			,'AdditionalinfoRequiredforContactAdd'
+			,'ContactAddresswithGeofence'
+			-- End of Rev 37.0
+			-- Rev 38.0
+			,'IsCRMPhonebookSyncEnable'
+			,'IsCRMSchedulerEnable'
+			,'IsCRMAddEnable'
+			,'IsCRMEditEnable'
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,'IsShowAddressInParty'
+			,'IsShowUpdateInvoiceDetails'
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,'IsSpecialPriceWithEmployee'
+			-- End of Rev 40.0
 			)
 		END
 	-- Rev 18.0
@@ -1785,3 +1959,4 @@ BEGIN
 		-- End of Rev 18.0
 END
 GO
+
