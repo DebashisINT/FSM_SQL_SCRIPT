@@ -15,7 +15,7 @@ As
 /*****************************************************************************************************************************************
 Written by : Priti Roy ON 02/04/2024
 Module	   : New Price Upload module shall be implemented named as Special Price Upload.Refer: 0027292
-
+1.0        03-06-2024         2.0.47            Priti               	0027493: Modification in ITC special price upload module.
 **************************************************************************************************************************/
 BEGIN
 
@@ -52,7 +52,10 @@ BEGIN
 			PRODUCT_ID bigint,
 			PRODUCTCODE varchar(80),
 			PRODUCTNAME varchar(100),
-			SPECIALPRICE NUMERIC(18,2)
+			SPECIALPRICE NUMERIC(18,2),
+			--Rev 1.0 
+			Employee_Name Nvarchar(500)
+			--Rev 1.0 End
 
 			)
 
@@ -63,14 +66,17 @@ BEGIN
 
 	IF @ACTION='ALL'
 	BEGIN
-			INSERT INTO PRODUCTSPECIALPRICELIST(SEQ ,USERID ,SlNo,SPECIALPRICEID ,BRANCH_ID ,BRANCH ,PRODUCT_ID ,PRODUCTCODE ,PRODUCTNAME ,SPECIALPRICE )
+			INSERT INTO PRODUCTSPECIALPRICELIST(SEQ ,USERID ,SlNo,SPECIALPRICEID ,BRANCH_ID ,BRANCH ,PRODUCT_ID ,PRODUCTCODE ,PRODUCTNAME ,SPECIALPRICE,Employee_Name )
 
 		
 			SELECT ROW_NUMBER() OVER (ORDER BY ID DESC),@USERID,ROW_NUMBER() OVER (ORDER BY ID DESC) SlNo,ID,MB.BRANCH_ID,branch_description,sProducts_ID,PRODUCT_CODE,sProducts_Name,SPECIAL_PRICE 
+			--Rev 1.0 
+			,Replace(ISNULL(cnt_firstName,'')+' '+ISNULL(cnt_middleName,'')+ ' '+ISNULL(cnt_lastName,''),'''','&#39;') AS Employee_Name
+			--Rev 1.0 End
 			FROM PRODUCT_SPECIAL_PRICE_BRANCHWISE PSPB
 			INNER JOIN tbl_master_branch MB ON MB.BRANCH_ID=PSPB.BRANCH_ID
-			INNER JOIN Master_sProducts  MP ON MP.sProducts_Code=PSPB.PRODUCT_CODE
-
+			INNER JOIN Master_sProducts  MP ON MP.sProducts_Code=LTRIM(RTRIM(PSPB.PRODUCT_CODE))
+			LEFT OUTER JOIN tbl_master_contact CONTACT ON  CONTACT.cnt_internalId=LTRIM(RTRIM(PSPB.EMPINTERNALID))
 			where EXISTS (select Product_Id from #Product_List as PL where PL.Product_Id=PSPB.PRODUCT_ID)	
 
 		--WHERE ISNULL(TSO.ISPROJECTORDER,0)=0
