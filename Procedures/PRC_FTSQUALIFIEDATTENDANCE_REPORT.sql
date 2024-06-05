@@ -15,6 +15,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSQUALIFIEDATTENDANCE_REPORT]
 @BRANCHID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @CHANNELID NVARCHAR(MAX)=NULL,
+--Rev 4.0
+@CONSIDERDAYEND NVARCHAR(1)=NULL,
+--End of Rev 4.0
 @USERID INT
 ) --WITH ENCRYPTION
 AS
@@ -24,6 +27,7 @@ Module	   : Qualified Attendance Report.Refer: 0025416
 1.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
 2.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
 3.0		v2.0.45		Debashis	28/03/2024		In Application, please consider Saturday and Sunday for qualified attendance.Refer: 0027330
+4.0		v2.0.47		Debashis	05/06/2024		Qualified attendance for the day to be considered only if the DS marks day end for ITC.Refer: 0027498
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -131,7 +135,10 @@ BEGIN
 	CREATE NONCLUSTERED INDEX IX1 ON #TMPEMPATTENDACESUMMARYQA (BRANCH_ID,EMPCODE)
 
 	--Rev 1.0
-	INSERT INTO #TMPATTENDACEQADET EXEC [PRC_FTSQUALIFIEDATTENDANCE_FETCH] @FROMDATE,@TODATE,@BRANCHID,@EMPID,@CHANNELID,@USERID
+	--Rev 4.0
+	--INSERT INTO #TMPATTENDACEQADET EXEC [PRC_FTSQUALIFIEDATTENDANCE_FETCH] @FROMDATE,@TODATE,@BRANCHID,@EMPID,@CHANNELID,@USERID
+	INSERT INTO #TMPATTENDACEQADET EXEC [PRC_FTSQUALIFIEDATTENDANCE_FETCH] @FROMDATE,@TODATE,@BRANCHID,@EMPID,@CHANNELID,@CONSIDERDAYEND,@USERID
+	--End of Rev 4.0
 
 	--Rev 3.0
 	--INSERT INTO #TMPEMPATTENDACESUMMARYQA(BRANCH_ID,BRANCH_DESCRIPTION,USERID,EMPCODE,EMPID,EMPNAME,TOTWORKINGDAYS,PRESENTABSENT)
