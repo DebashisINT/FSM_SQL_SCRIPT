@@ -30,6 +30,8 @@ Module	   : Employee Outlet Master.Refer: 0024448
 6.0		v2.0.41		Sanchita	26/05/2023		New Coloumn "Status" add in Employee Outlet Master. Refer: 26240
 7.0		v2.0.41		Sanchita	02/06/2023		Employee Outlet Master : Report, Outlet ID shall be showing Internal ID. Refer: 26239
 8.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
+
+10.0	v2.0.47		Sanchita	04/06/2024		In Employee Outlet Master report, add a “DS Type” column at the end.Refer: 27516
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -149,6 +151,7 @@ BEGIN
 	IF NOT EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID=OBJECT_ID(N'FTSEMPLOYEEOUTLETMASTER_REPORT_AUTOMAIL') AND TYPE IN (N'U'))
 		BEGIN
 			--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
+			--Rev 10.0 && Two new columns have been added as DSTYPEID & DSTYPE
 			CREATE TABLE FTSEMPLOYEEOUTLETMASTER_REPORT_AUTOMAIL
 			(
 			  USERID INT,
@@ -184,8 +187,10 @@ BEGIN
 			  OUTLETSTATUS	VARCHAR(10), -- Rev 6.0
 			  --Rev 8.0
 			  OUTLETEMPSEX TINYINT,
-			  GENDERDESC VARCHAR(100)
+			  GENDERDESC VARCHAR(100),
 			--End of Rev 8.0
+			  DSTYPEID BIGINT,
+			  DSTYPE NVARCHAR(600)
 			)
 			CREATE NONCLUSTERED INDEX IX1 ON FTSEMPLOYEEOUTLETMASTER_REPORT_AUTOMAIL (SEQ)
 		END
@@ -196,13 +201,14 @@ BEGIN
 		BEGIN
 	--End of Rev 5.0
 			--Rev 1.0 && Two new fields added as REPORTTOUID & HREPORTTOUID
+			--Rev 10.0 && Two new columns have been added as DSTYPEID & DSTYPE
 			SET @Strsql=''
 			SET @Strsql='INSERT INTO FTSEMPLOYEEOUTLETMASTER_REPORT_AUTOMAIL(USERID,SEQ,BRANCH_ID,BRANCHDESC,EMPCODE,EMPID,EMPNAME,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,CONTACTNO,REPORTTOID,REPORTTOUID,REPORTTO,'
 			SET @Strsql+='RPTTODESG,HREPORTTOID,HREPORTTOUID,HREPORTTO,HRPTTODESG,OUTLETID,OUTLETNAME,OUTLETADDRESS,OUTLETCONTACT,OUTLETLAT,OUTLETLANG,LASTVISITDATE,LASTVISITTIME,LASTVISITEDBY,'
 			-- Rev 6.0
 			--Rev 8.0
 			--SET @Strsql+='OUTLETSTATUS) '
-			SET @Strsql+='OUTLETSTATUS,OUTLETEMPSEX,GENDERDESC) '
+			SET @Strsql+='OUTLETSTATUS,OUTLETEMPSEX,GENDERDESC,DSTYPEID,DSTYPE) '
 			--End of Rev 8.0
 			-- End of Rev 6.0
 			SET @Strsql+='SELECT '+LTRIM(RTRIM(STR(@USERID)))+' AS USERID,ROW_NUMBER() OVER(ORDER BY CNT.cnt_internalId) AS SEQ,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
@@ -231,7 +237,7 @@ BEGIN
 			SET @Strsql+=' , CASE WHEN ISNULL(MS.Entity_Status,0)=0 THEN ''Inactive'' ELSE ''Active'' END AS OUTLETSTATUS,'
 			-- End of Rev 6.0
 			--Rev 8.0
-			SET @Strsql+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC '
+			SET @Strsql+='CNT.cnt_sex AS OUTLETEMPSEX,CNT.GENDERDESC,USR.FaceRegTypeID AS DSTYPEID,STG.Stage AS DSTYPE '
 			--End of Rev 8.0
 			SET @Strsql+='FROM tbl_master_employee EMP '
 			SET @Strsql+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
@@ -277,6 +283,9 @@ BEGIN
 			--SET @Strsql+='LEFT OUTER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
 			SET @Strsql+='INNER JOIN tbl_Master_shop MS ON USR.USER_ID=MS.SHOP_CREATEUSER '
 			--End of Rev 4.0
+			--Rev 10.0
+			SET @Strsql+='LEFT OUTER JOIN FTS_Stage STG WITH (NOLOCK) ON USR.FaceRegTypeID=STG.StageID '
+			--End of Rev 10.0
 			SET @Strsql+='LEFT OUTER JOIN tbl_master_user UserTBl ON CAST(UserTBl.user_id AS INT)=MS.Shop_CreateUser '
 			--Rev 1.0
 			--SET @Strsql+='WHERE DESG.deg_designation=''DS'' '
