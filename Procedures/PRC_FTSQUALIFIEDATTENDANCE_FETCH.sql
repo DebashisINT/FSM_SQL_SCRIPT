@@ -14,6 +14,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSQUALIFIEDATTENDANCE_FETCH]
 @BRANCHID NVARCHAR(MAX)=NULL,
 @EMPID NVARCHAR(MAX)=NULL,
 @CHANNELID NVARCHAR(MAX)=NULL,
+--Rev 5.0
+@CONSIDERDAYEND NVARCHAR(1)=NULL,
+--End of Rev 5.0
 @USERID INT
 ) --WITH ENCRYPTION
 AS
@@ -25,7 +28,7 @@ Module	   : Qualified Attendance Report.Refer: 0025416
 3.0		v2.0.45		Debashis	28/03/2024		Qualified Attendance Report, logic should be updated as the visit count shall be 
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
 4.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
-5.0		v2.0.47		Debashis	04/06/2024		Qualified attendance for the day to be considered only if the DS marks day end for ITC.Refer: 0027498
+5.0		v2.0.47		Debashis	05/06/2024		Qualified attendance for the day to be considered only if the DS marks day end for ITC.Refer: 0027498
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -209,7 +212,10 @@ BEGIN
 	--SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
 	--Rev 5.0
 	--SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
-	SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND DAYEND.ISEND=1 AND '
+	IF @CONSIDERDAYEND='1'
+		SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND DAYEND.ISEND=1 AND '
+	ELSE IF @CONSIDERDAYEND='0'
+		SET @SqlStr+='CASE WHEN (ISNULL(SHOPACT.NEWSHOP_VISITED,0)+ISNULL(SHOPACT.RE_VISITED,0))>=20 AND '
 	--End of Rev 5.0
 	--End of Rev 3.0
 	SET @SqlStr+='(CAST(CAST(ISNULL(CAST((DATEPART(HOUR,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 60) AS FLOAT) +CAST(DATEPART(MINUTE,ISNULL(DAYSTARTEND.DAYENDTIME,''00:00:00'')) * 1 AS FLOAT),0) AS VARCHAR(100)) AS FLOAT) '
@@ -243,9 +249,12 @@ BEGIN
 	SET @SqlStr+='SELECT USERID,DAYSTTIME,DAYENDTIME,cnt_internalId,STARTENDDATE,STARTENDDATEORDBY FROM #TMPDAYSTARTENDQA '
 	SET @SqlStr+=') DAYSTEND GROUP BY USERID,cnt_internalId,STARTENDDATE,STARTENDDATEORDBY) DAYSTARTEND ON CNT.cnt_internalId=DAYSTARTEND.cnt_internalId AND USR.user_id=DAYSTARTEND.USERID '
 	--Rev 5.0
-	SET @SqlStr+='LEFT OUTER JOIN('
-	SET @SqlStr+='SELECT USERID,cnt_internalId,1 AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL GROUP BY USERID,cnt_internalId '
-	SET @SqlStr+=') DAYEND ON CNT.cnt_internalId=DAYEND.cnt_internalId AND USR.user_id=DAYEND.USERID '
+	IF @CONSIDERDAYEND='1'
+		BEGIN
+			SET @SqlStr+='LEFT OUTER JOIN('
+			SET @SqlStr+='SELECT USERID,cnt_internalId,1 AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL GROUP BY USERID,cnt_internalId '
+			SET @SqlStr+=') DAYEND ON CNT.cnt_internalId=DAYEND.cnt_internalId AND USR.user_id=DAYEND.USERID '
+		END
 	--End of Rev 5.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
 	SET @SqlStr+='SELECT User_Id,cnt_internalId,VISITED_TIME,SUM(NEWSHOP_VISITED) AS NEWSHOP_VISITED,SUM(RE_VISITED) AS RE_VISITED '
