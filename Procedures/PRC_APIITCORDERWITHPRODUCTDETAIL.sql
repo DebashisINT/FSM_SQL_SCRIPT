@@ -22,17 +22,26 @@ ALTER PROCEDURE [dbo].[PRC_APIITCORDERWITHPRODUCTDETAIL]
 @SHOP_PINCODE NVARCHAR(100)=NULL,
 @ORDER_TOTALAMOUNT DECIMAL(18,2)=NULL,
 @ORDER_REMARKS NVARCHAR(500)=NULL,
+--Rev 1.0
+@ORDER_EDIT_DATE_TIME DATETIME=NULL,
+@ORDER_EDIT_REMARKS NVARCHAR(500)=NULL,
+--End of Rev 1.0
 @JsonXML XML=NULL
 ) --WITH ENCRYPTION
 AS
 /****************************************************************************************************************
 Written By : Debashis Talukder On 03/04/2024
 Purpose : For ITC New Order.Row: 911 to 912
+1.0		V2.0.47		06-06-2024		Debashis	Some new parameters & Actions have been added.Row: 938 to 940
+2.0		V2.0.47     11-06-2024		Debashis    Some new parameters have been added.Row: 942 to 944
 ****************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @LASTRECORD BIGINT=0
+	--Rev 1.0
+	DECLARE @LASTCREATEDBY BIGINT,@LASTCREATEDON DATETIME
+	--End of Rev 1.0
 
 	IF @ACTION='INSERTDATA'
 		BEGIN
@@ -47,18 +56,22 @@ BEGIN
 					SELECT (@LASTRECORD+1),@USER_ID,@ORDER_CODE,@ORDER_DATE,@ORDER_TIME,@ORDER_DATE_TIME,@SHOP_ID,@SHOP_NAME,@SHOP_TYPE,@ISINRANGE,@ORDER_LAT,@ORDER_LONG,@SHOP_ADDRESS,@SHOP_PINCODE,@ORDER_TOTALAMOUNT,
 					@ORDER_REMARKS,@USER_ID,GETDATE()
 
-					INSERT INTO FSMITCORDERDETAIL(DETID,USERID,ORDER_CODE,PRODUCT_ID,PRODUCT_NAME,PRODUCT_QTY,PRODUCT_SPECIALRATE)
+					--Rev 2.0 && Added three new fields as AMOUNT,MRP & ITEMPRICE
+					INSERT INTO FSMITCORDERDETAIL(DETID,USERID,ORDER_CODE,PRODUCT_ID,PRODUCT_NAME,PRODUCT_QTY,PRODUCT_SPECIALRATE,AMOUNT,MRP,ITEMPRICE)
 					SELECT (@LASTRECORD+1),@USER_ID,
 					XMLproduct.value('(order_id/text())[1]','NVARCHAR(50)') AS order_id,
 					XMLproduct.value('(product_id/text())[1]','BIGINT') AS product_id,
 					XMLproduct.value('(product_name/text())[1]','NVARCHAR(300)') AS product_name,
 					XMLproduct.value('(submitedQty/text())[1]','DECIMAL(18,2)') AS submitedQty,
-					XMLproduct.value('(submitedSpecialRate/text())[1]','DECIMAL(18,2)') AS submitedSpecialRate
+					XMLproduct.value('(submitedSpecialRate/text())[1]','DECIMAL(18,2)') AS submitedSpecialRate,
+					XMLproduct.value('(total_amt/text())[1]','DECIMAL(18,2)') AS total_amt,
+					XMLproduct.value('(mrp/text())[1]','DECIMAL(18,2)') AS mrp,
+					XMLproduct.value('(itemPrice/text())[1]','DECIMAL(18,2)') AS itemPrice
 					FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
 					INNER JOIN Master_sProducts MP ON MP.sProducts_ID=XMLproduct.value('(product_id/text())[1]','BIGINT')
-					AND EXISTS(SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE)
+					AND EXISTS(SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID)
 
-					SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE
+					SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID
 				COMMIT TRAN
 			END TRY
 			BEGIN CATCH
@@ -66,13 +79,78 @@ BEGIN
 				SELECT ERROR_NUMBER() AS ErrorNumber,ERROR_MESSAGE() AS ErrorMessage
 			END CATCH
 		END
+	--Rev 1.0
+	IF @ACTION='EDITDATA'
+		BEGIN
+			BEGIN TRAN
+				BEGIN TRY
+					IF EXISTS(SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID)
+						BEGIN
+							SELECT @LASTRECORD=ISNULL(ID,0),@LASTCREATEDBY=CREATED_BY,@LASTCREATEDON=CREATED_ON FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID
+
+							DELETE FROM FSMITCORDERDETAIL WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID
+							DELETE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID
+
+							INSERT INTO FSMITCORDERHEADER(ID,USERID,ORDER_CODE,ORDER_DATE,ORDER_TIME,ORDER_DATE_TIME,SHOP_ID,SHOP_NAME,SHOP_TYPE,ISINRANGE,ORDER_LAT,ORDER_LONG,SHOP_ADDRESS,SHOP_PINCODE,
+							ORDER_TOTALAMOUNT,ORDER_REMARKS,CREATED_BY,CREATED_ON,MODIFIED_BY,MODIFIED_ON,ORDER_EDIT_DATE_TIME,ORDER_EDIT_REMARKS)
+							SELECT @LASTRECORD,@USER_ID,@ORDER_CODE,@ORDER_DATE,@ORDER_TIME,@ORDER_DATE_TIME,@SHOP_ID,@SHOP_NAME,@SHOP_TYPE,@ISINRANGE,@ORDER_LAT,@ORDER_LONG,@SHOP_ADDRESS,@SHOP_PINCODE,
+							@ORDER_TOTALAMOUNT,@ORDER_REMARKS,@LASTCREATEDBY,@LASTCREATEDON,@USER_ID,GETDATE(),@ORDER_EDIT_DATE_TIME,@ORDER_EDIT_REMARKS
+
+							--Rev 2.0 && Added three new fields as AMOUNT,MRP & ITEMPRICE
+							INSERT INTO FSMITCORDERDETAIL(DETID,USERID,ORDER_CODE,PRODUCT_ID,PRODUCT_NAME,PRODUCT_QTY,PRODUCT_SPECIALRATE,AMOUNT,MRP,ITEMPRICE)
+							SELECT @LASTRECORD,@USER_ID,
+							XMLproduct.value('(order_id/text())[1]','NVARCHAR(50)') AS order_id,
+							XMLproduct.value('(product_id/text())[1]','BIGINT') AS product_id,
+							XMLproduct.value('(product_name/text())[1]','NVARCHAR(300)') AS product_name,
+							XMLproduct.value('(submitedQty/text())[1]','DECIMAL(18,2)') AS submitedQty,
+							XMLproduct.value('(submitedSpecialRate/text())[1]','DECIMAL(18,2)') AS submitedSpecialRate,
+							XMLproduct.value('(total_amt/text())[1]','DECIMAL(18,2)') AS total_amt,
+							XMLproduct.value('(mrp/text())[1]','DECIMAL(18,2)') AS mrp,
+							XMLproduct.value('(itemPrice/text())[1]','DECIMAL(18,2)') AS itemPrice
+							FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct)
+							INNER JOIN Master_sProducts MP ON MP.sProducts_ID=XMLproduct.value('(product_id/text())[1]','BIGINT')
+							AND EXISTS(SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID)
+
+							SELECT ORDER_CODE FROM FSMITCORDERHEADER WHERE ORDER_CODE=@ORDER_CODE AND USERID=@USER_ID
+						END
+				COMMIT TRAN
+			END TRY
+			BEGIN CATCH
+				ROLLBACK TRAN
+				SELECT ERROR_NUMBER() AS ErrorNumber,ERROR_MESSAGE() AS ErrorMessage
+			END CATCH
+		END
+	IF @ACTION='DELETEDATA'
+		BEGIN
+			IF EXISTS(SELECT ORDER_CODE FROM FSMITCORDERHEADER 
+			INNER JOIN @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) ON FSMITCORDERHEADER.ORDER_CODE=XMLproduct.value('(order_id/text())[1]','NVARCHAR(100)')
+			WHERE USERID=@USER_ID)
+				BEGIN
+					SELECT 1
+					
+					DELETE FROM FSMITCORDERDETAIL 
+					WHERE EXISTS(SELECT XMLproduct.value('(order_id/text())[1]','NVARCHAR(100)') FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
+					WHERE FSMITCORDERDETAIL.ORDER_CODE=XMLproduct.value('(order_id/text())[1]','NVARCHAR(100)'))
+					AND USERID=@USER_ID
+
+					DELETE FROM FSMITCORDERHEADER 
+					WHERE EXISTS(SELECT XMLproduct.value('(order_id/text())[1]','NVARCHAR(100)') FROM @JsonXML.nodes('/root/data')AS TEMPTABLE(XMLproduct) 
+					WHERE FSMITCORDERHEADER.ORDER_CODE=XMLproduct.value('(order_id/text())[1]','NVARCHAR(100)'))
+					AND USERID=@USER_ID
+				END
+		END
+	--End of Rev 1.0
 	IF @ACTION='FETCHORDPRODDETAIL'
 		BEGIN
+			--Rev 1.0 && Added some new fields as ORDER_EDIT_DATE_TIME,ORDER_EDIT_REMARKS & isEdited
 			SELECT ORDER_CODE AS order_id,ORDER_DATE AS order_date,ORDER_TIME AS order_time,ORDER_DATE_TIME AS order_date_time,SHOP_ID AS shop_id,SHOP_NAME AS shop_name,SHOP_TYPE AS shop_type,ISINRANGE AS isInrange,
-			ORDER_LAT AS order_lat,ORDER_LONG AS order_long,SHOP_ADDRESS AS shop_addr,SHOP_PINCODE AS shop_pincode,ORDER_TOTALAMOUNT AS order_total_amt,ORDER_REMARKS AS order_remarks,'true' AS isUploaded
+			ORDER_LAT AS order_lat,ORDER_LONG AS order_long,SHOP_ADDRESS AS shop_addr,SHOP_PINCODE AS shop_pincode,ORDER_TOTALAMOUNT AS order_total_amt,ORDER_REMARKS AS order_remarks,'true' AS isUploaded,
+			ISNULL(ORDER_EDIT_DATE_TIME,'') AS order_edit_date_time,ISNULL(ORDER_EDIT_REMARKS,'') AS order_edit_remarks,'false' AS isEdited
 			FROM FSMITCORDERHEADER WHERE USERID=@USER_ID
 
-			SELECT ORDER_CODE AS order_id,PRODUCT_ID AS product_id,PRODUCT_NAME AS product_name,PRODUCT_QTY AS submitedQty,PRODUCT_SPECIALRATE AS submitedSpecialRate FROM FSMITCORDERDETAIL WHERE USERID=@USER_ID
+			--Rev 2.0 && Added three new fields as AMOUNT,MRP & ITEMPRICE
+			SELECT ORDER_CODE AS order_id,PRODUCT_ID AS product_id,PRODUCT_NAME AS product_name,PRODUCT_QTY AS submitedQty,PRODUCT_SPECIALRATE AS submitedSpecialRate,AMOUNT AS total_amt,
+			MRP AS mrp,ITEMPRICE AS itemPrice FROM FSMITCORDERDETAIL WHERE USERID=@USER_ID
 		END
 
 	SET NOCOUNT OFF
