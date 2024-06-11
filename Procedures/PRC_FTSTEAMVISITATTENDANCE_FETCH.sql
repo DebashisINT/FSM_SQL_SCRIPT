@@ -31,6 +31,7 @@ Module	   : Team Visit Attendance.Refer: 0024720
 												instead 'Day Start'.Refer: 0025240
 5.0		v2.0.35		Debashis	15/11/2022		Need to optimized Employee Attendance, Team Visit and Qualified Attendance reports in ITC Portal.Refer: 0025453
 6.0		v2.0.41		Debashis	09/08/2023		A coloumn named as Gender needs to be added in all the ITC reports.Refer: 0026680
+7.0		v2.0.47		Debashis	10/06/2024		A new coloumn "Total CDM Days" is required under the Summary section. It shall be placed at the end.Refer: 0027509
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -199,19 +200,29 @@ BEGIN
 	----End of Rev 4.0
 	IF OBJECT_ID('tempdb..#TMPATTENLOGINOUTTV') IS NOT NULL
 		DROP TABLE #TMPATTENLOGINOUTTV
+	--Rev 7.0 && A new column has been added as WORKACTIVITYDESCRIPTION NVARCHAR(500)
 	CREATE TABLE #TMPATTENLOGINOUTTV
-	(USERID BIGINT,LOGGEDIN NVARCHAR(10),LOGIN_DATE NVARCHAR(10))
+	(USERID BIGINT,LOGGEDIN NVARCHAR(10),LOGIN_DATE NVARCHAR(10),WORKACTIVITYDESCRIPTION NVARCHAR(500))
 	CREATE NONCLUSTERED INDEX IX1 ON #TMPATTENLOGINOUTTV(USERID,LOGGEDIN,LOGIN_DATE)
 
 	SET @SqlStr=''
-	SET @SqlStr='INSERT INTO #TMPATTENLOGINOUTTV(USERID,LOGGEDIN,LOGIN_DATE) '
-	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,CAST(ATTEN.Work_datetime AS DATE) AS LOGIN_DATE '
+	--Rev 7.0 && A new column has been added as WORKACTIVITYDESCRIPTION
+	SET @SqlStr='INSERT INTO #TMPATTENLOGINOUTTV(USERID,LOGGEDIN,LOGIN_DATE,WORKACTIVITYDESCRIPTION) '
+	SET @SqlStr+='SELECT ATTEN.User_Id AS USERID,MIN(CONVERT(VARCHAR(5),CAST(ATTEN.Login_datetime AS TIME),108)) AS LOGGEDIN,CAST(ATTEN.Work_datetime AS DATE) AS LOGIN_DATE,WRKACT.WRKACTVTYDESCRIPTION '
 	SET @SqlStr+='FROM tbl_fts_UserAttendanceLoginlogout ATTEN WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON USR.user_id=ATTEN.User_Id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
+	--Rev 7.0
+	SET @SqlStr+='INNER JOIN tbl_attendance_worktype ATTENWRKTYP ON ATTENWRKTYP.UserID=ATTEN.User_Id AND ATTEN.Id=ATTENWRKTYP.attendanceid '
+	SET @SqlStr+='INNER JOIN tbl_FTS_WorkActivityList WRKACT ON WRKACT.WorkActivityID=ATTENWRKTYP.worktypeID '
+	--End of Rev 7.0
 	SET @SqlStr+='WHERE CONVERT(NVARCHAR(10),ATTEN.Work_datetime,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) AND Login_datetime IS NOT NULL '
 	SET @SqlStr+='AND Logout_datetime IS NULL AND Isonleave=''false'' '
-	SET @SqlStr+='GROUP BY ATTEN.User_Id,CAST(ATTEN.Work_datetime AS DATE) '
+	--Rev 7.0
+	--SET @SqlStr+='GROUP BY ATTEN.User_Id,CAST(ATTEN.Work_datetime AS DATE) '
+	SET @SqlStr+='AND WRKACT.WrkActvtyDescription IN(''CDM Day'',''Non CDM Day'') '
+	SET @SqlStr+='GROUP BY ATTEN.User_Id,CAST(ATTEN.Work_datetime AS DATE),WRKACT.WrkActvtyDescription '
+	--End of Rev 7.0
 	--End of Rev 5.0
 
 	--SELECT @SqlStr
@@ -221,6 +232,7 @@ BEGIN
 	--Rev 2.0 && WITH (NOLOCK) has been added in all tables
 	--Rev 5.0 && Added a new column as LOGIN_DATE
 	--Rev 6.0 && Two new fields added as OUTLETEMPSEX & GENDERDESC
+	--Rev 7.0 && A new column has been added as TOTALCDMDAYS
 	SET @SqlStr=''
 	SET @SqlStr+='SELECT ATTENINOUT.LOGIN_DATE,BR.BRANCH_ID,BR.BRANCH_DESCRIPTION,USR.USER_ID AS USERID,CNT.cnt_internalId AS EMPCODE,EMP.emp_uniqueCode AS EMPID,'
 	SET @SqlStr+='ISNULL(CNT.CNT_FIRSTNAME,'''')+'' ''+ISNULL(CNT.CNT_MIDDLENAME,'''')+(CASE WHEN ISNULL(CNT.CNT_MIDDLENAME,'''')<>'''' THEN '' '' ELSE '''' END)+ISNULL(CNT.CNT_LASTNAME,'''') AS EMPNAME,'
@@ -241,8 +253,11 @@ BEGIN
 	SET @SqlStr+='ISNULL((SELECT LTRIM(STUFF(((SELECT DISTINCT '', '' + crl_Circle FROM '
 	SET @SqlStr+='(SELECT EC.crl_Circle FROM Employee_Circle EC WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN Employee_CircleMap ECM WITH (NOLOCK) ON EC.crl_id=ECM.EP_CRL_ID WHERE ECM.EP_EMP_CONTACTID=CNT.cnt_internalId '
-	SET @SqlStr+=') AS CIR FOR XML PATH(''''))),1,2,'' ''))),'''') AS CIRCLE '
+	SET @SqlStr+=') AS CIR FOR XML PATH(''''))),1,2,'' ''))),'''') AS CIRCLE,'
 	--End of Rev 3.0
+	--Rev 7.0
+	SET @SqlStr+='CASE WHEN ATTENINOUT.WORKACTIVITYDESCRIPTION=''CDM Day'' THEN 1 ELSE 0 END AS TOTALCDMDAYS '
+	--End of Rev 7.0
 	SET @SqlStr+='FROM tbl_master_employee EMP WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=EMP.emp_contactId '
 	SET @SqlStr+='INNER JOIN tbl_master_branch BR WITH (NOLOCK) ON CNT.cnt_branchid=BR.branch_id '
