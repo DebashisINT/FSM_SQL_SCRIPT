@@ -147,11 +147,12 @@ BEGIN
 					SET @StrSql+='FROM Master_sProducts AS MP '
 					--Rev 1.0
 					SET @StrSql+='INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP '
-					SET @StrSql+='INNER JOIN tbl_master_user USR ON MAP.CHILDEMP_INTERNALID=USR.user_contactId AND USR.user_id='+TRIM(STR(@USER_ID))+' '
+					SET @StrSql+='INNER JOIN tbl_master_user USR ON MAP.CHILDEMP_INTERNALID=USR.user_contactId AND USR.user_id='+TRIM(STR(@USER_ID))+' '					
 					SET @StrSql+='GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID '
 					--End of Rev 1.0
 					SET @StrSql+='LEFT OUTER JOIN PRODUCT_SPECIAL_PRICE_BRANCHWISE PSPB ON MP.sProducts_ID=PSPB.PRODUCT_ID '
 					--Rev 2.0
+					SET @StrSql+='INNER JOIN #BRANCH_LIST BR ON PSPB.BRANCH_ID=BR.Branch_Id '
 					IF @IsSpecialPriceWithEmployee=1
 						SET @StrSql+='WHERE PSPB.EMPINTERNALID='''+@REPORTTOID+''' '
 					--End of Rev 2.0
@@ -163,10 +164,11 @@ BEGIN
 					SET @StrSql+='CAST(ISNULL(PSPB.SPECIAL_PRICE,0.00) AS DECIMAL(18,2)) AS specialRate '
 					SET @StrSql+='FROM Master_sProducts AS MP '
 					SET @StrSql+='INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP '
-					SET @StrSql+='INNER JOIN tbl_master_user USR ON MAP.PARENTEMP_INTERNALID=USR.user_contactId AND USR.user_id='+TRIM(STR(@USER_ID))+' '
+					SET @StrSql+='INNER JOIN tbl_master_user USR ON MAP.PARENTEMP_INTERNALID=USR.user_contactId AND USR.user_id='+TRIM(STR(@USER_ID))+' '					
 					SET @StrSql+='GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID '
 					SET @StrSql+='LEFT OUTER JOIN PRODUCT_SPECIAL_PRICE_BRANCHWISE PSPB ON MP.sProducts_ID=PSPB.PRODUCT_ID '
 					--Rev 2.0
+					SET @StrSql+='INNER JOIN #BRANCH_LIST BR ON MAP.BRANCH_ID=BR.Branch_Id '
 					IF @IsSpecialPriceWithEmployee=1
 						SET @StrSql+='WHERE PSPB.EMPINTERNALID='''+@REPORTTOID+''' '
 					--End of Rev 2.0
