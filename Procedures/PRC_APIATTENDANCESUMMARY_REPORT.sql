@@ -15,6 +15,8 @@ Module	   : Attendance Summary Report.Refer: 0026236
 1.0		v2.0.45		28/03/2024		Debashis	In Application, please consider Saturday and Sunday for qualified attendance.Refer: 0027330
 2.0		v2.0.45		28/03/2024		Debashis	Qualified Attendance Report, logic should be updated as the visit count shall be
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
+3.0		v2.0.47		17/06/2024		Debashis	Please consider DS types of 'Stockist DS' and 'Emerging DS' in the Attendance Summary and the Attendance Calendar report of 
+												the FSM application.Refer: 0027553
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -210,7 +212,10 @@ BEGIN
 	SET @SqlStr+='SELECT User_Id,cnt_internalId,NEWSHOP_VISITED,RE_VISITED,VISITED_TIME FROM #TMPSHOPACTIVITYSUBMITQA '
 	SET @SqlStr+=') AA GROUP BY User_Id,cnt_internalId,VISITED_TIME) SHOPACT ON CNT.cnt_internalId=SHOPACT.cnt_internalId AND DAYSTARTEND.STARTENDDATE=SHOPACT.VISITED_TIME '
 	SET @SqlStr+='LEFT OUTER JOIN FTS_Stage STG WITH (NOLOCK) ON USR.FaceRegTypeID=STG.StageID '
-	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	--Rev 3.0
+	--SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2) '
+	SET @SqlStr+='WHERE DESG.deg_designation=''DS'' AND USR.FaceRegTypeID IN(1,2,36,37) '
+	--End of Rev 3.0
 	SET @SqlStr+=') ATTENSUM '
 	SET @SqlStr+='GROUP BY BRANCH_ID,BRANCH_DESCRIPTION,USERID,EMPCODE,EMPID,EMPNAME,CONTACTNO,STATEID,STATE,DEG_ID,DESIGNATION,DATEOFJOINING,REPORTTOID,REPORTTOUID,REPORTTO,RPTTODESG,DSTYPE,'
 	SET @SqlStr+='CH_ID,CHANNEL '
