@@ -27,6 +27,7 @@ Module	   : ITC Product Listing.Refer: 0027291 and Row: 909,910 & 916
 												Refer: 0027423
 2.0		v2.0.47		Debashis	04/06/2024		A new global settings is required as "IsSpecialPriceWithEmployee" & Modification in API of ITC special price upload module.
 												Refer: 0027502 & 0027494
+3.0		v2.0.47		Debashis	17/06/2024		Please stop using Product Branch mapping table Special Price Upload module.Refer: 0027558
 ************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -178,10 +179,15 @@ BEGIN
 					SET @StrSql='SELECT sProducts_ID AS product_id,CAST(ISNULL(MP.sProduct_MRP,0.00) AS DECIMAL(18,2)) AS mrp,CAST(ISNULL(MP.sProduct_Price,0.00) AS DECIMAL(18,2)) AS item_price,'
 					SET @StrSql+='CAST(ISNULL(PSPB.SPECIAL_PRICE,0.00) AS DECIMAL(18,2)) AS specialRate '
 					SET @StrSql+='FROM Master_sProducts AS MP '
-					SET @StrSql+='INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP '
-					SET @StrSql+='INNER JOIN #BRANCH_LIST BR ON MAP.BRANCH_ID=BR.Branch_Id '
-					SET @StrSql+='GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID '
+					--Rev 3.0
+					--SET @StrSql+='INNER JOIN (SELECT PRODUCT_ID FROM PRODUCT_BRANCH_MAP MAP '
+					--SET @StrSql+='INNER JOIN #BRANCH_LIST BR ON MAP.BRANCH_ID=BR.Branch_Id '
+					--SET @StrSql+='GROUP BY PRODUCT_ID) PBMAP ON MP.sProducts_ID=PBMAP.PRODUCT_ID '
+					--End of Rev 3.0
 					SET @StrSql+='LEFT OUTER JOIN PRODUCT_SPECIAL_PRICE_BRANCHWISE PSPB ON MP.sProducts_ID=PSPB.PRODUCT_ID '
+					--Rev 3.0
+					SET @StrSql+='INNER JOIN #BRANCH_LIST BR ON PSPB.BRANCH_ID=BR.Branch_Id '
+					--End of Rev 3.0
 					--Rev 2.0
 					IF @IsSpecialPriceWithEmployee=1
 						SET @StrSql+='WHERE PSPB.EMPINTERNALID='''+@REPORTTOID+''' '
