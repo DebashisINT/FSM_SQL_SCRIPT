@@ -30,6 +30,8 @@ Module	   : Qualified Attendance Report.Refer: 0025416
 4.0		v2.0.45		Debashis	12/04/2024		The above mentioned two DS types need to be considered in the below reports.Refer: 0027360
 5.0		v2.0.47		Debashis	05/06/2024		Qualified attendance for the day to be considered only if the DS marks day end for ITC.Refer: 0027498
 6.0		v2.0.47		Debashis	10/06/2024		 A new coloumn "Total CDM Days" is required under the Summary section. It shall be placed at the end.Refer: 0027511
+7.0		v2.0.48		Debashis	05/07/2024		If IsEnd= 0 in FSMUSERWISEDAYSTARTEND, table for a user for a particular day then please consider the remarks 
+												'Auto Update Cutoff Time' for market duration calculation.Refer: 0027603
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -170,7 +172,10 @@ BEGIN
 	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON DAYSTEND.User_Id=USR.user_id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @SqlStr+='WHERE ISEND=1 '
+	--Rev 7.0
+	--SET @SqlStr+='WHERE ISEND=1 '
+	SET @SqlStr+='WHERE (ISEND=1 OR REMARKS=''Auto Update Cutoff Time'') '
+	--End of Rev 7.0
 	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105),CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120),WORKACTIVITYDESCRIPTION '
 

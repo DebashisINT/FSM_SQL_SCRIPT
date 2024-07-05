@@ -39,6 +39,8 @@ Module	   : Employee DS Visit Details.Refer: 0024868
 11.0	v2.0.46		Debashis	25/04/2024		In the below reports, please fetch only active customers count for the Outlets Mapped coloumn.Refer: 0027404
 12.0	v2.0.47		Debashis	03/06/2024		A new coloumn shall be added in the below mentioned reports.Refer: 0027402
 13.0	v2.0.47		Debashis	10/06/2024		Add a new column at the end named as “Total CDM Days" in selected date range.Refer: 0027510
+14.0	v2.0.48		Debashis	05/07/2024		If IsEnd= 0 in FSMUSERWISEDAYSTARTEND, table for a user for a particular day then please consider the remarks 
+												'Auto Update Cutoff Time' for market duration calculation.Refer: 0027603
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -239,7 +241,10 @@ BEGIN
 			SET @SqlStr+='CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105) AS STARTENDDATE,SUM(DAYSTEND.SALE_VALUE) AS SALE_VALUE,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) AS STARTENDDATEORDBY,'
 			SET @SqlStr+='WORKACTIVITYDESCRIPTION '
 			SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
-			SET @SqlStr+='WHERE ISEND=1 '
+			--Rev 14.0
+			--SET @SqlStr+='WHERE ISEND=1 '
+			SET @SqlStr+='WHERE (ISEND=1 OR REMARKS=''Auto Update Cutoff Time'') '
+			--End of Rev 14.0
 			SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 			SET @SqlStr+='GROUP BY DAYSTEND.User_Id,DAYSTEND.STARTENDDATE,DAYSTEND.WORKACTIVITYDESCRIPTION '
 

@@ -17,6 +17,8 @@ Module	   : API Attendance Detail Report.Refer: Row: 853
 												(Total Outlet Re-visited + Total Outlet New visit).Refer: 0027327
 3.0		v2.0.47		17/06/2024		Debashis	Please consider DS types of 'Stockist DS' and 'Emerging DS' in the Attendance Summary and the Attendance Calendar report of 
 												the FSM application.Refer: 0027553
+4.0		v2.0.48		05/07/2024		Debashis	If IsEnd= 0 in FSMUSERWISEDAYSTARTEND, table for a user for a particular day then please consider the remarks 
+												'Auto Update Cutoff Time' for market duration calculation.Refer: 0027603
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -92,7 +94,10 @@ BEGIN
 	SET @SqlStr+='FROM FSMUSERWISEDAYSTARTEND DAYSTEND WITH (NOLOCK) '
 	SET @SqlStr+='INNER JOIN tbl_master_user USR WITH (NOLOCK) ON DAYSTEND.User_Id=USR.user_id AND USR.user_inactive=''N'' '
 	SET @SqlStr+='INNER JOIN #TEMPCONTACT CNT ON CNT.cnt_internalId=USR.user_contactId '
-	SET @SqlStr+='WHERE ISEND=1 '
+	--Rev 4.0
+	--SET @SqlStr+='WHERE ISEND=1 '
+	SET @SqlStr+='WHERE (ISEND=1 OR REMARKS=''Auto Update Cutoff Time'') '
+	--End of Rev 4.0
 	SET @SqlStr+='AND CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) BETWEEN CONVERT(NVARCHAR(10),'''+@FROMDATE+''',120) AND CONVERT(NVARCHAR(10),'''+@TODATE+''',120) '
 	SET @SqlStr+='GROUP BY DAYSTEND.User_Id,CNT.cnt_internalId,CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,105),CONVERT(NVARCHAR(10),DAYSTEND.STARTENDDATE,120) '
 
