@@ -12,6 +12,9 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Debashis Talukder On 13/06/2022
 Module	   : Scheduler for Auto Update Cutoff Time in FSMUSERWISEDAYSTARTEND table.Refer: 0024934
+1.0		v2.0.48		Debashis	02/07/2024		In auto logout schedular, please update IsEnd='0' for auto logout. Rest of the parameters will remain the same.Refer: 0027595
+2.0		v2.0.48		Debashis	08/07/2024		The remarks, 'Auto Update Cutoff Time' is generating more than one time against a date for a user in the below mentioned table
+												FSMUSERWISEDAYSTARTEND.Now it has been taken care of.Refer: 0027608
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -19,8 +22,9 @@ BEGIN
 	DECLARE @DAYSTEND_CURSOR CURSOR
 	DECLARE @USER_ID BIGINT,@STARTENDDATE NVARCHAR(10),@LOCATION_NAME NVARCHAR(2000),@LATITUDE NVARCHAR(MAX),@LONGITUDE NVARCHAR(MAX),@SHOP_TYPE INT,@SHOP_ID NVARCHAR(200)
 
+	--Rev 2.0 && A new condition CAST(STARTENDDATE AS date)=CAST(GETDATE() AS date) has been added
 	SET @DAYSTEND_CURSOR=CURSOR FAST_FORWARD FOR SELECT USER_ID,CAST(STARTENDDATE AS date) AS STARTENDDATE,LOCATION_NAME,LATITUDE,LONGITUDE,SHOP_TYPE,SHOP_ID
-	FROM FSMUSERWISEDAYSTARTEND WHERE ISSTART=1 ORDER BY USER_ID,CAST(STARTENDDATE AS date)
+	FROM FSMUSERWISEDAYSTARTEND WHERE ISSTART=1 AND CAST(STARTENDDATE AS date)=CAST(GETDATE() AS date) ORDER BY USER_ID,CAST(STARTENDDATE AS date)
 
 	OPEN @DAYSTEND_CURSOR
 
@@ -30,7 +34,10 @@ BEGIN
 			IF NOT EXISTS(SELECT ISEND FROM FSMUSERWISEDAYSTARTEND WHERE USER_ID=@USER_ID AND CAST(STARTENDDATE AS date)=@STARTENDDATE AND ISEND=1)
 				BEGIN
 					INSERT INTO FSMUSERWISEDAYSTARTEND(USER_ID,STARTENDDATE,LOCATION_NAME,LATITUDE,LONGITUDE,SHOP_TYPE,SHOP_ID,ISSTART,ISEND,SALE_VALUE,REMARKS)
-					SELECT @USER_ID,@STARTENDDATE+' 21:00:00.000',@LOCATION_NAME,@LATITUDE,@LONGITUDE,@SHOP_TYPE,@SHOP_ID,0,1,0.00,'Auto Update Cutoff Time'
+					--Rev 1.0
+					--SELECT @USER_ID,@STARTENDDATE+' 21:00:00.000',@LOCATION_NAME,@LATITUDE,@LONGITUDE,@SHOP_TYPE,@SHOP_ID,0,1,0.00,'Auto Update Cutoff Time'
+					SELECT @USER_ID,@STARTENDDATE+' 21:00:00.000',@LOCATION_NAME,@LATITUDE,@LONGITUDE,@SHOP_TYPE,@SHOP_ID,0,0,0.00,'Auto Update Cutoff Time'
+					--End of Rev 1.0
 				END
 			FETCH NEXT FROM @DAYSTEND_CURSOR INTO @USER_ID,@STARTENDDATE,@LOCATION_NAME,@LATITUDE,@LONGITUDE,@SHOP_TYPE,@SHOP_ID
 		END
@@ -39,3 +46,4 @@ BEGIN
 
 	SET NOCOUNT OFF
 END
+GO
