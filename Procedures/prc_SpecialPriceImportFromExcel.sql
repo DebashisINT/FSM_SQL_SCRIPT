@@ -24,8 +24,9 @@ ALTER PROC [dbo].[prc_SpecialPriceImportFromExcel]
 	--Rev 1.0 
 	@DesignationId BIGINT=0,
 	@EMPINTERNALID nvarchar(100) ='',
-	@USERLOGINID  nvarchar(200) =null
+	@USERLOGINID  nvarchar(200) =null,
 	--Rev 1.0  End
+	@UserbranchHierarchy NVARCHAR(MAX)=NULL 
 )  
 As 
 /*****************************************************************************************************************************************
@@ -35,8 +36,11 @@ Module	   : New Price Upload module shall be implemented named as Special Price 
 
 **************************************************************************************************************************/
 Begin
+SET NOCOUNT ON
 begin tran t1        
 Begin try 
+
+
 DECLARE @SUCCESS BIT = 0;
 DECLARE @HASLOG BIT = 0;
 declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
@@ -171,6 +175,7 @@ declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
 		,Replace(ISNULL(cnt_firstName,'')+' '+ISNULL(cnt_middleName,'')+ ' '+ISNULL(cnt_lastName,''),'''','&#39;') AS Employee_Name
 		,deg_designation,DesignationID
 		--Rev 1.0 End
+		,SP.BRANCH_ID,DesignationID,EMPINTERNALID
 		from PRODUCT_SPECIAL_PRICE_BRANCHWISE SP
 		inner join Master_sProducts MP on SP.PRODUCT_ID=MP.sProducts_ID
 		inner join tbl_master_branch MB on  SP.BRANCH_ID=MB.branch_id
@@ -186,9 +191,11 @@ declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
 	End
 	else if(@Action)='UpdateSpecialPrice'
 	Begin
-		update PRODUCT_SPECIAL_PRICE_BRANCHWISE set SPECIAL_PRICE=@SPECIALPRICE where ID=@SPECIALPRICEID
+		update PRODUCT_SPECIAL_PRICE_BRANCHWISE set SPECIAL_PRICE=@SPECIALPRICE,MODIFIED_BY=@UserId,MODIFIED_ON=GETDATE(),BRANCH_ID=@BranchId,PRODUCT_ID=@ProductID ,EMPINTERNALID=LTRIM(RTRIM(@EMPINTERNALID)),
+		DesignationID=@DesignationId
+		where ID=@SPECIALPRICEID
 
-		update PRODUCTSPECIALPRICELIST set SPECIALPRICE=@SPECIALPRICE where  USERID=@UserId and  SPECIALPRICEID=@SPECIALPRICEID
+		update PRODUCTSPECIALPRICELIST set SPECIALPRICE=@SPECIALPRICE,BRANCH_ID=@BranchId,PRODUCT_ID=@ProductID,EMPINTERNALID=LTRIM(RTRIM(@EMPINTERNALID)) where  USERID=@UserId and  SPECIALPRICEID=@SPECIALPRICEID
 		SELECT '1' AS INSERTMSG
 	End	
 	else if(@Action)='InsertSpecialPrice'
@@ -197,7 +204,7 @@ declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
 				select top 1 @LastCount=ID from PRODUCT_SPECIAL_PRICE_BRANCHWISE  order by id desc
 				select @PRODUCTCODE=sProducts_Code from Master_sProducts where sProducts_ID=@ProductID
 
-				select @IsExistSPECIAL_PRICE=count(0) from PRODUCT_SPECIAL_PRICE_BRANCHWISE  where BRANCH_ID=@BranchId  and PRODUCT_ID=@ProductID
+				select @IsExistSPECIAL_PRICE=count(0) from PRODUCT_SPECIAL_PRICE_BRANCHWISE  where BRANCH_ID=@BranchId  and PRODUCT_ID=@ProductID and isnull(EMPINTERNALID,'')=LTRIM(RTRIM(@EMPINTERNALID))
 				if(@IsExistSPECIAL_PRICE=0)
 				Begin
 					INSERT INTO  PRODUCT_SPECIAL_PRICE_BRANCHWISE 
@@ -217,7 +224,8 @@ declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
 				End
 				Else
 				Begin
-					update PRODUCT_SPECIAL_PRICE_BRANCHWISE set SPECIAL_PRICE=@SPECIALPRICE,MODIFIED_BY=@UserId,MODIFIED_ON=GETDATE()   where BRANCH_ID=@BranchId  and PRODUCT_ID=@ProductID
+					update PRODUCT_SPECIAL_PRICE_BRANCHWISE set SPECIAL_PRICE=@SPECIALPRICE,MODIFIED_BY=@UserId,MODIFIED_ON=GETDATE()  				
+					where BRANCH_ID=@BranchId  and PRODUCT_ID=@ProductID and isnull(EMPINTERNALID,'')=LTRIM(RTRIM(@EMPINTERNALID))
 					SELECT '1' AS INSERTMSG
 				End
 	End	
@@ -244,11 +252,29 @@ declare @IsExist bigint=0,@IsExistSPECIAL_PRICE bigint=0;
 	--Rev 1.0  End
 	else if(@Action)='ALLPAGELOADDATA'
 	Begin
-		
-		select branch_id,branch_description from  tbl_master_branch
+		DECLARE  @sqlStrTable NVARCHAR(MAX)
 
-		select 0 as deg_id, 'Select' as deg_designation 
-		Union all
+		IF OBJECT_ID('tempdb..#BRANCH_LIST') IS NOT NULL
+			DROP TABLE #BRANCH_LIST
+		CREATE TABLE #Branch_List (Branch_Id BIGINT NULL)
+		CREATE NONCLUSTERED INDEX Branch_Id ON #Branch_List (Branch_Id ASC)
+
+		SET @sqlStrTable=' INSERT INTO #Branch_List select branch_id from tbl_master_branch where (branch_id in('+@UserbranchHierarchy+'))'
+		EXEC SP_EXECUTESQL @sqlStrTable
+
+		--SELECT 0 as branch_id ,'Select' as branch_description 
+		--Union
+		SELECT branch_id ,branch_description  FROM tbl_master_branch
+		WHERE  EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE tbl_master_branch.branch_id=F.Branch_Id)
+		ORDER BY branch_description ASC
+		
+
+		DROP TABLE #Branch_List
+		--select branch_id,branch_description from  tbl_master_branch
+
+
+		--select 0 as deg_id, 'Select' as deg_designation 
+		--Union all
 		select deg_id, deg_designation from tbl_master_Designation
 	End
  commit tran t1          
@@ -264,6 +290,8 @@ select @SUCCESS AS Success ,ERROR_MESSAGE() as MSG,@HASLOG AS HasLog  ,'' as int
 return    
 
 End Catch
+
+SET NOCOUNT OFF
 	
 end	
     
