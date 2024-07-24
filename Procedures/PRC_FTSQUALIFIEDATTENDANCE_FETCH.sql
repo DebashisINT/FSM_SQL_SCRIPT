@@ -1,5 +1,5 @@
 --EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2023-07-01','2023-08-28','','','',378
---EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2024-07-20','2024-07-20','','','1,2,3,4',378
+--EXEC PRC_FTSQUALIFIEDATTENDANCE_FETCH '2024-07-18','2024-07-20','135','EM 0000017','',0,378
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSQUALIFIEDATTENDANCE_FETCH]') AND type in (N'P', N'PC'))
 BEGIN
@@ -35,6 +35,7 @@ Module	   : Qualified Attendance Report.Refer: 0025416
 8.0		v2.0.48		Debashis	23/07/2024		In Qualified Attendance Report, If we click on 'Consider Day End' check box then find the below logic.
 												Qualified =1,When total visit >= 20, Visit duration>=240 mins and ISEND=1
 												Qualified =0,When ISEND=0 and remarks ='Auto Update Cutoff Time'.Refer: 0027643
+9.0		v2.0.48		Debashis	24/07/2024		Multiple Qualified Attendance Report Issue found.Now it has been taken care of.Refer: 0027646
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -268,10 +269,15 @@ BEGIN
 			SET @SqlStr+='LEFT OUTER JOIN('
 			--Rev 8.0
 			--SET @SqlStr+='SELECT USERID,cnt_internalId,1 AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL GROUP BY USERID,cnt_internalId '
-			SET @SqlStr+='SELECT USERID,cnt_internalId,CASE WHEN ISEND=0 THEN 0 ELSE 1 END AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL '
-			SET @SqlStr+='GROUP BY USERID,cnt_internalId,ISEND '
-			--End of Rev 8.0
-			SET @SqlStr+=') DAYEND ON CNT.cnt_internalId=DAYEND.cnt_internalId AND USR.user_id=DAYEND.USERID '
+			--Rev 9.0
+			--SET @SqlStr+='SELECT USERID,cnt_internalId,CASE WHEN ISEND=0 THEN 0 ELSE 1 END AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL '
+			--SET @SqlStr+='GROUP BY USERID,cnt_internalId,ISEND '
+			--SET @SqlStr+=') DAYEND ON CNT.cnt_internalId=DAYEND.cnt_internalId AND USR.user_id=DAYEND.USERID '			
+			----End of Rev 8.0
+			SET @SqlStr+='SELECT USERID,cnt_internalId,STARTENDDATEORDBY,CASE WHEN ISEND=0 THEN 0 ELSE 1 END AS ISEND FROM #TMPDAYSTARTENDQA WHERE DAYENDTIME IS NOT NULL '
+			SET @SqlStr+='GROUP BY USERID,cnt_internalId,STARTENDDATEORDBY,ISEND '
+			SET @SqlStr+=') DAYEND ON CNT.cnt_internalId=DAYEND.cnt_internalId AND USR.user_id=DAYEND.USERID AND DAYSTARTEND.STARTENDDATEORDBY=DAYEND.STARTENDDATEORDBY '			
+			--End of Rev 9.0
 		END
 	--End of Rev 5.0
 	SET @SqlStr+='LEFT OUTER JOIN ('
