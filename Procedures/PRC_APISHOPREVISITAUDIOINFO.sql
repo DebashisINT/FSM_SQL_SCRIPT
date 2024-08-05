@@ -12,12 +12,13 @@ ALTER  PROCEDURE [dbo].[PRC_APISHOPREVISITAUDIOINFO]
 @VISIT_DATETIME DATETIME=NULL,
 @REVISITORVISIT CHAR(1)=NULL,
 @SHOPVISIT_AUDIO NVARCHAR(500)=NULL,
-@AUDIOPATH NVARCHAR(500)=NULL
+@AUDIOPATH NVARCHAR(500)=NULL,
+@DATALIMITINDAYS INT=NULL
 ) --WITH ENCRYPTION
 AS
 /************************************************************************************************************************************************************************************************************
 Written by : Debashis Talukder ON 31/07/2024
-Module	   : Shop Revisit Audio Info Details.Refer: Row: 957
+Module	   : Shop Revisit Audio Info Details.Refer: Row: 957 & 965
 ************************************************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -27,6 +28,12 @@ BEGIN
 				INSERT INTO FSMUSERREVISITAUDIO(USERID,SHOPID,VISIT_DATETIME,REVISITORVISIT,AUDIONAME,AUDIOPATH,CREATED_BY,CREATED_ON)
 				SELECT @USER_ID,@SHOP_ID,@VISIT_DATETIME,@REVISITORVISIT,@SHOPVISIT_AUDIO,@AUDIOPATH,@USER_ID,GETDATE()
 				SELECT 1
+			END
+		IF @ACTION='FETCHSHOPAUDIO'
+			BEGIN
+				SELECT SHOPID AS shop_id,AUDIOPATH AS audio_path,'True' AS isUploaded,CONVERT(NVARCHAR(10),VISIT_DATETIME,105) +' '+CONVERT(NVARCHAR(8),CAST(VISIT_DATETIME AS TIME),108) AS [datetime],
+				REVISITORVISIT AS revisitORvisit FROM FSMUSERREVISITAUDIO
+				WHERE USERID=@USER_ID AND CONVERT(NVARCHAR(10),VISIT_DATETIME,120) BETWEEN DATEADD(DAY,-@DATALIMITINDAYS,CONVERT(DATE,GETDATE())) AND CONVERT(NVARCHAR(10),GETDATE(),120)
 			END
 	SET NOCOUNT OFF
 END
