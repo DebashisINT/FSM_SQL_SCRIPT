@@ -35,32 +35,34 @@ BEGIN
 
 		select count(distinct USER_ID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
 
-		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
+		select count(TOPICID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
 
-		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid
+		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid
 
-		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
 
-		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
-
-		select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
-
-		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid  
-		and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
-
-		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
-		and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
-
-		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
-		and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Pending' ))
+		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
 
 
-		select @Pending=count(distinct TOPICID) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
-		and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
+		--select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
 
-		--select @Pending=count(*) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid  
+		--and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
 
-		select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
+		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		--and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
+
+		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
+		--and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Pending' ))
+
+
+		--select @Pending=count(distinct TOPICID) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		--and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
+
+		select @Pending=count(*) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+
+		--select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
+		select @AssignedTopics=count(TOPICID) from LMSDASHBOARD_LIST  where USERID=@userid
 
 		if(@AssignedTopics=0)
 		set @AssignedTopics=1
