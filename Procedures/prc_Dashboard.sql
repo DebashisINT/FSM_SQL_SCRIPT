@@ -17,14 +17,23 @@ ALTER PROC [dbo].[prc_Dashboard]
 	-- End of Rev 1.0
 )
 AS
-/********************************************************************************************
+/****************************************************************************************************************************************************************************************************************
 1.0		V2.0.29		Sanchita	08-03-2022		FSM - Portal: Branch selection required against the selected 'State'. Refer: 24729
 2.0		V2.0.32		Sanchita	02-08-2022		Dashboard Data shall be showing based on Assign [Single/Multiple] Branch in Employee [Master Mapping]
-												Refer: 25102
-*********************************************************************************************/ 
+												based on APP settings "IsActivateEmployeeBranchHierarchy". Refer: 25102
+3.0		V2.0.48		Priti	    26-08-2024		0027676:LMS Dashboard Value related changes
+
+*****************************************************************************************************************************************************************************************************************/ 
     SET NOCOUNT ON ;
     BEGIN TRY 
 	DECLARE @i_intTempID INT	= 0;
+	-- Rev 2.0
+	declare @ActivateEmployeeBranchHierarchy varchar(100) = (select top 1 [value] from fts_app_config_settings where [key]='IsActivateEmployeeBranchHierarchy')
+	-- End of Rev 2.0
+	-- Rev 3.0
+	DECLARE @sqlQuery NVARCHAR(MAX),@Contact_CNT_ID int,@TEMPSTATE_ID1 INT = NULL	
+	declare @ActivateEmployeeBranchHierarchyLMS varchar(100) = (select top 1 [value] from fts_app_config_settings where [key]='IsUserBranchHierarchyWiseLMS')
+	-- Rev 3.0 End
 
 	IF @DASHBOARDACTION = 'DashboardGridView'
 	BEGIN
@@ -71,62 +80,181 @@ AS
 	-- Rev 1.0
 	IF @DASHBOARDACTION = 'DashboardBranchList'
 	BEGIN
-		-- Rev 2.0
-		DECLARE @Contact_CNT_ID int
+		-- Rev 2.0		
 		set @Contact_CNT_ID = (select top 1 C.cnt_id from tbl_master_contact C inner join tbl_master_user U on C.cnt_internalid=U.user_contactId where U.user_id=@USERID)
 		-- End of Rev 2.0
 
 		if(@STATEIDLIST is null or @STATEIDLIST='')
 		begin
-			DECLARE @TEMPSTATE_ID1 INT = NULL
+			
 			(SELECT TOP 1 @TEMPSTATE_ID1 = STATE_ID FROM FTS_EMPSTATEMAPPING WHERE [USER_ID] = @USERID)
 			
 			IF @USERID > 0 
 			BEGIN 
 				IF (@TEMPSTATE_ID1 = 0)
 				BEGIN
-					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
-					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
 					-- Rev 2.0
-					and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					if(@ActivateEmployeeBranchHierarchy = 0)
+					begin
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+						and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					end
+					else
+					begin
+					-- End of Rev 2.0
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+					-- Rev 2.0
+					end
 					-- End of Rev 2.0	
 				END
 				ELSE
 				BEGIN
-					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
-					(SELECT id FROM 
-					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN 
-					(SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office')
-					) TM INNER JOIN FTS_EMPSTATEMAPPING TSID ON TM.ID = CAST(TSID.STATE_ID as varchar(200))
-					WHERE TSID.[USER_ID] = @USERID)
 					-- Rev 2.0
-					and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					if(@ActivateEmployeeBranchHierarchy = 0)
+					begin
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN 
+						(SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office')
+						) TM INNER JOIN FTS_EMPSTATEMAPPING TSID ON TM.ID = CAST(TSID.STATE_ID as varchar(200))
+						WHERE TSID.[USER_ID] = @USERID)
+						and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					end
+					else
+					begin
+					-- End of Rev 2.0
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN 
+						(SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office')
+						) TM INNER JOIN FTS_EMPSTATEMAPPING TSID ON TM.ID = CAST(TSID.STATE_ID as varchar(200))
+						WHERE TSID.[USER_ID] = @USERID)
+					-- Rev 2.0
+					end
 					-- End of Rev 2.0
 				END
 			END
 			ELSE 
 			BEGIN
-				SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
-				(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
 				-- Rev 2.0
-				and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+				if(@ActivateEmployeeBranchHierarchy = 0)
+				begin
+					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+					and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+				end
+				else
+				begin
+				-- End of Rev 2.0
+					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+				-- Rev 2.0
+				end
 				-- End of Rev 2.0
 			END
 		END
 		ELSE
 		BEGIN
-			SET @STATEIDLIST = ''''+ REPLACE(@STATEIDLIST,',',' '','' ') + ''''
-			DECLARE @sqlQuery NVARCHAR(MAX)
+			SET @STATEIDLIST = ''''+ REPLACE(@STATEIDLIST,',',' '','' ') + ''''			
 			SET @sqlQuery = 'SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state IN ('+@STATEIDLIST+')'
 			-- Rev 2.0
-			SET @sqlQuery = @sqlQuery + ' and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId='+convert(varchar(10),@Contact_CNT_ID)+' and Branchid=B.branch_id) '
+			if(@ActivateEmployeeBranchHierarchy = 0)
+				SET @sqlQuery = @sqlQuery + ' and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId='+convert(varchar(10),@Contact_CNT_ID)+' and Branchid=B.branch_id) '
 			-- End of Rev 2.0
 			Exec sp_executesql @sqlQuery
 		END
 
 	END
-	-- End of Rev 1.0		
+	-- End of Rev 1.0	
+	-- Rev 3.0
+	IF @DASHBOARDACTION = 'LMSDashboardBranchList'
+	BEGIN		
+		
+		set @Contact_CNT_ID = (select top 1 C.cnt_id from tbl_master_contact C inner join tbl_master_user U on C.cnt_internalid=U.user_contactId where U.user_id=@USERID)		
 
+		if(@STATEIDLIST is null or @STATEIDLIST='')
+		begin
+			
+			(SELECT TOP 1 @TEMPSTATE_ID1 = STATE_ID FROM FTS_EMPSTATEMAPPING WHERE [USER_ID] = @USERID)
+			
+			IF @USERID > 0 
+			BEGIN 
+				IF (@TEMPSTATE_ID1 = 0)
+				BEGIN
+					
+					if(@ActivateEmployeeBranchHierarchyLMS = 0)
+					begin
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+						and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					end
+					else
+					begin
+					
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+					
+					end
+					
+				END
+				ELSE
+				BEGIN
+					
+					if(@ActivateEmployeeBranchHierarchyLMS = 0)
+					begin
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN 
+						(SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office')
+						) TM INNER JOIN FTS_EMPSTATEMAPPING TSID ON TM.ID = CAST(TSID.STATE_ID as varchar(200))
+						WHERE TSID.[USER_ID] = @USERID)
+						and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+					end
+					else
+					begin
+				
+						SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+						(SELECT id FROM 
+						(SELECT id FROM TBL_MASTER_STATE WHERE ID IN 
+						(SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office')
+						) TM INNER JOIN FTS_EMPSTATEMAPPING TSID ON TM.ID = CAST(TSID.STATE_ID as varchar(200))
+						WHERE TSID.[USER_ID] = @USERID)
+				
+					end
+					
+				END
+			END
+			ELSE 
+			BEGIN
+				
+				if(@ActivateEmployeeBranchHierarchyLMS = 0)
+				begin
+					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+					and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId=@Contact_CNT_ID and Branchid=B.branch_id)
+				end
+				else
+				begin
+				
+					SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state in 
+					(SELECT id FROM TBL_MASTER_STATE WHERE ID IN (SELECT DISTINCT ADD_STATE FROM TBL_MASTER_ADDRESS TMA INNER JOIN tbl_master_contact TMC ON TMC.cnt_internalId = TMA.add_cntId AND cnt_contactType='EM' AND add_addressType = 'Office'))
+				
+				end				
+			END
+		END
+		ELSE
+		BEGIN
+			SET @STATEIDLIST = ''''+ REPLACE(@STATEIDLIST,',',' '','' ') + ''''			
+			SET @sqlQuery = 'SELECT CAST(branch_id as varchar(20)) ID,branch_code [name] FROM tbl_master_branch B where branch_state IN ('+@STATEIDLIST+')'			
+			if(@ActivateEmployeeBranchHierarchyLMS = 0)
+				SET @sqlQuery = @sqlQuery + ' and exists (select Branchid from FTS_EmployeeBranchMap where EmployeeId='+convert(varchar(10),@Contact_CNT_ID)+' and Branchid=B.branch_id) '			
+			Exec sp_executesql @sqlQuery
+		END
+
+	END
+	-- Rev 3.0 End
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage NVARCHAR(4000) ;
