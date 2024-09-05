@@ -1,3 +1,4 @@
+
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[PRC_FTSInsertUpdateUser]') AND type in (N'P', N'PC'))
 BEGIN
 EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateUser] AS' 
@@ -306,6 +307,49 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 ,@IsCheckBatteryOptimization INT=0
 -- End of Rev 35.0
 
+-- Rev 36.0
+,@ShowUserwisePartyWithGeoFence INT=0
+,@ShowUserwisePartyWithCreateOrder INT=0
+-- End of Rev 36.0
+-- Rev 37.0
+,@AdditionalinfoRequiredforContactListing INT=0
+,@AdditionalinfoRequiredforContactAdd INT=0
+,@ContactAddresswithGeofence INT=0
+-- End of Rev 37.0
+
+-- Rev 38.0
+,@IsCRMPhonebookSyncEnable  INT=0
+,@IsCRMSchedulerEnable INT=0
+,@IsCRMAddEnable INT=0
+,@IsCRMEditEnable INT=0
+-- End of Rev 38.0
+-- Rev 39.0
+,@IsShowAddressInParty  INT=0
+,@IsShowUpdateInvoiceDetails INT=0
+-- End of Rev 39.0
+-- Rev 40.0
+,@IsSpecialPriceWithEmployee INT=0
+-- End of Rev 40.0
+-- Rev 41.0
+,@IsShowCRMOpportunity INT=0
+,@IsEditEnableforOpportunity INT=0
+,@IsDeleteEnableforOpportunity INT=0
+-- End of Rev 41.0
+-- Rev 42.0
+,@IsShowDateWiseOrderInApp INT=0
+-- End of Rev 42.0
+-- Rev 43.0
+,@IsUserWiseLMSEnable INT=0
+,@IsUserWiseLMSFeatureOnly INT=0
+-- End of Rev 43.0
+-- Rev 45.0
+,@IsUserWiseRecordAudioEnableForVisitRevisit INT=0
+-- End of Rev 45.0
+-- Rev 46.0
+,@ShowClearQuiz INT=0
+-- End of Rev 46.0
+
+
 ) --WITH ENCRYPTION
 AS
 /***************************************************************************************************************************************
@@ -351,7 +395,20 @@ AS
 33.0	V2.0.43		14/11/2023		Sanchita	In user master table, Inactive User Date coloumn required. Mantis: 26990
 34.0    V2.0.44     19/12/2023      Sanchita    Call log facility is required in the FSM App - IsCallLogHistoryActivated” - 
                                                 User Account - Add User master settings. Mantis: 27063
-35.0    v2.0.47		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
+35.0    v2.0.46		16/04/2024		Sanchita	The mentioned settings are required in the User master in FSM. Mantis: 27369
+36.0    V2.0.46     17-04-2024      Priti       0027372: ShowPartyWithCreateOrder setting shall be available User wise setting also
+                                                0027374: ShowPartyWithGeoFence setting shall be available User wise setting also
+37.0	V2.0.46		26-04-2024		Sanchita	0027406: Some of the Global & user wise fields need to be visible in the front end of FSM App	
+38.0    V2.0.47     22-05-2024      Priti       0027467: Some changes are required in CRM Modules
+39.0    V2.0.47     25-05-2024      Sanchita    New User wise settings required. Mantis: 27474, 27477 
+40.0    V2.0.47     31-05-2024      Sanchita    27502: A new global settings is required as "IsSpecialPriceWithEmployee"
+41.0    V2.0.47     03-06-2024      Sanchita    Some global settings are required for CRM Opportunity module. Mantis: 27481
+42.0	V2.0.47		18-06-2024		Sanchita	27436: Please create a global settings IsShowDateWiseOrderInApp
+43.0	V2.0.48		04-07-2024		Sanchita	27575: Two new global and user settings are required as 'IsUserWiseLMSEnable' and 'IsUserWiseLMSFeatureOnly'
+44.0	V2.0.48		05-08-2024		Sanchita	27662: While User creation from User Count module, the below mentioned settings value shall be fixed
+45.0    V2.0.48     29-08-2024      Sanchita    27648: Global and User wise settings isRecordAudioEnableForVisitRevisit shall be available 
+                                                in both System settings page and in User master. 
+46.0    V2.0.48     03-09-2024      Priti       0027684: Create a new user setting as ShowClearQuiz
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -542,6 +599,49 @@ BEGIN
 			,IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,ShowUserwisePartyWithGeoFence 
+			,ShowUserwisePartyWithCreateOrder 
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,AdditionalinfoRequiredforContactListing
+			,AdditionalinfoRequiredforContactAdd
+			,ContactAddresswithGeofence
+			-- End of Rev 37.0
+
+			-- Rev 38.0
+			,IsCRMPhonebookSyncEnable  
+			,IsCRMSchedulerEnable 
+			,IsCRMAddEnable 
+			,IsCRMEditEnable 
+			-- End of Rev 38.0
+
+			-- Rev 39.0
+			,IsShowAddressInParty  
+			,IsShowUpdateInvoiceDetails 
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+			-- Rev 41.0
+			,IsShowCRMOpportunity
+			,IsEditEnableforOpportunity
+			,IsDeleteEnableforOpportunity	
+			-- End of Rev 41.0
+			-- Rev 42.0
+			,IsShowDateWiseOrderInApp
+			-- End of Rev 42.0
+			-- Rev 43.0
+			,IsUserWiseLMSEnable
+			,IsUserWiseLMSFeatureOnly
+			-- End of Rev 43.0
+			-- Rev 45.0
+			,IsUserWiseRecordAudioEnableForVisitRevisit
+			-- End of Rev 45.0
+			-- Rev 46.0
+			,ShowClearQuiz
+			-- End of Rev 46.0
+
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
 			( select top 1 grp_segmentId from tbl_master_userGroup where grp_id in(@usergroup)),86400,@superuser,@ddDataEntry,@IPAddress,@isactive,@isactivemac,@txtgps,
@@ -708,6 +808,48 @@ BEGIN
 			,isnull(@IsShowMenuCRMContacts,0)
 			,isnull(@IsCheckBatteryOptimization,0)
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,isnull(@ShowUserwisePartyWithGeoFence,0) 
+			,isnull(@ShowUserwisePartyWithCreateOrder,0) 
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,isnull(@AdditionalinfoRequiredforContactListing,0)
+			,isnull(@AdditionalinfoRequiredforContactAdd,0)
+			,isnull(@ContactAddresswithGeofence,0)
+			-- End of Rev 37.0
+
+			-- Rev 38.0
+			,isnull(@IsCRMPhonebookSyncEnable ,0) 
+			,isnull(@IsCRMSchedulerEnable ,0) 
+			,isnull(@IsCRMAddEnable ,0) 
+			,isnull(@IsCRMEditEnable ,0) 
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,isnull(@IsShowAddressInParty,0)
+			,isnull(@IsShowUpdateInvoiceDetails,0)
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,isnull(@IsSpecialPriceWithEmployee,0)
+			-- End of Rev 40.0
+			-- Rev 41.0
+			,isnull(@IsShowCRMOpportunity,0)
+			,isnull(@IsEditEnableforOpportunity,0)
+			,isnull(@IsDeleteEnableforOpportunity,0)
+			-- End of Rev 41.0
+			-- Rev 42.0
+			,isnull(@IsShowDateWiseOrderInApp,0)
+			-- End of Rev 42.0
+			-- Rev 43.0
+			,isnull(@IsUserWiseLMSEnable,0)
+			,isnull(@IsUserWiseLMSFeatureOnly,0)
+			-- End of Rev 43.0
+			-- Rev 45.0
+			,isnull(@IsUserWiseRecordAudioEnableForVisitRevisit,0)
+			-- End of Rev 45.0
+			-- Rev 46.0
+			,isnull(@ShowClearQuiz,0)
+			-- End of Rev 46.0
+
 			)
 
 			set @user_id=SCOPE_IDENTITY();
@@ -795,8 +937,11 @@ BEGIN
 							WillRoomDBShareinLogin='1',
 							IsShowTypeInRegistrationForSpecificUser='1',
 							IsFeedbackAvailableInShop='0',
-							IsHierarchyforHorizontalPerformanceReport='0'
+							IsHierarchyforHorizontalPerformanceReport='0',
 							-- End of Rev 27.0
+							-- Rev 44.0
+							IsRouteUpdateForShopUser='0'
+							-- End of Rev 44.0
 						where user_id=@user_id
 					end
 					else
@@ -866,8 +1011,11 @@ BEGIN
 							IsShowTypeInRegistrationForSpecificUser='1',
 							CommonAINotification='0',
 							IsFeedbackAvailableInShop='0',
-							IsHierarchyforHorizontalPerformanceReport='0'
+							IsHierarchyforHorizontalPerformanceReport='0',
 							-- End of Rev 27.0
+							-- Rev 44.0
+							IsRouteUpdateForShopUser='0'
+							-- End of Rev 44.0
 						where user_id=@user_id
 					end
 				-- Rev 27.0
@@ -1139,6 +1287,47 @@ BEGIN
 				 OR IsShowMenuCRMContacts<>@IsShowMenuCRMContacts
 				 OR IsCheckBatteryOptimization<>@IsCheckBatteryOptimization
 				 -- End of Rev 35.0
+				 -- Rev 36.0
+				OR ShowUserwisePartyWithGeoFence<>@ShowUserwisePartyWithGeoFence
+				OR ShowUserwisePartyWithCreateOrder<>@ShowUserwisePartyWithCreateOrder
+				-- End of Rev 36.0
+				-- Rev 37.0
+				OR AdditionalinfoRequiredforContactListing<>@AdditionalinfoRequiredforContactListing
+				OR AdditionalinfoRequiredforContactAdd<>@AdditionalinfoRequiredforContactAdd
+				OR ContactAddresswithGeofence<>@ContactAddresswithGeofence
+				-- End of Rev 37.0
+				-- Rev 38.0
+				OR IsCRMPhonebookSyncEnable<>@IsCRMPhonebookSyncEnable
+				OR IsCRMSchedulerEnable<>@IsCRMSchedulerEnable
+				OR IsCRMAddEnable<>@IsCRMAddEnable 
+				OR IsCRMEditEnable<>@IsCRMEditEnable 
+				-- End of Rev 38.0
+				-- Rev 39.0
+				OR IsShowAddressInParty<>@IsShowAddressInParty
+				OR IsShowUpdateInvoiceDetails<>@IsShowUpdateInvoiceDetails
+				-- End of Rev 39.0
+				-- Rev 40.0
+				OR IsSpecialPriceWithEmployee<>@IsSpecialPriceWithEmployee
+				-- End of Rev 40.0
+				-- Rev 41.0
+				OR IsShowCRMOpportunity<>@IsShowCRMOpportunity
+				OR IsEditEnableforOpportunity<>@IsEditEnableforOpportunity
+				OR IsDeleteEnableforOpportunity<>@IsDeleteEnableforOpportunity
+				-- End of Rev 41.0
+				-- Rev 42.0
+				OR IsShowDateWiseOrderInApp<>@IsShowDateWiseOrderInApp
+				-- End of Rev 42.0
+				-- Rev 43.0
+				OR IsUserWiseLMSEnable<>@IsUserWiseLMSEnable
+				OR IsUserWiseLMSFeatureOnly<>@IsUserWiseLMSFeatureOnly
+				-- End of Rev 43.0
+				-- Rev 45.0
+				OR IsUserWiseRecordAudioEnableForVisitRevisit<>@IsUserWiseRecordAudioEnableForVisitRevisit
+				-- End of Rev 45.0
+				-- Rev 46.0
+				OR ShowClearQuiz<>@ShowClearQuiz
+				-- End of Rev 46.0
+
 				 )
 				)
 			BEGIN
@@ -1349,6 +1538,46 @@ BEGIN
 			,IsShowMenuCRMContacts = @IsShowMenuCRMContacts
 			,IsCheckBatteryOptimization = @IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			-- Rev 36.0
+			,ShowUserwisePartyWithGeoFence=@ShowUserwisePartyWithGeoFence
+			,ShowUserwisePartyWithCreateOrder=@ShowUserwisePartyWithCreateOrder
+			-- End of Rev 36.0
+			-- Rev 37.0
+			,AdditionalinfoRequiredforContactListing = @AdditionalinfoRequiredforContactListing
+			,AdditionalinfoRequiredforContactAdd = @AdditionalinfoRequiredforContactAdd
+			,ContactAddresswithGeofence = @ContactAddresswithGeofence
+			-- End of Rev 37.0
+			-- Rev 38.0
+			,IsCRMPhonebookSyncEnable=@IsCRMPhonebookSyncEnable
+			,IsCRMSchedulerEnable=@IsCRMSchedulerEnable
+			,IsCRMAddEnable=@IsCRMAddEnable 
+			,IsCRMEditEnable=@IsCRMEditEnable 
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,IsShowAddressInParty = @IsShowAddressInParty
+			,IsShowUpdateInvoiceDetails = @IsShowUpdateInvoiceDetails
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,IsSpecialPriceWithEmployee = @IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+			-- Rev 41.0
+			,IsShowCRMOpportunity = @IsShowCRMOpportunity
+			,IsEditEnableforOpportunity = @IsEditEnableforOpportunity
+			,IsDeleteEnableforOpportunity = @IsDeleteEnableforOpportunity
+			-- End of Rev 41.0
+			-- Rev 42.0
+			,IsShowDateWiseOrderInApp = @IsShowDateWiseOrderInApp
+			-- End of Rev 42.0
+			-- Rev 43.0
+			,IsUserWiseLMSEnable = @IsUserWiseLMSEnable
+			,IsUserWiseLMSFeatureOnly = @IsUserWiseLMSFeatureOnly
+			-- End of Rev 43.0
+			-- Rev 45.0
+			,IsUserWiseRecordAudioEnableForVisitRevisit = @IsUserWiseRecordAudioEnableForVisitRevisit
+			-- End of Rev 45.0
+			-- Rev 46.0
+			,ShowClearQuiz = @ShowClearQuiz
+			-- End of Rev 46.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1616,6 +1845,48 @@ BEGIN
 			,ISNULL(IsShowMenuCRMContacts,0) as IsShowMenuCRMContacts
 			,ISNULL(IsCheckBatteryOptimization,0) as IsCheckBatteryOptimization
 			-- End of Rev 35.0
+			--Rev 36.0
+			,ShowUserwisePartyWithGeoFence
+			,ShowUserwisePartyWithCreateOrder
+			--Rev 36.0 End
+			-- Rev 37.0
+			,ISNULL(AdditionalinfoRequiredforContactListing,0) as AdditionalinfoRequiredforContactListing
+			,ISNULL(AdditionalinfoRequiredforContactAdd,0) as AdditionalinfoRequiredforContactAdd
+			,ISNULL(ContactAddresswithGeofence,0) as ContactAddresswithGeofence
+			-- End of Rev 37.0
+
+			
+			-- Rev 38.0
+			,isnull(IsCRMPhonebookSyncEnable ,0) as IsCRMPhonebookSyncEnable 
+			,isnull(IsCRMSchedulerEnable ,0)as IsCRMSchedulerEnable 
+			,isnull(IsCRMAddEnable ,0)as IsCRMAddEnable
+			,isnull(IsCRMEditEnable ,0) as IsCRMEditEnable
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,ISNULL(IsShowAddressInParty,0) as IsShowAddressInParty
+			,ISNULL(IsShowUpdateInvoiceDetails,0) as IsShowUpdateInvoiceDetails
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,ISNULL(IsSpecialPriceWithEmployee,0) as IsSpecialPriceWithEmployee
+			-- End of Rev 40.0
+			-- Rev 41.0
+			,ISNULL(IsShowCRMOpportunity,0) as IsShowCRMOpportunity
+			,ISNULL(IsEditEnableforOpportunity,0) as IsEditEnableforOpportunity
+			,ISNULL(IsDeleteEnableforOpportunity,0) as IsDeleteEnableforOpportunity
+			-- End of Rev 41.0
+			-- Rev 42.0
+			,ISNULL(IsShowDateWiseOrderInApp,0) as IsShowDateWiseOrderInApp
+			-- End of Rev 42.0
+			-- Rev 43.0
+			,ISNULL(IsUserWiseLMSEnable,0) as IsUserWiseLMSEnable
+			,ISNULL(IsUserWiseLMSFeatureOnly,0) as IsUserWiseLMSFeatureOnly
+			-- End of Rev 43.0
+			-- Rev 45.0
+			,ISNULL(IsUserWiseRecordAudioEnableForVisitRevisit,0) as IsUserWiseRecordAudioEnableForVisitRevisit
+			-- End of Rev 45.0
+			-- Rev 46.0
+			,ISNULL(ShowClearQuiz,0) as ShowClearQuiz
+			-- End of Rev 46.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -1775,6 +2046,46 @@ BEGIN
 			,'IsShowMenuCRMContacts'
 			,'IsCheckBatteryOptimization'
 			-- End of Rev 35.0
+			--Rev 36.0 
+			,'ShowPartyWithCreateOrder'
+			,'ShowPartyWithGeoFence'
+			--Rev 36.0 End
+			-- Rev 37.0
+			,'AdditionalinfoRequiredforContactListing'
+			,'AdditionalinfoRequiredforContactAdd'
+			,'ContactAddresswithGeofence'
+			-- End of Rev 37.0
+			-- Rev 38.0
+			,'IsCRMPhonebookSyncEnable'
+			,'IsCRMSchedulerEnable'
+			,'IsCRMAddEnable'
+			,'IsCRMEditEnable'
+			-- End of Rev 38.0
+			-- Rev 39.0
+			,'IsShowAddressInParty'
+			,'IsShowUpdateInvoiceDetails'
+			-- End of Rev 39.0
+			-- Rev 40.0
+			,'IsSpecialPriceWithEmployee'
+			-- End of Rev 40.0
+			-- Rev 41.0
+			,'IsShowCRMOpportunity'
+			,'IsEditEnableforOpportunity'
+			,'IsDeleteEnableforOpportunity'
+			-- End of Rev 41.0
+			-- Rev 42.0
+			,'IsShowDateWiseOrderInApp'
+			-- End of Rev 42.0
+			-- Rev 43.0
+			,'IsUserWiseLMSEnable'
+			,'IsUserWiseLMSFeatureOnly'
+			-- End of Rev 43.0
+			-- Rev 45.0
+			,'isRecordAudioEnableForVisitRevisit'
+			-- End of Rev 45.0
+			-- Rev 46.0
+			,'ShowClearQuiz'
+			-- End of Rev 46.0
 			)
 		END
 	-- Rev 18.0
@@ -1785,3 +2096,4 @@ BEGIN
 		-- End of Rev 18.0
 END
 GO
+
