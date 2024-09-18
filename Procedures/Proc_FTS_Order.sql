@@ -29,8 +29,11 @@ ALTER PROCEDURE [dbo].[Proc_FTS_Order]
 --End of Rev 3.0
 --Rev 4.0
 @Hospital NVARCHAR(200)=NULL,
-@Email_Address NVARCHAR(300)=NULL
+@Email_Address NVARCHAR(300)=NULL,
 --End of Rev 4.0
+--Rev 7.0
+@OrderStatus NVARCHAR(100)=NULL
+--End of Rev 7.0
 ) --WITH ENCRYPTION
 As
 /*************************************************************************************************************************************
@@ -40,6 +43,7 @@ As
 4.0		v2.0.26		Debashis	10-01-2022		Enhancement done for Row No. 606 & 607
 5.0		v2.0.33		Debashis	13-10-2022		Product_Qty length has been increased.Refer: 25368
 6.0		v2.0.38		Debashis	23-01-2023		Enhancement done for Row No. 805
+7.0		v2.0.49		Debashis	17-09-2024		Enhancement done for Row No. 977
 *************************************************************************************************************************************/
 BEGIN
 
@@ -63,10 +67,11 @@ BEGIN
 
 			--Rev 3.0 && A new column Scheme_Amount have been added.
 			--Rev 4.0 &&Two new columns added as HOSPITAL & EMAIL_ADDRESS
+			--Rev 7.0 &&A new column added as ORDERSTATUS
 			INSERT  INTO  tbl_trans_fts_Orderupdate (Shop_Code,OrderCode,Ordervalue,Order_Description,Orderdate,userID,Collectionvalue,Latitude,Longitude,Order_Address,Remarks
-							,PATIENT_PHONE_NO,PATIENT_NAME,PATIENT_ADDRESS,Scheme_Amount,HOSPITAL,EMAIL_ADDRESS)
+							,PATIENT_PHONE_NO,PATIENT_NAME,PATIENT_ADDRESS,Scheme_Amount,HOSPITAL,EMAIL_ADDRESS,ORDERSTATUS)
 			values (@Shop_Id,@order_id,@order_amount,@description,@order_date,@user_id,isnull(@Collection,0),@Lat,@Long,@Order_Address,@Remarks,@patient_no,@patient_name,@patient_address,@Scheme_Amount,
-							@Hospital,@Email_Address)
+							@Hospital,@Email_Address,@OrderStatus)
 
 			SET @OrderUniqueId=SCOPE_IDENTITY()
 			END
@@ -148,3 +153,4 @@ BEGIN
 	END CATCH
 
 END
+GO

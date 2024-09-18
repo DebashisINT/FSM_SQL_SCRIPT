@@ -210,6 +210,11 @@ BEGIN
 	186.0		Debashis	23-05-2024	ADD SETTINGS @Action=UserCheck'		IsShowUserWiseDateWiseOrderInApp,IsShowCRMOpportunity,IsEditEnableforOpportunity,IsDeleteEnableforOpportunity,
 																			IsCRMPhonebookSyncEnable,IsCRMSchedulerEnable,IsCRMAddEnable,IsCRMEditEnable & IsShowAddressInParty.
 																			Row 929 to 931
+	187.0		Debashis	06-06-2024	ADD SETTINGS @Action=UserCheck'		OrderEditEnable & OrderDeleteEnable.Row 937
+	188.0		Debashis	01-07-2024	ADD SETTINGS @Action=UserCheck'		IsUserWiseLMSEnable & IsUserWiseLMSFeatureOnly.Row 946
+	189.0		Debashis	31-07-2024	ADD SETTINGS @Action=UserCheck'		IsUserWiseRecordAudioEnableForVisitRevisit.Row 958
+	190.0		Debashis	07-08-2024	ADD SETTINGS @Action=GlobalCheck'	QuestionAfterNoOfContentForLMS & IsAllowGPSTrackingInBackgroundForLMS.Row 968
+	191.0		Debashis	17-09-2024	ADD SETTINGS @Action=GlobalCheck'	IsRetailOrderStatusRequired.Row 979
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -479,6 +484,13 @@ BEGIN
 	--Rev 181.0
 	,@IsShowLeaderBoard BIT
 	--End of Rev 181.0
+	--Rev 190.0
+	,@QuestionAfterNoOfContentForLMS INT
+	,@IsAllowGPSTrackingInBackgroundForLMS BIT
+	--End of Rev 190.0
+	--Rev 191.0
+	,@IsRetailOrderStatusRequired BIT
+	--End of Rev 191.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -799,6 +811,13 @@ BEGIN
 		--Rev 181.0
 		SET @IsShowLeaderBoard =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowLeaderBoard' AND IsActive=1)
 		--End of Rev 181.0
+		--Rev 190.0
+		SET @QuestionAfterNoOfContentForLMS =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='QuestionAfterNoOfContentForLMS' AND IsActive=1)
+		SET @IsAllowGPSTrackingInBackgroundForLMS =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowGPSTrackingInBackgroundForLMS' AND IsActive=1)
+		--End of Rev 190.0
+		--Rev 191.0
+		SET @IsRetailOrderStatusRequired =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsRetailOrderStatusRequired' AND IsActive=1)
+		--End of Rev 191.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1098,6 +1117,13 @@ BEGIN
 			--Rev 181.0
 			,@IsShowLeaderBoard AS IsShowLeaderBoard
 			--End of Rev 181.0
+			--Rev 190.0
+			,@QuestionAfterNoOfContentForLMS AS QuestionAfterNoOfContentForLMS 
+			,@IsAllowGPSTrackingInBackgroundForLMS AS IsAllowGPSTrackingInBackgroundForLMS
+			--End of Rev 190.0
+			--Rev 191.0
+			,@IsRetailOrderStatusRequired AS IsRetailOrderStatusRequired
+			--End of Rev 191.0
 	END
 
 	else if(@Action='UserCheck')
@@ -2161,6 +2187,27 @@ BEGIN
 		SELECT 'IsShowAddressInParty' AS [Key],CONVERT(NVARCHAR(15),USR.IsShowAddressInParty) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 186.0
+		--Rev 187.0
+		UNION ALL
+		SELECT 'IsOrderEditEnable' AS [Key],CONVERT(NVARCHAR(15),USR.IsOrderEditEnable) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsOrderDeleteEnable' AS [Key],CONVERT(NVARCHAR(15),USR.IsOrderDeleteEnable) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 187.0
+		--Rev 188.0
+		UNION ALL
+		SELECT 'IsUserWiseLMSEnable' AS [Key],CONVERT(NVARCHAR(15),USR.IsUserWiseLMSEnable) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'IsUserWiseLMSFeatureOnly' AS [Key],CONVERT(NVARCHAR(15),USR.IsUserWiseLMSFeatureOnly) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 188.0
+		--Rev 189.0
+		UNION ALL
+		SELECT 'IsUserWiseRecordAudioEnableForVisitRevisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsUserWiseRecordAudioEnableForVisitRevisit) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 189.0
 	END
 
 	SET NOCOUNT OFF
