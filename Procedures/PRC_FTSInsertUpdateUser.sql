@@ -348,7 +348,9 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateUser]
 -- Rev 46.0
 ,@ShowClearQuiz INT=0
 -- End of Rev 46.0
-
+-- Rev 47.0
+, @IsAllowProductCurrentStockUpdateFromApp INT=0
+-- End of Rev 47.0
 
 ) --WITH ENCRYPTION
 AS
@@ -409,6 +411,7 @@ AS
 45.0    V2.0.48     29-08-2024      Sanchita    27648: Global and User wise settings isRecordAudioEnableForVisitRevisit shall be available 
                                                 in both System settings page and in User master. 
 46.0    V2.0.48     03-09-2024      Priti       0027684: Create a new user setting as ShowClearQuiz
+47.0	V2.0.49		24-09-2024		Sanchita	0027705: A new Global and user wise settings required as IsAllowProductCurrentStockUpdateFromApp
 ***************************************************************************************************************************************/
 BEGIN
 	DECLARE @sqlStrTable NVARCHAR(MAX)
@@ -641,6 +644,9 @@ BEGIN
 			-- Rev 46.0
 			,ShowClearQuiz
 			-- End of Rev 46.0
+			-- Rev 47.0
+			,IsAllowProductCurrentStockUpdateFromApp
+			-- End of Rec 47.0
 
 			)
 			VALUES (@txtusername,@b_id,@txtuserid,@Encryptpass,@contact,@usergroup,@CreateDate,@CreateUser ,
@@ -849,6 +855,9 @@ BEGIN
 			-- Rev 46.0
 			,isnull(@ShowClearQuiz,0)
 			-- End of Rev 46.0
+			-- Rev 47.0
+			, isnull(@IsAllowProductCurrentStockUpdateFromApp,0)
+			-- End of Rev 47.0
 
 			)
 
@@ -1327,6 +1336,9 @@ BEGIN
 				-- Rev 46.0
 				OR ShowClearQuiz<>@ShowClearQuiz
 				-- End of Rev 46.0
+				-- Rev 47.0
+				OR IsAllowProductCurrentStockUpdateFromApp<>@IsAllowProductCurrentStockUpdateFromApp
+				-- End of Rev 47.0
 
 				 )
 				)
@@ -1578,6 +1590,9 @@ BEGIN
 			-- Rev 46.0
 			,ShowClearQuiz = @ShowClearQuiz
 			-- End of Rev 46.0
+			-- Rev 47.0
+			,IsAllowProductCurrentStockUpdateFromApp = @IsAllowProductCurrentStockUpdateFromApp
+			-- End of Rev 47.0
 			 Where  user_id =@user_id
 
 			-- Rev 26.0
@@ -1887,6 +1902,9 @@ BEGIN
 			-- Rev 46.0
 			,ISNULL(ShowClearQuiz,0) as ShowClearQuiz
 			-- End of Rev 46.0
+			-- Rev 47.0
+			,ISNULL(IsAllowProductCurrentStockUpdateFromApp,0) as IsAllowProductCurrentStockUpdateFromApp
+			-- End of Rev 47.0
 			From tbl_master_user u,tbl_master_contact c Where u.user_id=@user_id AND u.user_contactId=c.cnt_internalId
 
 
@@ -2086,6 +2104,9 @@ BEGIN
 			-- Rev 46.0
 			,'ShowClearQuiz'
 			-- End of Rev 46.0
+			-- Rev 47.0
+			,'IsAllowProductCurrentStockUpdateFromApp'
+			-- End of Rev 47.0
 			)
 		END
 	-- Rev 18.0
@@ -2096,4 +2117,3 @@ BEGIN
 		-- End of Rev 18.0
 END
 GO
-

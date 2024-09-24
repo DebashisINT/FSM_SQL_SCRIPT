@@ -18,6 +18,8 @@ AS
 															Refer: 24832
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
 3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
+4.0		Sanchita		V2.0.47			03-06-2024		27500: Attendance/ Leave Clear tab need to add in security Role of "Users"
+5.0		Sanchita		V2.0.49			17-09-2024		27698: Customization work of New Order Status Update module
 ****************************************************************************************************************************************************************************/
 BEGIN
 	IF @mode = 'FetchAllGroups'
@@ -59,6 +61,19 @@ BEGIN
 		,CanReassignedAreaRouteBeat = CAST(IsNull(acc_CanReassignedAreaRouteBeat, 0) as BIT)
 		,CanReassignedAreaRouteBeatLog = CAST(IsNull(acc_CanReassignedAreaRouteBeatLog, 0) as BIT)
 		-- End of Rev 3.0
+		-- Rev 3.0
+		,CanMassDelete = CAST(IsNull(acc_MassDelete, 0) as BIT)
+		,CanMassDeleteDownloadImport = CAST(IsNull(acc_MassDeleteDownloadImport, 0) as BIT)
+		-- End of Rev 3.0
+		-- Rev 4.0
+		,CanAttendanceLeaveClear = CAST(IsNull(acc_CanAttendanceLeaveClear, 0) as BIT)
+		-- End of Rev 4.0
+		-- Rev 5.0
+		,CanInvoice = CAST(IsNull(acc_CanInvoice, 0) as BIT)
+		,CanReadyToDispatch = CAST(IsNull(acc_CanReadyToDispatch, 0) as BIT)
+		,CanDispatch = CAST(IsNull(acc_CanDispatch, 0) as BIT)
+		,CanDeliver = CAST(IsNull(acc_CanDeliver, 0) as BIT)
+		-- End of Rev 5.0
 		from tbl_trans_access
 		where acc_userGroupId = @grp_id;
 	END
@@ -71,3 +86,4 @@ BEGIN
 	END
 END
 GO
+
