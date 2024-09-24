@@ -22,7 +22,7 @@ Written by : Priti Roy on 20/08/2024
 *****************************************************************************************************************************************************************************************/
 BEGIN    
 	
-	Declare @Pending bigint=0,@AssignedTopics bigint=0
+	Declare @Pending bigint=0,@AssignedTopics bigint=0,@UnAssignedTopics bigint=0
 
 
 	
@@ -33,36 +33,42 @@ BEGIN
 		EXEC PRC_LMSDASHBOARD_REPORT @Action='ALL',@RPTTYPE='Summary',@USERID=@userid,@STATEID=@STATEID,@BRANCHID=@BRANCHID
 		
 
-		select count(distinct USER_ID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
+		select count(distinct USER_ID)CNT from LMSDASHBOARD_LIST  --where USERID=@userid
 
-		select count(TOPICID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
+		--select count(TOPICID)CNT from LMSDASHBOARD_LIST  where USERID=@userid
 
-		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid
+		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid
 
-		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
 
-		select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
+		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
+
+		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST
+		select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
+		select @UnAssignedTopics=count(TOPICID) from LMS_TOPICS where TOPICID not in (select CONTENT_TOPICID from LMS_CONTENT where CONTENTSTATUS=1)  and TOPICSTATUS=1
+
+		select (count(distinct TOPICID)+@UnAssignedTopics )CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' --and  USERID=@userid  
+		and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
 
 
-		--select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
+		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  --and  USERID=@userid
+		and TOPICID not in  (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Completed' ))
 
-		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' and  USERID=@userid  
-		--and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
-
-		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
-		--and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
-
-		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
+		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' --and  USERID=@userid
 		--and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Pending' ))
 
 
-		--select @Pending=count(distinct TOPICID) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
-		--and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Untouched' ,'Completed' ))
+		select @Pending=count(distinct TOPICID) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  --and  USERID=@userid
+		and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Completed' ))
 
-		select @Pending=count(*) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
 
-		--select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
-		select @AssignedTopics=count(TOPICID) from LMSDASHBOARD_LIST  where USERID=@userid
+
+
+		--select @Pending=count(*) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
+		--select @AssignedTopics=count(TOPICID) from LMSDASHBOARD_LIST  where USERID=@userid
+		
+		
 
 		if(@AssignedTopics=0)
 		set @AssignedTopics=1
