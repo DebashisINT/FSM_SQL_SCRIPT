@@ -15,6 +15,9 @@ AS
 															Refer: 24832
 2.0		Sanchita		2.0.38			28/01/2022		Bulk modification feature is required in Parties menu. Refer: 25609
 3.0		Sanchita		V2.0.44			19/02/2023		Beat related tab will be added in the security roles of Parties. Mantis: 27080
+4.0		Sanchita		V2.0.47			30/05/2024		Mass Delete related tabs will be added in the security roles of Parties. Mantis: 27489
+5.0		Sanchita		V2.0.47			03-06-2024		27500: Attendance/ Leave Clear tab need to add in security Role of "Users"
+6.0		Sanchita		V2.0.49			17-09-2024		27698: Customization work of New Order Status Update module
 ****************************************************************************************************************************************************************************/
 BEGIN
 	IF @mode = 'GetUserRightsForPage'
@@ -51,9 +54,23 @@ BEGIN
 		,CanReassignedAreaRouteBeat = CAST(IsNull(ta.acc_CanReassignedAreaRouteBeat, 0) as BIT)
 		,CanReassignedAreaRouteBeatLog = CAST(IsNull(ta.acc_CanReassignedAreaRouteBeatLog, 0) as BIT)
 		-- End of Rev 3.0
+		-- Rev 4.0
+		,CanMassDelete = CAST(IsNull(ta.acc_MassDelete, 0) as BIT)
+		,CanMassDeleteDownloadImport = CAST(IsNull(ta.acc_MassDeleteDownloadImport, 0) as BIT)
+		-- End of Rev 4.0
+		-- Rev 5.0
+		,CanAttendanceLeaveClear = CAST(IsNull(ta.acc_CanAttendanceLeaveClear, 0) as BIT)
+		-- End of Rev 5.0
+		-- Rev 6.0
+		,CanInvoice = CAST(IsNull(ta.acc_CanInvoice, 0) as BIT)
+		,CanReadyToDispatch = CAST(IsNull(ta.acc_CanReadyToDispatch, 0) as BIT)
+		,CanDispatch = CAST(IsNull(ta.acc_CanDispatch, 0) as BIT)
+		,CanDeliver = CAST(IsNull(ta.acc_CanDeliver, 0) as BIT)
+		-- End of Rev 6.0
 		FROM tbl_trans_access ta
 		INNER JOIN tbl_trans_menu tm ON CAST(ta.acc_menuId as INT) = CAST(mnu_Id as INT)
 		WHERE ta.acc_userGroupId = @usergroupid and tm.mnu_menuLink = @url;
 	END
 END
 GO
+
