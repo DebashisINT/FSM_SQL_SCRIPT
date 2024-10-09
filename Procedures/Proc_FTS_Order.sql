@@ -54,6 +54,9 @@ BEGIN
 			set @Collection=0
 			END
 			declare  @OrderUniqueId bigint
+			--Rev 7.0
+			DECLARE @IsRetailOrderStatusRequired NCHAR(1)=''
+			--End of Rev 7.0
 
 			IF NOT EXISTS(select Ordervalue  from tbl_trans_fts_Orderupdate where OrderCode=@order_id)
 			BEGIN
@@ -68,12 +71,20 @@ BEGIN
 			--Rev 3.0 && A new column Scheme_Amount have been added.
 			--Rev 4.0 &&Two new columns added as HOSPITAL & EMAIL_ADDRESS
 			--Rev 7.0 &&A new column added as ORDERSTATUS
-			INSERT  INTO  tbl_trans_fts_Orderupdate (Shop_Code,OrderCode,Ordervalue,Order_Description,Orderdate,userID,Collectionvalue,Latitude,Longitude,Order_Address,Remarks
+			INSERT INTO tbl_trans_fts_Orderupdate (Shop_Code,OrderCode,Ordervalue,Order_Description,Orderdate,userID,Collectionvalue,Latitude,Longitude,Order_Address,Remarks
 							,PATIENT_PHONE_NO,PATIENT_NAME,PATIENT_ADDRESS,Scheme_Amount,HOSPITAL,EMAIL_ADDRESS,ORDERSTATUS)
 			values (@Shop_Id,@order_id,@order_amount,@description,@order_date,@user_id,isnull(@Collection,0),@Lat,@Long,@Order_Address,@Remarks,@patient_no,@patient_name,@patient_address,@Scheme_Amount,
 							@Hospital,@Email_Address,@OrderStatus)
 
 			SET @OrderUniqueId=SCOPE_IDENTITY()
+			--Rev 7.0
+			SET @IsRetailOrderStatusRequired=(SELECT [Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsRetailOrderStatusRequired' AND IsActive=1)
+			IF @IsRetailOrderStatusRequired='1'
+				BEGIN
+					INSERT INTO FSM_ORDERUPDATESTAUSLOG(ORDERSTAUSLOG_ID,SHOP_CODE,ORDER_CODE,ORDER_VALUE,ORDER_DESCRIPTION,ORDER_DATE,USERID,ORDER_STATUS,[ACTION],CREATEDBY,CREATEDON)
+					SELECT @OrderUniqueId,@Shop_Id,@order_id,@order_amount,@description,@order_date,@user_id,'Ordered','I',@user_id,GETDATE()
+				END
+			--End of Rev 7.0
 			END
 
 			if(@@ROWCOUNT>0)
