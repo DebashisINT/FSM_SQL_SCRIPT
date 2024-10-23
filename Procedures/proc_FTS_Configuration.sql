@@ -215,6 +215,14 @@ BEGIN
 	189.0		Debashis	31-07-2024	ADD SETTINGS @Action=UserCheck'		IsUserWiseRecordAudioEnableForVisitRevisit.Row 958
 	190.0		Debashis	07-08-2024	ADD SETTINGS @Action=GlobalCheck'	QuestionAfterNoOfContentForLMS & IsAllowGPSTrackingInBackgroundForLMS.Row 968
 	191.0		Debashis	17-09-2024	ADD SETTINGS @Action=GlobalCheck'	IsRetailOrderStatusRequired.Row 979
+	192.0		Debashis	27-09-2024	ADD SETTINGS @Action=GlobalCheck'	IsVideoAutoPlayInLMS.Row 981
+	193.0		Debashis	01-10-2024	ADD SETTINGS @Action=GlobalCheck'	IsStockCheckFeatureOn,IsShowDistributorWiseCurrentStockInOrder,IsAllowNegativeStock & StockCheckOnOrder1OrInvioce0.
+																			Row 983
+	194.0		Debashis	09-10-2024	ADD SETTINGS @Action=GlobalCheck'	AllowedCreditDays,WillCreditDaysFollow & AllowOrderOnOutstandingAndClosingStockDifference.
+																			Row 985
+	195.0		Debashis	09-10-2024	ADD SETTINGS @Action=UserCheck'		WillCreditDaysFollowUserWise & AllowOrderOnOutstandingAndClosingStockDifferenceUserWise.
+																			Row 986
+	196.0		Debashis	23-10-2024	ADD SETTINGS @Action=GlobalCheck'	ShowRetryIncorrectQuiz.Row 987
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -491,6 +499,23 @@ BEGIN
 	--Rev 191.0
 	,@IsRetailOrderStatusRequired BIT
 	--End of Rev 191.0
+	--Rev 192.0
+	,@IsVideoAutoPlayInLMS BIT
+	--End of Rev 192.0
+	--Rev 193.0
+	,@IsStockCheckFeatureOn BIT
+	,@IsShowDistributorWiseCurrentStockInOrder BIT
+	,@IsAllowNegativeStock BIT
+	,@StockCheckOnOrder1OrInvioce0 BIT
+	--End of Rev 193.0
+	--Rev 194.0
+	,@AllowedCreditDays NVARCHAR(50)
+	,@WillCreditDaysFollow BIT
+	,@AllowOrderOnOutstandingAndClosingStockDifference BIT
+	--End of Rev 194.0
+	--Rev 196.0
+	,@ShowRetryIncorrectQuiz BIT
+	--End of Rev 196.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -818,6 +843,23 @@ BEGIN
 		--Rev 191.0
 		SET @IsRetailOrderStatusRequired =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsRetailOrderStatusRequired' AND IsActive=1)
 		--End of Rev 191.0
+		--Rev 192.0
+		SET @IsVideoAutoPlayInLMS =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsVideoAutoPlayInLMS' AND IsActive=1)
+		--End of Rev 192.0
+		--Rev 193.0
+		SET @IsStockCheckFeatureOn =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsStockCheckFeatureOn' AND IsActive=1)
+		SET @IsShowDistributorWiseCurrentStockInOrder =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsShowDistributorWiseCurrentStockInOrder' AND IsActive=1)
+		SET @IsAllowNegativeStock =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='IsAllowNegativeStock' AND IsActive=1)
+		SET @StockCheckOnOrder1OrInvioce0 =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='StockCheckOnOrder1OrInvioce0' AND IsActive=1)
+		--End of Rev 193.0
+		--Rev 194.0
+		SET @AllowedCreditDays =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='AllowedCreditDays' AND IsActive=1)
+		SET @WillCreditDaysFollow =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='WillCreditDaysFollow' AND IsActive=1)
+		SET @AllowOrderOnOutstandingAndClosingStockDifference =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='AllowOrderOnOutstandingAndClosingStockDifference' AND IsActive=1)
+		--End of Rev 194.0
+		--Rev 196.0
+		SET @ShowRetryIncorrectQuiz =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowRetryIncorrectQuiz' AND IsActive=1)
+		--End of Rev 196.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1124,6 +1166,23 @@ BEGIN
 			--Rev 191.0
 			,@IsRetailOrderStatusRequired AS IsRetailOrderStatusRequired
 			--End of Rev 191.0
+			--Rev 192.0
+			,@IsVideoAutoPlayInLMS AS IsVideoAutoPlayInLMS
+			--End of Rev 192.0
+			--Rev 193.0
+			,@IsStockCheckFeatureOn AS IsStockCheckFeatureOn
+			,@IsShowDistributorWiseCurrentStockInOrder AS IsShowDistributorWiseCurrentStockInOrder
+			,@IsAllowNegativeStock AS IsAllowNegativeStock
+			,@StockCheckOnOrder1OrInvioce0 AS StockCheckOnOrder1OrInvioce0
+			--End of Rev 193.0
+			--Rev 194.0
+			,@AllowedCreditDays AS AllowedCreditDays
+			,@WillCreditDaysFollow AS WillCreditDaysFollow
+			,@AllowOrderOnOutstandingAndClosingStockDifference AS AllowOrderOnOutstandingAndClosingStockDifference
+			--End of Rev 194.0
+			--Rev 196.0
+			,@ShowRetryIncorrectQuiz AS ShowRetryIncorrectQuiz
+			--End of Rev 196.0
 	END
 
 	else if(@Action='UserCheck')
@@ -2208,6 +2267,14 @@ BEGIN
 		SELECT 'IsUserWiseRecordAudioEnableForVisitRevisit' AS [Key],CONVERT(NVARCHAR(15),USR.IsUserWiseRecordAudioEnableForVisitRevisit) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 189.0
+		--Rev 195.0
+		UNION ALL
+		SELECT 'WillCreditDaysFollowUserWise' AS [Key],CONVERT(NVARCHAR(15),USR.WillCreditDaysFollowUserWise) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		UNION ALL
+		SELECT 'AllowOrderOnOutstandingAndClosingStockDifferenceUserWise' AS [Key],CONVERT(NVARCHAR(15),USR.AllowOrderOnOutstandingAndClosingStockDifferenceUserWise) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 195.0
 	END
 
 	SET NOCOUNT OFF
