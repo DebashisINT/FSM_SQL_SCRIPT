@@ -222,6 +222,7 @@ BEGIN
 																			Row 985
 	195.0		Debashis	09-10-2024	ADD SETTINGS @Action=UserCheck'		WillCreditDaysFollowUserWise & AllowOrderOnOutstandingAndClosingStockDifferenceUserWise.
 																			Row 986
+	196.0		Debashis	23-10-2024	ADD SETTINGS @Action=GlobalCheck'	ShowRetryIncorrectQuiz.Row 987
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -512,6 +513,9 @@ BEGIN
 	,@WillCreditDaysFollow BIT
 	,@AllowOrderOnOutstandingAndClosingStockDifference BIT
 	--End of Rev 194.0
+	--Rev 196.0
+	,@ShowRetryIncorrectQuiz BIT
+	--End of Rev 196.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -853,6 +857,9 @@ BEGIN
 		SET @WillCreditDaysFollow =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='WillCreditDaysFollow' AND IsActive=1)
 		SET @AllowOrderOnOutstandingAndClosingStockDifference =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='AllowOrderOnOutstandingAndClosingStockDifference' AND IsActive=1)
 		--End of Rev 194.0
+		--Rev 196.0
+		SET @ShowRetryIncorrectQuiz =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowRetryIncorrectQuiz' AND IsActive=1)
+		--End of Rev 196.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1173,6 +1180,9 @@ BEGIN
 			,@WillCreditDaysFollow AS WillCreditDaysFollow
 			,@AllowOrderOnOutstandingAndClosingStockDifference AS AllowOrderOnOutstandingAndClosingStockDifference
 			--End of Rev 194.0
+			--Rev 196.0
+			,@ShowRetryIncorrectQuiz AS ShowRetryIncorrectQuiz
+			--End of Rev 196.0
 	END
 
 	else if(@Action='UserCheck')
