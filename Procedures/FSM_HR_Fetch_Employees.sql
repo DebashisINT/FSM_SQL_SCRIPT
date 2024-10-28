@@ -48,6 +48,7 @@ AS
 													To avoid this Index corruption, the TEMP table #TEMPMASTEREMPLOYEE will be used 
 													instead of TBL_MASTER_EMPLOYEE. 
 													All places where TBL_MASTER_EMPLOYEE was used now replaced by #TEMPMASTEREMPLOYEE in this SP.
+	9.0      Sanchita    25/10/2024      V2.0.49     In employee master a new filed is required as Target Level.. Mantis : 27773
 ***************************************************************************************************************************************/
 BEGIN
   Declare @DSql nVarchar(Max),@DSql1 nVarchar(Max), @DSql_SearchBy nVarchar(2000)
@@ -279,6 +280,9 @@ BEGIN
 			  --rev 4.0
 			  ,AdditionalReportingHead Varchar(500),Colleague Varchar(500),Colleague1 Varchar(500),Colleague2 Varchar(500)
 			  --End of rev 4.0
+			  -- Rev 9.0
+			  , EmpTargetLevel varchar(200)
+			  -- End of Rev 9.0
 			)
 			-- Rev 3.0
 			--CREATE NONCLUSTERED INDEX IX1 ON FTS_Final_Display (Code)
@@ -291,11 +295,12 @@ BEGIN
 	-- End of Rev 3.0
 	/*Rev 2.0 start*/
 	/*Rev 4.0 start(Add AdditionalReportingHead,Colleague,Colleague1,Colleague2)*/
+	-- Rev 9.0 (add new column EmpTargetLevel)
 	Set @DSql='Insert into FSMEmployee_Master
   (
 	USERID,Employee_Grade,SRLNO,ContactID,Code,Name,FirstName,MiddleName,LastName,cnt_id,BranchName,Department,DepartmentID,CTC,ReportTo,ReportToID,
 	DOJ,CreatedBy,Designation,DesignationID,Company,OrganizationID,Email_Ids,PhoneMobile_Numbers,FatherName,PanCardNumber,cnt_OtherID
-	,AdditionalReportingHead,Colleague,Colleague1,Colleague2
+	,AdditionalReportingHead,Colleague,Colleague1,Colleague2, EmpTargetLevel
   )
 	Select '+convert(varchar(50),@User_id) +',empgrade.Employee_Grade,
 	ROW_NUMBER()  OVER (ORDER BY Ltrim(Rtrim(isnull(b.cnt_firstName,'''')))+'' ''+Ltrim(Rtrim(isnull(b.cnt_middleName,'''')))+'' ''+ Ltrim(Rtrim(isnull(b.cnt_lastName,''''))),a.emp_contactId desc) as SRLNO,
@@ -311,6 +316,7 @@ BEGIN
 	, CTC.cmp_Name Company,CTC.emp_organization OrganizationID,Ltrim(Rtrim(eml.eml_email)) Email_Ids
 	,Ltrim(Rtrim(phf.phf_phoneNumber)) PhoneMobile_Numbers,femrel_memberName FatherName,crg_Number PanCardNumber,a.cnt_OtherID
 	,CTC.AdditionalReportingHead as AdditionalReportingHead,CTC.Colleague as Colleague,CTC.Colleague1 as Colleague1,CTC.Colleague2 as Colleague2
+	,LEVELMAP.LEVEL_NAME EmpTargetLevel 
 	From #TEMPMASTEREMPLOYEE a WITH (NOLOCK) 
 	INNER JOIN #TEMPCONTACT b WITH (NOLOCK) ON a.emp_contactId=b.Cnt_InternalID and b.cnt_contactType=''EM'' '
 	-- Rev 7.0
@@ -383,6 +389,12 @@ BEGIN
 	LEFT OUTER JOIN tbl_master_contactRegistration crg WITH (NOLOCK) ON  a.emp_contactId=crg.crg_cntId AND crg.crg_type=''Pancard''
 	LEFT OUTER JOIN  tbl_FTS_MapEmployeeGrade grad WITH (NOLOCK) ON a.emp_contactId= grad.Emp_Code
 	LEFT OUTER JOIN FTS_Employee_Grade as empgrade WITH (NOLOCK) ON grad.Emp_Grade=empgrade.Id '
+	
+	-- Rev 9.0
+	Set @DSql+=' LEFT OUTER JOIN (SELECT LM.LEVEL_NAME, LMAP.TARGET_EMPCNTID FROM FSM_TARGETLEVELSETUP_MASTER LM INNER JOIN FSM_TARGET_EMPMAP LMAP ON LM.LEVEL_SHORTNAME=LMAP.TARGET_LEVEL_SHORTNAME ) LEVELMAP 
+				 ON LEVELMAP.TARGET_EMPCNTID = a.emp_contactId '
+	-- End of Rev 9.0
+
 	IF ((select IsAllDataInPortalwithHeirarchy from tbl_master_user where user_id=@User_id)=1)
 			BEGIN
 				Set @DSql=@DSql+'INNER JOIN #EMPHR_EDIT ON emp_contactId=EMPCODE '
@@ -610,3 +622,4 @@ BEGIN
   
 End
 go
+
