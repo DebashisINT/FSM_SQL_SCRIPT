@@ -21,6 +21,8 @@ AS
 /****************************************************************************************************************************************************************************
 Written by : Priti Roy on 20/08/2024
 0027667:LMS Dashboard
+1.0		V2.0.49		Priti	    08/10/2024		0027753: In LMS Dashboard, the count of the Assigned topics will be all the topics under whom at least one content is mapped
+code changes accouding to discussion with Gautam da
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
@@ -109,8 +111,9 @@ BEGIN
 			 SELECT ID,USERID,MUSER.USER_NAME,MUSER.USER_LOGINID,INFO.TOPICID,TOPIC.TOPICNAME,CONTENT_ID,CONTENTTITLE,CONTENTDESC,CONTENT.CREATEDON ASSIGNEDON  
 			 ,CASE WHEN ISCONTENTCOMPLETED=0 THEN ''Pending'' WHEN ISCONTENTCOMPLETED=1 THEN ''Completed'' END COMPLETIONSTATUS 
 			  FROM FSMUSERLMSTOPICCONTENTINFO INFO 
-			 inner join  TBL_MASTER_USER MUSER on INFO.USERID=MUSER.USER_ID inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID 
-			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID
+			 inner join  TBL_MASTER_USER MUSER on INFO.USERID=MUSER.USER_ID 
+			 inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID and TOPICSTATUS=1
+			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID and CONTENTSTATUS=1
 
 			 union all
 
@@ -121,10 +124,12 @@ BEGIN
 			,CONTENT.CONTENTID CONTENT_ID,CONTENTTITLE,CONTENTDESC,CONTENT.CREATEDON ASSIGNEDON  
 			,''Untouched''  COMPLETIONSTATUS 
 			FROM  LMS_CONTENT  CONTENT
-			inner join   LMS_TOPICS TOPICMAP on CONTENT.CONTENT_TOPICID=TOPICMAP.TOPICID
+			inner join   LMS_TOPICS TOPICMAP on CONTENT.CONTENT_TOPICID=TOPICMAP.TOPICID and TOPICSTATUS=1
 			inner join #USERTABLE USERLIST on USERLIST.TOPICID=TOPICMAP.TOPICID
 
 			where NOT EXISTS  (select ''Y'' from FSMUSERLMSTOPICCONTENTINFO where USERID=user_id    and CONTENT_ID=CONTENT.CONTENTID) 
+			and CONTENT.CONTENTSTATUS=1
+
 			)tbl 
 			left outer join tbl_master_user MUser on MUser.user_id=tbl.USERID
 			left outer join FTS_EmployeeBranchMap EMP on EMP.Emp_Contactid=MUser.user_contactId
@@ -147,6 +152,58 @@ BEGIN
 
 	End
 	
+
+	--IF @ACTION='ALL' AND @RPTTYPE='Summary'
+	--Begin
+	--	SET @Strsql=@Strsql+ ' SELECT '
+	--		SET @Strsql=@Strsql+ ''+cast(@USERID as varchar(250)) +','	
+	--		SET @Strsql=@Strsql+ ' ROW_NUMBER() OVER(ORDER BY tbl.ID desc) AS SEQ,tbl.USERID,tbl.USER_NAME,tbl.USER_LOGINID,TOPICID,TOPICNAME,CONTENT_ID,CONTENTTITLE,CONTENTDESC,COMPLETIONSTATUS
+
+	--		from (
+
+	--		 SELECT ID,USERID,MUSER.USER_NAME,MUSER.USER_LOGINID,INFO.TOPICID,TOPIC.TOPICNAME,CONTENT_ID,CONTENTTITLE,CONTENTDESC,CONTENT.CREATEDON ASSIGNEDON  
+	--		 ,CASE WHEN ISCONTENTCOMPLETED=0 THEN ''Pending'' WHEN ISCONTENTCOMPLETED=1 THEN ''Completed'' END COMPLETIONSTATUS 
+	--		  FROM FSMUSERLMSTOPICCONTENTINFO INFO 
+	--		 inner join  TBL_MASTER_USER MUSER on INFO.USERID=MUSER.USER_ID inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID 
+	--		 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID
+
+	--		 union all
+
+
+	--		SELECT  CONTENTID as ID,
+	--		user_id USERID,user_name,USERLIST.USER_LOGINID
+	--		,TOPICMAP.TOPICID,TOPICMAP.TOPICNAME
+	--		,CONTENT.CONTENTID CONTENT_ID,CONTENTTITLE,CONTENTDESC,CONTENT.CREATEDON ASSIGNEDON  
+	--		,''Untouched''  COMPLETIONSTATUS 
+	--		FROM  LMS_CONTENT  CONTENT
+	--		inner join   LMS_TOPICS TOPICMAP on CONTENT.CONTENT_TOPICID=TOPICMAP.TOPICID
+	--		inner join #USERTABLE USERLIST on USERLIST.TOPICID=TOPICMAP.TOPICID
+
+	--		where NOT EXISTS  (select ''Y'' from FSMUSERLMSTOPICCONTENTINFO where USERID=user_id    and CONTENT_ID=CONTENT.CONTENTID) 
+	--		)tbl 
+	--		left outer join tbl_master_user MUser on MUser.user_id=tbl.USERID
+	--		left outer join FTS_EmployeeBranchMap EMP on EMP.Emp_Contactid=MUser.user_contactId
+	--		left outer join tbl_master_branch branch on branch.branch_id=EMP.BranchId
+	--		left outer join tbl_trans_employeeCTC CTC on CTC.emp_cntId=MUser.user_contactId
+	--		left outer join tbl_master_designation DESIGNATION on DESIGNATION.deg_id=CTC.emp_Designation
+			
+	--		'
+
+
+	--		IF @BRANCHID<>''
+	--		SET @Strsql+=' where  EXISTS (SELECT Branch_Id FROM #Branch_List AS F WHERE F.Branch_Id=branch.branch_id) '
+
+
+
+	--		INSERT INTO LMSDASHBOARD_LIST (USERID, SEQ,USER_ID,USER_NAME,USER_LOGINID,TOPICID,TOPICNAME,CONTENT_ID,CONTENTTITLE,CONTENTDESC,COMPLETIONSTATUS )
+			
+			
+	--		EXEC (@Strsql)
+
+	--End
+
+
+
 	DROP TABLE #USERTABLE
 	DROP TABLE #BRANCH_LIST
 

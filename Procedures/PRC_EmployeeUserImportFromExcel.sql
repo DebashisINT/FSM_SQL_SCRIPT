@@ -14,17 +14,18 @@ AS
 /*****************************************************************************************************************
 Written by : Priti Roy ON 20/02/2023
 Module	   : Employee  Master Refer: 0025676
+Rev 1.0		Priti	V2.0.49		01-10-2024	 0027734: Employee Master Import
 *******************************************************************************************************************/
 BEGIN
 	declare @emplcode varchar(50)=null,
 	@empname varchar(500)=null,
-	@salutation varchar(500)=null,
+	@salutation varchar(500)='Mr',
 	@firstname varchar(500)=null,
 	@lastname varchar(500)=null,
 	@middle varchar(500)=null,
 	@dob datetime=null,
 	@doj datetime=null,
-	@gender varchar(500)=null,
+	@gender varchar(500)='M',
 	@grade varchar(500)=null,
 	@blood_group varchar(500)=null,
 	@marital_status varchar(500)=null,
@@ -438,8 +439,10 @@ BEGIN
 	close db_cursor
 	deallocate db_cursor
 
-	--insert into tbl_trans_LastSegment(ls_cntId,ls_lastSegment,ls_lastCompany,ls_lastFinYear,ls_lastSettlementNo,ls_lastSettlementType,ls_lastdpcoid,ls_userid)
-	--select user_contactId,1,'COR0000002','2018-2019','2016001','F','1',user_id from tbl_master_user where user_id not in (select ls_userid from tbl_trans_LastSegment)
+	--Rev 1.0
+	insert into tbl_trans_LastSegment(ls_cntId,ls_lastSegment,ls_lastCompany,ls_lastFinYear,ls_lastSettlementNo,ls_lastSettlementType,ls_lastdpcoid,ls_userid)
+	select user_contactId,1,'COR0000002','2024-2025','2016001','F','1',user_id from tbl_master_user where user_id not in (select ls_userid from tbl_trans_LastSegment)
+	--Rev 1.0 End
 
 	DELETE FROM TEMPEmployeeData
 	

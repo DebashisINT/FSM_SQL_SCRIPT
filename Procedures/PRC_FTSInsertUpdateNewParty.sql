@@ -75,6 +75,33 @@ ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
 -- Rev 9.0
 ,@RETURN_VALUE nvarchar(50)=NULL OUTPUT
 -- Ebd of Rev 9.0
+
+
+
+,@BKT NVARCHAR(100)=NULL
+,@TOTALOUTSTANDING numeric(18,2)=NULL
+,@POS numeric(18,2)=NULL
+,@EMIAMOUNT numeric(18,2)=NULL
+,@ALLCHARGES numeric(18,2)=NULL
+,@TOTALCOLLECTABLE numeric(18,2)=NULL
+,@RISK bigint=0
+,@WORKABLE NVARCHAR(50)=NULL
+,@DISPOSITIONCODE bigint=0
+,@PTPDATE datetime =NULL
+,@PTPAMOUNT numeric(18,2)=NULL
+,@COLLECTIONDATE datetime =NULL
+,@COLLECTIONAMOUNT numeric(18,2)=NULL
+,@FINALSTATUS bigint=0
+
+
+
+
+
+
+
+
+
+
 ) 
 AS
 /******************************************************************************************************************************
@@ -98,9 +125,17 @@ AS
 17.0		V2.0.46		Sanchita	12-04-2024		0027348: FSM: Master > Contact > Parties [Delete Facility]
 18.0		v2.0.46		Sanchita	26-04-2024		A flag shall be created in the user master when any customer is made inactive or delete against a particular user.
 													Refer: 0027414
-*******************************************************************************************************************************/
+19.0		V2.0.47		Sanchita	13-05-2024		A new coloumn named as Shop_id shall be implemented in place of existing shop_id coloumn of tbl_master_shop table.
+													Mantis: 27416
+20.0		V2.0.49		Priti	18-11-2024		A new Global settings required as WillShowLoanDetailsInParty.Mantis: 0027799
+													
+******************************************************************************************************************************/
 BEGIN
 	DECLARE @SHOP_CODE NVARCHAR(100)
+	-- Rev 19.0
+	DECLARE @SHOP_ID_MANUAL BIGINT
+	-- End of Rev 19.0
+
 	set @Lastvisit_date =GETDATE()
 	IF @ACTION='Details'
 	BEGIN
@@ -156,6 +191,10 @@ BEGIN
 		--UNION ALL
 		SELECT convert(nvarchar(10),id) as StateID_BulkModify,state as StateName_BulkModify FROM tbl_master_state where countryid=1 order by StateName_BulkModify
 		-- End of Rev 15.0
+
+		
+
+
 	END
 
 	IF @ACTION='InsertShop'
@@ -234,6 +273,10 @@ BEGIN
 		BEGIN
 		-- End of Rev 9.0
 
+			-- Rev 19.0
+			SET @SHOP_ID_MANUAL = ISNULL((select MAX(SHOP_ID) from tbl_master_shop),0)+1
+			-- End of Rev 19.0
+
 			INSERT INTO tbl_Master_shop
 			(Shop_Code,Shop_Name,Address,Pincode,Shop_Lat,Shop_Long,Shop_City,Shop_Owner,Shop_WebSite,Shop_Owner_Email,Shop_Owner_Contact,dob,date_aniversary,
 			type,Shop_CreateUser,Shop_CreateTime,Shop_Image,total_visitcount,Lastvisit_date,isAddressUpdated,assigned_to_pp_id,assigned_to_dd_id,
@@ -243,6 +286,17 @@ BEGIN
 			--rev 8.0
 			,GSTN_NUMBER,Trade_Licence_Number,Cluster,Alt_MobileNo1,Shop_Owner_Email2
 			--End of rev 8.0
+			-- Rev 19.0
+			,SHOP_ID
+			-- End of Rev 19.0
+
+
+
+			---REV 20.0
+			,BKT,TOTALOUTSTANDING,POS,ALLCHARGES,TOTALCOLLECTABLE,WORKABLE,PTPDATE,PTPAMOUNT,COLLECTIONDATE,COLLECTIONAMOUNT,EMIAMOUNT,RISK,DISPOSITIONCODE,FINALSTATUS
+			---REV 20.0 END
+
+
 			)
 
 			VALUES(@SHOP_CODE,@Shop_Name,@Address,@Pincode,@Shop_Lat,@Shop_Long,@Shop_City,@Shop_Owner,@Shop_WebSite,@Shop_Owner_Email,@Shop_Owner_Contact,@dob,@date_aniversary,
@@ -256,6 +310,16 @@ BEGIN
 			--rev 8.0
 			,@GSTN_NUMBER,@Trade_Licence_Number,@Cluster,@Alt_MobileNo1,@Shop_Owner_Email2
 			--End of rev 8.0
+			-- Rev 19.0
+			,@SHOP_ID_MANUAL
+			-- End of Rev 19.0
+
+			---REV 20.0
+			,@BKT,@TOTALOUTSTANDING,@POS,@ALLCHARGES,@TOTALCOLLECTABLE,@WORKABLE,@PTPDATE,@PTPAMOUNT,@COLLECTIONDATE,@COLLECTIONAMOUNT,@EMIAMOUNT,@RISK,@DISPOSITIONCODE,@FINALSTATUS
+			---REV 20.0 END
+
+
+
 			)
 		-- Rev 9.0
 		END
@@ -300,6 +364,18 @@ BEGIN
 		-- Rev 14.0
 		,IsShopModified=1
 		-- End of Rev 14.0
+
+
+		---REV 20.0
+		,BKT=@BKT,TOTALOUTSTANDING=@TOTALOUTSTANDING,POS=@POS,ALLCHARGES=@ALLCHARGES,TOTALCOLLECTABLE=@TOTALCOLLECTABLE
+		,WORKABLE=@WORKABLE,PTPDATE=@PTPDATE,PTPAMOUNT=@PTPAMOUNT,COLLECTIONDATE=@COLLECTIONDATE,COLLECTIONAMOUNT=@COLLECTIONAMOUNT,EMIAMOUNT=@EMIAMOUNT,RISK=@RISK,DISPOSITIONCODE=@DISPOSITIONCODE
+		,FINALSTATUS=@FINALSTATUS
+		---REV 20.0
+
+
+
+
+
 		WHERE Shop_Code=@ShopCode 
 
 	END
@@ -333,6 +409,13 @@ BEGIN
 		--rev 8.0
 		,shop.GSTN_NUMBER,shop.Trade_Licence_Number,shop.Cluster,shop.Alt_MobileNo1,shop.Shop_Owner_Email2
 		--End of rev 8.0
+		--REV 20.0
+		,isnull(shop.BKT,'')BKT,Isnull(shop.TOTALOUTSTANDING,0)TOTALOUTSTANDING,Isnull(shop.POS,0)POS,Isnull(shop.ALLCHARGES,0)ALLCHARGES
+		,isnull(shop.TOTALCOLLECTABLE,0)TOTALCOLLECTABLE,isnull(shop.WORKABLE,'')WORKABLE,shop.PTPDATE,isnull(shop.PTPAMOUNT,0)PTPAMOUNT,shop.COLLECTIONDATE,isnull(shop.COLLECTIONAMOUNT,0)COLLECTIONAMOUNT,
+		isnull(shop.EMIAMOUNT,0)EMIAMOUNT
+		,shop.RISK,shop.DISPOSITIONCODE,shop.FINALSTATUS
+		--REV 20.0
+
 		 FROM tbl_Master_shop shop
 		LEFT OUTER JOIN tbl_Master_shop PP ON PP.SHOP_CODE=shop.assigned_to_pp_id and pp.type=2
 		LEFT OUTER JOIN tbl_Master_shop DD ON DD.SHOP_CODE=shop.assigned_to_dd_id and DD.type=4
@@ -342,6 +425,9 @@ BEGIN
 		LEFT OUTER JOIN tbl_Master_user oldUser ON shop.OLD_CreateUser=oldUser.user_id
 		LEFT OUTER JOIN tbl_Master_user newUser ON shop.Shop_CreateUser=newUser.user_id
 		--End of Rev 7.0
+
+
+		
 		
 		WHERE shop.Shop_Code=@ShopCode 
 
@@ -715,5 +801,26 @@ BEGIN
 		DROP TABLE #TEMPCONTACT
 	END
 	-- End of Rev 17.0
+
+	IF @ACTION='LoanDetails'
+	BEGIN
+		
+		SELECT 0 as ID,'Select' Name 
+		union
+		SELECT RISKID as ID,RISKNAME Name FROM FSM_LOANRISK where ISACTIVE=1
+
+		select 'Yes' as ID ,'Yes' as NAME
+		Union
+		select 'No' as ID,'No' as NAME
+
+		SELECT 0 as ID,'Select' Name 
+		union
+		SELECT DISPOSITIONID as ID,DISPOSITIONCODE Name FROM FSM_LOANDISPOSITIONCODE where ISACTIVE=1 
+
+		SELECT 0 as ID,'Select' Name 
+		union
+		SELECT FINALSTATUSID as ID,FINALSTATUSNAME Name FROM FSM_LOANFINALSTATUS where ISACTIVE=1 
+		
+	END
 END
 GO

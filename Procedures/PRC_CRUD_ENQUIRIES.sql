@@ -27,7 +27,8 @@ ALTER PROCEDURE [dbo].[PRC_CRUD_ENQUIRIES]
 	@SALESMANID nvarchar(10)=NULL,
 	@UOM nvarchar(100)='',
 	@RETURNMESSAGE NVARCHAR(500) =NULL OUTPUT ,
-	@RETURNCODE NVARCHAR(20) =NULL OUTPUT
+	@RETURNCODE NVARCHAR(20) =NULL OUTPUT,
+	@MODE varchar(20)=''
 
 )
  
@@ -40,35 +41,61 @@ Written by : Sanchita on 07-02-2022. Refer: 24631
 4.0		Sanchita	V2.0.42		16-08-2023		The enquiry doesn't showing in the listing after modification. Mantis: 26721
 5.0		Sanchita	V2.0.43		06-09-2023		For reassign enquery need updation of userid properly. Mantis: 26795
 6.0		Sanchita	V2.0.43		27/07/2023		Eurobond Enquiry data entry and edit submit issue. Mantis : 27047
+7.0		Priti	    V2.0.46		24/04/2024	    0027383: New Enquires type Add and Hide # Eurobond Portal
 ****************************************************************************************************************************************************************************/
 BEGIN
 	SET NOCOUNT ON
 	IF(@ACTION_TYPE='ADD')
-			BEGIN TRY
-			BEGIN TRANSACTION	
-				-- Rev 3.0 [ MobileNo updated with @PHONENO ]	
-				insert into tbl_CRM_Import(Date,Customer_Name,Contact_Person,PhoneNo,Email,Location,Product_Required,Qty,UOM,Order_Value,Enq_Details,vend_type,Created_Date,
-				Created_By,Modified_By,Modified_Date,MobileNo)
-				values( CONVERT(DATETIME,CONVERT(VARCHAR(15),CAST(@DATE as date),120)+' '+CONVERT(VARCHAR(15),CAST(GETDATE() AS TIME),108)) ,
-				@CUSTNAME,@CONTACTPERSON,@PHONENO,@EMAIL,@LOCATION,@PRODUCTREQUIRED,@QTY,ISNULL(@UOM,''),@ORDER_VALUE,@ENQ_DETAILS,@VEND_TYPE,getdate(),
-				@USERID,null,null,@PHONENO)
-				COMMIT TRANSACTION
+	BEGIN TRY
+	BEGIN TRANSACTION	
+		-- Rev 3.0 [ MobileNo updated with @PHONENO ]	
 
-				Set @RETURNMESSAGE= 'Success';
-				Set @RETURNCODE='1'
+		--Rev 7.0
+		if(@VEND_TYPE='ExportersIndia')
+		Begin
+			set @VEND_TYPE='Exporters India'
+		End
+		if(@VEND_TYPE='DirectCall')
+		Begin
+			set @VEND_TYPE='Direct Call'
+		End
 
-			END TRY
+		if(@VEND_TYPE='SolarTrade')
+		Begin
+			set @VEND_TYPE='Solar Trade'
+		End
 
-			BEGIN CATCH
+		if(@VEND_TYPE='Social Media')
+		Begin
+			set @VEND_TYPE='SocialMedia'
+		End
 
-			ROLLBACK TRANSACTION
+
+
+		--Rev 7.0 End
+		insert into tbl_CRM_Import(Date,Customer_Name,Contact_Person,PhoneNo,Email,Location,Product_Required,Qty,UOM,Order_Value,Enq_Details,vend_type,Created_Date,
+		Created_By,Modified_By,Modified_Date,MobileNo)
+		values( CONVERT(DATETIME,CONVERT(VARCHAR(15),CAST(@DATE as date),120)+' '+CONVERT(VARCHAR(15),CAST(GETDATE() AS TIME),108)) ,
+		@CUSTNAME,@CONTACTPERSON,@PHONENO,@EMAIL,@LOCATION,@PRODUCTREQUIRED,@QTY,ISNULL(@UOM,''),@ORDER_VALUE,@ENQ_DETAILS,@VEND_TYPE,getdate(),
+		@USERID,null,null,@PHONENO)
+		COMMIT TRANSACTION
+
+		Set @RETURNMESSAGE= 'Success';
+		Set @RETURNCODE='1'
+
+	END TRY
+
+	BEGIN CATCH
+
+	ROLLBACK TRANSACTION
 			
-				Set @RETURNMESSAGE= ERROR_MESSAGE();
-				Set @RETURNCODE='-10'
+		Set @RETURNMESSAGE= ERROR_MESSAGE();
+		Set @RETURNCODE='-10'
 	
-			END CATCH
-			--END	
+	END CATCH
+	
 	ELSE IF(@ACTION_TYPE='EDIT') 
+	BEGIN
 			-- Rev 4.0
 			--select Date,Customer_Name,Contact_Person,PhoneNo,Email,Location,Product_Required,isnull(Qty,0)as Qty,UOM,isnull(Order_Value,0) as Order_Value,Enq_Details,vend_type,Created_Date,PhoneNo,
 			--	Created_By,Modified_By,Modified_Date,isnull(Supervisor,0) as Supervisor,isnull(salesman,0) as salesman,isnull(verify,0) as verify 
@@ -78,6 +105,7 @@ BEGIN
 				, convert(varchar(10),Date,105) as txtDate
 				from tbl_CRM_Import where Crm_Id=@CRM_ID
 			-- End of Rev 4.0
+	END
 	ELSE IF(@ACTION_TYPE='MOD') 
 			BEGIN TRY
 			BEGIN TRANSACTION		
@@ -258,12 +286,39 @@ BEGIN
 			END CATCH
 		--End of rev 2.0
 
-	if(@ACTION_TYPE='GetEnquiryFrom')
-	begin
-		SELECT EnqID, EnquiryFromDesc from tbl_master_EnquiryFrom order by EnqID
+	ELSE if(@ACTION_TYPE='GetEnquiryFrom')
+	begin		
+		--Rev 7.0
+		--SELECT EnqID, EnquiryFromDesc from tbl_master_EnquiryFrom order by EnqID
+		SELECT EnqID, EnquiryFromDesc from tbl_master_EnquiryFrom where EnquiryFromDesc<>'Other' 
+		Union All
+		SELECT EnqID, EnquiryFromDesc from tbl_master_EnquiryFrom  where EnquiryFromDesc='Other'
+		--Rev 7.0 End
 	end
-
-	if(@ACTION_TYPE='GetSalesmanlist')
+	--Rev 7.0
+	ELSE if(@ACTION_TYPE='GetProvidedBy')
+	begin
+		
+		if(@MODE='ADD')
+		Begin
+			SELECT 'Select' as EnquiryFromDescValue,'Select' as EnquiryFromDesc
+			Union All
+			SELECT Replace(EnquiryFromDesc,' ','') as EnquiryFromDescValue, EnquiryFromDesc from tbl_master_EnquiryFrom where EnquiryFromDesc NOT IN ('Other','IndiaMart (ARCHER)','MccoyMart')
+			Union All
+			SELECT EnquiryFromDesc as EnquiryFromDescValue, EnquiryFromDesc from tbl_master_EnquiryFrom  where EnquiryFromDesc='Other' 
+		End
+		Else
+		Begin
+			SELECT 'Select' as EnquiryFromDescValue,'Select' as EnquiryFromDesc
+			Union All
+			SELECT Replace(EnquiryFromDesc,' ','') as EnquiryFromDescValue, EnquiryFromDesc from tbl_master_EnquiryFrom where EnquiryFromDesc NOT IN ('Other','IndiaMart (ARCHER)')
+			Union All
+			SELECT EnquiryFromDesc as EnquiryFromDescValue, EnquiryFromDesc from tbl_master_EnquiryFrom  where EnquiryFromDesc='Other' 
+		End
+		
+	end
+	--End 7.0 End
+	ELSE if(@ACTION_TYPE='GetSalesmanlist')
 	begin
 		SELECT '0' AS UserID,'Select' AS username
 		UNION ALL

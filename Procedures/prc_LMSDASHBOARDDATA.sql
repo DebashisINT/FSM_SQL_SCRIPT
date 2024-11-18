@@ -19,6 +19,7 @@ AS
 /****************************************************************************************************************************************************************************************
 Written by : Priti Roy on 20/08/2024
 0027667:LMS Dashboard
+1.0		V2.0.49		Priti	    08/10/2024		0027753: In LMS Dashboard, the count of the Assigned topics will be all the topics under whom at least one content is mapped
 *****************************************************************************************************************************************************************************************/
 BEGIN    
 	
@@ -44,12 +45,25 @@ BEGIN
 		--select count(*)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Completed' and  USERID=@userid
 
 		--select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST
-		select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
-		select @UnAssignedTopics=count(TOPICID) from LMS_TOPICS where TOPICID not in (select CONTENT_TOPICID from LMS_CONTENT where CONTENTSTATUS=1)  and TOPICSTATUS=1
 
-		select (count(distinct TOPICID)+@UnAssignedTopics )CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' --and  USERID=@userid  
+		--Rev 1.0
+		select count(*)CNT from LMS_TOPICS  where TOPICSTATUS=1
+
+		--select count(distinct TOPICID)CNT from LMS_TOPICS  
+		--inner join LMS_CONTENT on CONTENT_TOPICID=TOPICID
+		--where TOPICSTATUS=1 and CONTENTSTATUS=1
+		--Rev 1.0 End
+
+		--Rev 1.0
+		--select @UnAssignedTopics=count(TOPICID) from LMS_TOPICS where TOPICID not in (select CONTENT_TOPICID from LMS_CONTENT )  and TOPICSTATUS=1
+		--select (count(distinct TOPICID)+@UnAssignedTopics )CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' --and  USERID=@userid  
+		--and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
+
+		select (count(distinct TOPICID) )CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Untouched' --and  USERID=@userid  
 		and TOPICID not in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Pending' ,'Completed' ))
 
+		
+		--Rev 1.0 End
 
 		select count(distinct TOPICID)CNT from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  --and  USERID=@userid
 		and TOPICID not in  (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Completed' ))
@@ -61,9 +75,14 @@ BEGIN
 		select @Pending=count(distinct TOPICID) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  --and  USERID=@userid
 		and TOPICID  in (select TOPICID from LMSDASHBOARD_LIST where   COMPLETIONSTATUS in ('Completed' ))
 
-		select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
 
+		--Rev 1.0
+		--select @AssignedTopics=count(*) from LMS_TOPICS  where TOPICSTATUS=1
 
+		select @AssignedTopics=count(distinct TOPICID) from LMS_TOPICS  
+		inner join LMS_CONTENT on CONTENT_TOPICID=TOPICID
+		where TOPICSTATUS=1
+		--Rev 1.0 End
 
 		--select @Pending=count(*) from LMSDASHBOARD_LIST where   COMPLETIONSTATUS='Pending'  and  USERID=@userid
 		--select @AssignedTopics=count(TOPICID) from LMSDASHBOARD_LIST  where USERID=@userid
@@ -79,13 +98,13 @@ BEGIN
 	END
 	ELSE IF(@Action ='TOTALUSERLIST' )
 	BEGIN
-
-				
 			select 
-			--tbl.USER_ID as [Learner ID], 
-			MUser.user_name as [Learner Name]
+			--tbl.USER_ID as [Learner ID]			
+			 MUser.user_name as [Learner Name]
 			,MUser.USER_LOGINID as [Login ID]
-			,branch_description Branch,deg_designation as Designation,TOPICID as[Assigned Topic],CONTENT_ID as [Assigned Content] from (
+			,branch_description Branch,deg_designation as Designation,TOPICID as[Assigned Topic],CONTENT_ID as [Assigned Content] 
+			,ISCONTENTCOMPLETED as [Completed Content],ISCONTENTPending as [Pending Content], (CONTENT_ID-(isnull(ISCONTENTCOMPLETED,0)+isnull(ISCONTENTPending,0))) as[Yet To Start Content]
+			from (
 			select  list.USER_ID,
 			COUNT(distinct TOPICID)TOPICID,count(distinct CONTENT_ID)CONTENT_ID
 			from LMSDASHBOARD_LIST  list	
@@ -97,6 +116,33 @@ BEGIN
 			left outer join tbl_master_branch branch on branch.branch_id=EMP.BranchId
 			left outer join tbl_trans_employeeCTC CTC on CTC.emp_cntId=MUser.user_contactId
 			left outer join tbl_master_designation DESIGNATION on DESIGNATION.deg_id=CTC.emp_Designation
+			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTCOMPLETED,USERID from  FSMUSERLMSTOPICCONTENTINFO INFO 
+			inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID and TOPICSTATUS=1 
+			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID and CONTENTSTATUS=1
+			where ISCONTENTCOMPLETED=1 group by USERID)INFO on INFO.USERID=tbl.USER_ID
+			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTPending,USERID from  FSMUSERLMSTOPICCONTENTINFO  INFO
+			inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID and TOPICSTATUS=1 
+			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID and CONTENTSTATUS=1
+			where ISCONTENTCOMPLETED=0 group by USERID)INFO1 on INFO1.USERID=tbl.USER_ID
+
+				
+			--select 
+			----tbl.USER_ID as [Learner ID], 
+			--MUser.user_name as [Learner Name]
+			--,MUser.USER_LOGINID as [Login ID]
+			--,branch_description Branch,deg_designation as Designation,TOPICID as[Assigned Topic],CONTENT_ID as [Assigned Content] 
+			--from (
+			--select  list.USER_ID,
+			--COUNT(distinct TOPICID)TOPICID,count(distinct CONTENT_ID)CONTENT_ID
+			--from LMSDASHBOARD_LIST  list	
+			--where  USERID=@userid
+			--group by list.USER_ID
+			--)tbl 
+			--left outer join tbl_master_user MUser on MUser.user_id=tbl.USER_ID
+			--left outer join FTS_EmployeeBranchMap EMP on EMP.Emp_Contactid=MUser.user_contactId
+			--left outer join tbl_master_branch branch on branch.branch_id=EMP.BranchId
+			--left outer join tbl_trans_employeeCTC CTC on CTC.emp_cntId=MUser.user_contactId
+			--left outer join tbl_master_designation DESIGNATION on DESIGNATION.deg_id=CTC.emp_Designation
 
 		   
 
@@ -147,8 +193,14 @@ BEGIN
 			left outer join tbl_master_branch branch on branch.branch_id=EMP.BranchId
 			left outer join tbl_trans_employeeCTC CTC on CTC.emp_cntId=MUser.user_contactId
 			left outer join tbl_master_designation DESIGNATION on DESIGNATION.deg_id=CTC.emp_Designation
-			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTCOMPLETED,USERID from  FSMUSERLMSTOPICCONTENTINFO  where ISCONTENTCOMPLETED=1 group by USERID)INFO on INFO.USERID=tbl.USER_ID
-			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTPending,USERID from  FSMUSERLMSTOPICCONTENTINFO  where ISCONTENTCOMPLETED=0 group by USERID)INFO1 on INFO1.USERID=tbl.USER_ID
+			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTCOMPLETED,USERID from  FSMUSERLMSTOPICCONTENTINFO  INFO
+			inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID and TOPICSTATUS=1 
+			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID and CONTENTSTATUS=1
+			where ISCONTENTCOMPLETED=1 group by USERID)INFO on INFO.USERID=tbl.USER_ID
+			left outer join (select count(ISCONTENTCOMPLETED)ISCONTENTPending,USERID from  FSMUSERLMSTOPICCONTENTINFO  INFO 
+			inner join  LMS_TOPICS TOPIC ON TOPIC.TOPICID=INFO.TOPICID and TOPICSTATUS=1 
+			 inner join  LMS_CONTENT CONTENT ON CONTENT.CONTENTID=INFO.CONTENT_ID and CONTENTSTATUS=1
+			where ISCONTENTCOMPLETED=0 group by USERID)INFO1 on INFO1.USERID=tbl.USER_ID
 
 		   
 
