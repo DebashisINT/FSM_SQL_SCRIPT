@@ -3,7 +3,6 @@ BEGIN
 	EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [PRC_FTSInsertUpdateNewParty] AS' 
 END
 GO
-
 --exec PRC_FTSInsertUpdateNewParty @ACTION='Details'
 
 ALTER PROCEDURE [dbo].[PRC_FTSInsertUpdateNewParty]
