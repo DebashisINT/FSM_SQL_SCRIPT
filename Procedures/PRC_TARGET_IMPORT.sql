@@ -453,7 +453,7 @@ BEGIN
 								WHILE @@FETCH_STATUS = 0   
 								BEGIN 	
 
-
+										SET @FAIL = 'FALSE'
 										if(isnull(@EmployeeGroup,'')='')
 										Begin
 												select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG  
@@ -559,6 +559,57 @@ BEGIN
 												,@ENDDATE,@NEWVISIT,@REVISIT,@ORDERAMOUNT,@COLLECTION,@ORDERQTY,'Failed','Order Amount,Order Quantity is empty.',@USER_ID,GETDATE()
 
 												SET @FAIL = 'TRUE'
+										End
+										if(@PRODUCTNAME='')
+										Begin
+												select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG  												
+
+												INSERT INTO IMPORT_TARGET_LOG(IMPORT_TARGET_ID,
+												DocumentNo,DocumentDate,
+												EmployeeGroup,TargetFor,TARGETLEVELNAME,TARGETLEVELCODE,TIMEFRAME,STARTDATE,ENDDATE,NEWVISIT,REVISIT,ORDERAMOUNT,COLLECTION,ORDERQTY,ImportStatus,ImportMsg,CREATEDBY,CREATEDON
+												)
+												Select @LastCountIMPORTLOG+1,@TargetNo,@TargetDate
+													,@EmployeeGroup,@TargetFor
+												,@TARGETLEVELNAME,@TARGETLEVELCODE,@TIMEFRAME,@STARTEDATE
+												,@ENDDATE,@NEWVISIT,@REVISIT,@ORDERAMOUNT,@COLLECTION,@ORDERQTY,'Failed','Product Name is empty.',@USER_ID,GETDATE()
+
+												SET @FAIL = 'TRUE'
+										End
+										if(@PRODUCTCODE='')
+										Begin
+												select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG  												
+
+												INSERT INTO IMPORT_TARGET_LOG(IMPORT_TARGET_ID,
+												DocumentNo,DocumentDate,
+												EmployeeGroup,TargetFor,TARGETLEVELNAME,TARGETLEVELCODE,TIMEFRAME,STARTDATE,ENDDATE,NEWVISIT,REVISIT,ORDERAMOUNT,COLLECTION,ORDERQTY,ImportStatus,ImportMsg,CREATEDBY,CREATEDON
+												)
+												Select @LastCountIMPORTLOG+1,@TargetNo,@TargetDate
+													,@EmployeeGroup,@TargetFor
+												,@TARGETLEVELNAME,@TARGETLEVELCODE,@TIMEFRAME,@STARTEDATE
+												,@ENDDATE,@NEWVISIT,@REVISIT,@ORDERAMOUNT,@COLLECTION,@ORDERQTY,'Failed','Product Code is empty.',@USER_ID,GETDATE()
+
+												SET @FAIL = 'TRUE'
+										End
+
+										if(@PRODUCTNAME<>'')
+										Begin
+											select @PRODUCTID=Isnull(sProducts_ID,0) from Master_sProducts where sProducts_Name=@PRODUCTNAME  and sProducts_Code=@PRODUCTCODE
+											if(@PRODUCTID=0)
+											Begin
+												select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG  												
+
+												INSERT INTO IMPORT_TARGET_LOG(IMPORT_TARGET_ID,
+												DocumentNo,DocumentDate,
+												EmployeeGroup,TargetFor,TARGETLEVELNAME,TARGETLEVELCODE,TIMEFRAME,STARTDATE,ENDDATE,NEWVISIT,REVISIT,ORDERAMOUNT,COLLECTION,ORDERQTY,ImportStatus,ImportMsg,CREATEDBY,CREATEDON
+												)
+												Select @LastCountIMPORTLOG+1,@TargetNo,@TargetDate
+													,@EmployeeGroup,@TargetFor
+												,@TARGETLEVELNAME,@TARGETLEVELCODE,@TIMEFRAME,@STARTEDATE
+												,@ENDDATE,@NEWVISIT,@REVISIT,@ORDERAMOUNT,@COLLECTION,@ORDERQTY,'Failed','Product not found.',@USER_ID,GETDATE()
+
+												SET @FAIL = 'TRUE'
+											end
+
 										End
 
 										IF(@FAIL='FALSE')
@@ -850,6 +901,45 @@ BEGIN
 
 												SET @FAIL = 'TRUE'
 										End
+										if( isnull(@BRANDNAME,'')=''  )
+										Begin
+												select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG  
+
+												
+
+												INSERT INTO IMPORT_TARGET_LOG(IMPORT_TARGET_ID,
+												DocumentNo,DocumentDate,
+												EmployeeGroup,TargetFor,TARGETLEVELNAME,TARGETLEVELCODE,TIMEFRAME,STARTDATE,ENDDATE,ORDERAMOUNT,ORDERQTY,BRANDNAME,ImportStatus,ImportMsg,CREATEDBY,CREATEDON
+												)
+												Select @LastCountIMPORTLOG+1,@TargetNo,@TargetDate
+													,@EmployeeGroup,@TargetFor
+												,@TARGETLEVELNAME,@TARGETLEVELCODE,@TIMEFRAME,@STARTEDATE
+												,@ENDDATE,@ORDERAMOUNT,@ORDERQTY,@BRANDNAME,'Failed','Brand is empty..',@USER_ID,GETDATE()
+
+												SET @FAIL = 'TRUE'
+										End
+
+
+										if(@BRANDNAME<>'')
+										Begin
+											select @BRANDID=isnull(Brand_Id,0) from tbl_master_brand where Brand_Name=trim(@BRANDNAME)
+											if( isnull(@BRANDID,0)=0  )
+											Begin
+													select  @LastCountIMPORTLOG=iSNULL(MAX(IMPORT_TARGET_ID),0) from IMPORT_TARGET_LOG												
+
+													INSERT INTO IMPORT_TARGET_LOG(IMPORT_TARGET_ID,
+													DocumentNo,DocumentDate,
+													EmployeeGroup,TargetFor,TARGETLEVELNAME,TARGETLEVELCODE,TIMEFRAME,STARTDATE,ENDDATE,ORDERAMOUNT,ORDERQTY,BRANDNAME,ImportStatus,ImportMsg,CREATEDBY,CREATEDON
+													)
+													Select @LastCountIMPORTLOG+1,@TargetNo,@TargetDate
+														,@EmployeeGroup,@TargetFor
+													,@TARGETLEVELNAME,@TARGETLEVELCODE,@TIMEFRAME,@STARTEDATE
+													,@ENDDATE,@ORDERAMOUNT,@ORDERQTY,@BRANDNAME,'Failed','Brand not found.',@USER_ID,GETDATE()
+
+													SET @FAIL = 'TRUE'
+											End
+
+										End
 
 										IF(@FAIL='FALSE')
 										BEGIN
@@ -1138,8 +1228,10 @@ BEGIN
 												if  NOT EXISTS (select 'Y' from FSM_WODTARGETASSIGN   where WODTARGETDOCNUMBER=@TargetNo)
 												BEGIN
 													select  @LastCount=iSNULL(MAX(WODTARGET_ID),0) from FSM_WODTARGETASSIGN  
+
 													INSERT INTO FSM_WODTARGETASSIGN(WODTARGET_ID,TARGETLEVELID,WODTARGETDOCNUMBER,WODTARGETDATE,CREATEDBY,CREATEDON) 
-													VALUES(@LastCount+1,@HeaderTARGETLEVELID,@TargetNo,@TargetDate,@USER_ID,GETDATE());		
+													VALUES(@LastCount+1,@HeaderTARGETLEVELID,@TargetNo,@TargetDate,@USER_ID,GETDATE());	
+													
 												END
 
 									
