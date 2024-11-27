@@ -32,7 +32,7 @@ ALTER PROCEDURE [dbo].[PRC_FTSHORIZONTALATTENDANCE_FETCH]
 AS
 /****************************************************************************************************************************************************************************
 1.0					Tanmoy		26-11-2020		CREATE PROCEDURE
-2.0		v2.0.32			Swatilekha  16.08.2022	Attendance register report enhancement required refer:0025111
+2.0		v2.0.32		Swatilekha  16.08.2022	Attendance register report enhancement required refer:0025111
 3.0		v2.0.37		Sanchita	16-11-2022		Attendance Register Report- Multiple rows generating against a singular User ID if the user logs out multiple times.
 												Also the distance travelled is showing zero though the total distance travelled showing data.
 												Refer: 25444
