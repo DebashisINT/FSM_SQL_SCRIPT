@@ -223,6 +223,8 @@ BEGIN
 	195.0		Debashis	09-10-2024	ADD SETTINGS @Action=UserCheck'		WillCreditDaysFollowUserWise & AllowOrderOnOutstandingAndClosingStockDifferenceUserWise.
 																			Row 986
 	196.0		Debashis	23-10-2024	ADD SETTINGS @Action=GlobalCheck'	ShowRetryIncorrectQuiz.Row 987
+	197.0		Debashis	11-11-2024	ADD SETTINGS @Action=UserCheck'		ShowTargetOnApp.Row 991
+	198.0		Debashis	15-11-2024	ADD SETTINGS @Action=GlobalCheck'	WillShowLoanDetailsInParty.Row 1005
 	*****************************************************************************************************************************************************************************/ 
 	SET NOCOUNT ON
 
@@ -516,6 +518,9 @@ BEGIN
 	--Rev 196.0
 	,@ShowRetryIncorrectQuiz BIT
 	--End of Rev 196.0
+	--Rev 198.0
+	,@WillShowLoanDetailsInParty BIT
+	--End of Rev 198.0
 	
 	if(@Action='GlobalCheck')
 	BEGIN
@@ -860,6 +865,9 @@ BEGIN
 		--Rev 196.0
 		SET @ShowRetryIncorrectQuiz =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='ShowRetryIncorrectQuiz' AND IsActive=1)
 		--End of Rev 196.0
+		--Rev 198.0
+		SET @WillShowLoanDetailsInParty =(select [Value] from FTS_APP_CONFIG_SETTINGS where [Key]='WillShowLoanDetailsInParty' AND IsActive=1)
+		--End of Rev 198.0
 
 		select  @max_accuracy as max_accuracy,
 			    @min_accuracy as min_accuracy,
@@ -1183,6 +1191,9 @@ BEGIN
 			--Rev 196.0
 			,@ShowRetryIncorrectQuiz AS ShowRetryIncorrectQuiz
 			--End of Rev 196.0
+			--Rev 198.0
+			,@WillShowLoanDetailsInParty AS WillShowLoanDetailsInParty
+			--End of Rev 198.0
 	END
 
 	else if(@Action='UserCheck')
@@ -2275,6 +2286,11 @@ BEGIN
 		SELECT 'AllowOrderOnOutstandingAndClosingStockDifferenceUserWise' AS [Key],CONVERT(NVARCHAR(15),USR.AllowOrderOnOutstandingAndClosingStockDifferenceUserWise) AS [Value] 
 		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
 		--End of Rev 195.0
+		--Rev 197.0
+		UNION ALL
+		SELECT 'ShowTargetOnApp' AS [Key],CONVERT(NVARCHAR(15),USR.ShowTargetOnApp) AS [Value] 
+		FROM tbl_master_user USR WHERE USR.USER_ID=@UserID
+		--End of Rev 197.0
 	END
 
 	SET NOCOUNT OFF
