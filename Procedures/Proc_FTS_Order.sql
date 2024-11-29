@@ -44,6 +44,7 @@ As
 5.0		v2.0.33		Debashis	13-10-2022		Product_Qty length has been increased.Refer: 25368
 6.0		v2.0.38		Debashis	23-01-2023		Enhancement done for Row No. 805
 7.0		v2.0.49		Debashis	17-09-2024		Enhancement done for Row No. 977
+8.0		v2.0.50		Debashis	29-11-2024		Order/AddOrder this api Order not save properly.Now solved.Refer: 0027826
 *************************************************************************************************************************************/
 BEGIN
 
@@ -54,6 +55,12 @@ BEGIN
 			set @Collection=0
 			END
 			declare  @OrderUniqueId bigint
+			--Rev 7.0
+			DECLARE @IsRetailOrderStatusRequired NCHAR(1)=''
+			--End of Rev 7.0
+			--Rev 8.0
+			DECLARE @ROWCOUNT INT
+			--End of Rev 8.0
 
 			IF NOT EXISTS(select Ordervalue  from tbl_trans_fts_Orderupdate where OrderCode=@order_id)
 			BEGIN
@@ -68,15 +75,29 @@ BEGIN
 			--Rev 3.0 && A new column Scheme_Amount have been added.
 			--Rev 4.0 &&Two new columns added as HOSPITAL & EMAIL_ADDRESS
 			--Rev 7.0 &&A new column added as ORDERSTATUS
-			INSERT  INTO  tbl_trans_fts_Orderupdate (Shop_Code,OrderCode,Ordervalue,Order_Description,Orderdate,userID,Collectionvalue,Latitude,Longitude,Order_Address,Remarks
+			INSERT INTO tbl_trans_fts_Orderupdate (Shop_Code,OrderCode,Ordervalue,Order_Description,Orderdate,userID,Collectionvalue,Latitude,Longitude,Order_Address,Remarks
 							,PATIENT_PHONE_NO,PATIENT_NAME,PATIENT_ADDRESS,Scheme_Amount,HOSPITAL,EMAIL_ADDRESS,ORDERSTATUS)
 			values (@Shop_Id,@order_id,@order_amount,@description,@order_date,@user_id,isnull(@Collection,0),@Lat,@Long,@Order_Address,@Remarks,@patient_no,@patient_name,@patient_address,@Scheme_Amount,
 							@Hospital,@Email_Address,@OrderStatus)
 
 			SET @OrderUniqueId=SCOPE_IDENTITY()
+			--Rev 8.0
+			SET @ROWCOUNT=@@ROWCOUNT
+			--End of Rev 8.0
+			--Rev 7.0
+			SET @IsRetailOrderStatusRequired=(SELECT [Value] FROM FTS_APP_CONFIG_SETTINGS WHERE [Key]='IsRetailOrderStatusRequired' AND IsActive=1)
+			IF @IsRetailOrderStatusRequired='1'
+				BEGIN
+					INSERT INTO FSM_ORDERUPDATESTAUSLOG(ORDERSTAUSLOG_ID,SHOP_CODE,ORDER_CODE,ORDER_VALUE,ORDER_DESCRIPTION,ORDER_DATE,USERID,ORDER_STATUS,[ACTION],CREATEDBY,CREATEDON)
+					SELECT @OrderUniqueId,@Shop_Id,@order_id,@order_amount,@description,@order_date,@user_id,'Ordered','I',@user_id,GETDATE()
+				END
+			--End of Rev 7.0
 			END
 
-			if(@@ROWCOUNT>0)
+			--Rev 8.0
+			--if(@@ROWCOUNT>0)
+			IF(@ROWCOUNT>0)
+			--End of Rev 8.0
 				BEGIN
 					--Rev 3.0 && Three new columns Scheme_Qty,Scheme_Rate & Total_Scheme_Price has been added.
 					--Rev 4.0 && A new column added as MRP
